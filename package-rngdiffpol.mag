@@ -1,0 +1,1720 @@
+declare verbose RngDiffPol, 6;
+
+/*
+    vprintf RngDiffPol,x: "my statements"'
+    
+    --for debugging should be set to x=4 or higher.
+
+*/
+
+ZZ:=IntegerRing();
+QQ:=RationalField();
+
+declare type RngDiffPol[RngDiffPolElt];
+declare type RngDiffPolMon: RngDiffPolTerm, RngDiffPolElt;
+declare type RngDiffPolTerm: RngDiffPolElt;
+
+declare attributes RngDiffPol:
+    base_ring,
+    variable_names,
+    number_of_variables,
+    max_orders,
+    derivation,
+    coercion_maps,
+    exponent_ring,
+    term_order,
+    polynomial_ring,
+    ranking,
+    ranking_sequence;
+    
+declare attributes RngDiffPolElt:
+    parent,
+    terms,
+    polynomial;
+    
+declare attributes RngDiffPolTerm:
+    parent,
+    coefficient,
+    exponent,
+    monomial,
+    polynomial;
+
+declare attributes RngDiffPolMon:
+    parent,
+    exponent,
+    polynomial,
+    coefficient,
+    term;
+    
+//###########################################
+
+/*
+
+This is used instantiate diffentialPolynomialFunction with lex_rank as a parameter.
+
+*/
+    
+//#############################
+function rank_lex(var1,var2)
+//#############################
+/*
+A comparison function for on pairs [i1,j1], [i2,j2], the MAGMA official documentation
+for comparison functions is below:
+
+//The comparison function C must take two arguments and return an integer less than,
+//equal to, or greater than 0 according to whether the first argument is less than,
+//equal to, or greater than the second argument (e.g.: func<x, y | x - y>).
+
+The basic idea is that we are going to pass rankings to our variables and these can
+induce lexicographic term orderings.
+*/
+    i1:=var1[1];
+    j1:=var1[2];
+    i2:=var2[1];
+    j2:=var2[2];
+    order_diff:=j2-j1;
+    if order_diff ne 0 then
+        return order_diff;
+    else
+        return i1-i2;
+    end if;
+end function;
+
+//##################################################
+//##################################################
+//  MAIN FUNCTION
+//##################################################
+//##################################################
+
+intrinsic differentialPolynomialRing(R::Rng, n::RngIntElt: order:=<"rank",rank_lex>) -> RngDiffPol
+{}
+    P:=New(RngDiffPol);
+    P`number_of_variables:=n;
+    P`base_ring:=R;
+    P`max_orders:=[5 : i in [1..n]];
+    P`term_order:=order;
+    E<d>:=PolynomialRing(ZZ,1);
+    P`exponent_ring:=E;
+    polynomial_ring:=PolynomialRing(R,n*6);
+    coercion_maps:=AssociativeArray();
+    coercion_maps[[0,0]]:=Id(polynomial_ring);
+    P`coercion_maps:=coercion_maps;
+    P`polynomial_ring:=polynomial_ring;
+    
+    return P;
+end intrinsic;
+
+
+
+//##################################################
+//##################################################
+//  MISC EXTRACTING ATTRIBUTES
+//##################################################
+//##################################################
+
+/*
+RngDiffPol
+RngDiffPolMon->RngDiffPolTerm->RngDiffPolElt
+
+coefficient
+
+term
+
+monomial
+
+polynomial
+
+differentialPolynomial
+*/
+
+/////////////////////////////
+intrinsic Parent(x::RngDiffPolElt)->RngDiffPol
+/////////////////////////////
+{}
+    return x`parent;
+end intrinsic;
+
+/////////////////////////////
+intrinsic Parent(x::RngDiffPolTerm)->RngDiffPol
+/////////////////////////////
+{}
+    return x`parent;
+end intrinsic;
+
+/////////////////////////////
+intrinsic Parent(x::RngDiffPolMon)->RngDiffPol
+/////////////////////////////
+{}
+    return x`parent;
+end intrinsic;
+
+/////////////////////////////
+intrinsic coefficient(t1::RngDiffPolTerm)->RngElt
+/////////////////////////////
+{}
+    return t1`coefficient;
+end intrinsic;
+
+/////////////////////////////
+intrinsic monomial(t1::RngDiffPolTerm)->RngDiffPolMon
+/////////////////////////////
+{}
+    if not assigned t1`monomial then
+        R:=Parent(t1);
+        e:=exponent(t1);
+        mon:=monomial(R,e);
+        t1`monomial:=mon;
+    end if;
+    
+    return t1`monomial;
+
+end intrinsic;
+
+
+/////////////////////////////
+intrinsic monomials(dpoly::RngDiffPolElt)->RngDiffPolMon
+/////////////////////////////
+{}
+    return {monomial(t) : t in terms(dpoly)};
+
+end intrinsic;
+
+
+/////////////////////////////
+intrinsic exponentRing(R::RngDiffPol)->RngUPol
+/////////////////////////////
+{}
+    return R`exponent_ring;
+end intrinsic;
+
+/////////////////////////////
+intrinsic exponent(mon::RngDiffPolTerm)->SeqEnum[RngUPolElt]
+/////////////////////////////
+{}
+    return mon`exponent;
+end intrinsic;
+
+/////////////////////////////
+intrinsic exponent(t::RngDiffPolTerm)->SeqEnum[RngUPolElt]
+/////////////////////////////
+{}
+    if not assigned t`exponent then
+        t`exponent :=exponent(monomial(t));
+    end if;
+    
+    return t`exponent;
+end intrinsic;
+
+/////////////////////////////
+intrinsic terms(dpoly::RngDiffPolElt)->SetEnum[RngDiffPolTerm]
+/////////////////////////////
+{}
+    return dpoly`terms;
+end intrinsic;
+
+/////////////////////////////
+intrinsic terms(m::RngDiffPolMon)->SetEnum[RngDiffPolTerm]
+/////////////////////////////
+{}
+    return [term(m)];
+end intrinsic;
+
+/////////////////////////////
+intrinsic coeff(f0::RngDiffPolTerm)->RngElt
+/////////////////////////////
+{}
+    return f0`coefficient;
+end intrinsic;
+
+/////////////////////////////
+intrinsic baseRing(R::RngDiffPol)->Rng
+/////////////////////////////
+{}
+    return R`base_ring;
+end intrinsic;
+
+/////////////////////////////
+intrinsic maxOrders(R::RngDiffPol)->SeqEnum
+/////////////////////////////
+{}
+    return R`max_orders;
+end intrinsic;
+
+/////////////////////////////
+intrinsic Nvariables(R::RngDiffPol)->RngIntElt
+/////////////////////////////
+{}
+    return R`number_of_variables;
+end intrinsic;
+
+/////////////////////////////
+intrinsic polynomialRing(R::RngDiffPol)->RngPol
+/////////////////////////////
+{}
+    return R`polynomial_ring;
+end intrinsic;
+
+
+//##################################################
+//##################################################
+//  HASHING
+//##################################################
+//##################################################
+
+/*
+
+equality:
+    RngDiffPol
+    RngDiffPolMon
+    RngDiffPolTerm
+    RngDiffPolElt
+    
+*/
+
+/////////////////////////////
+intrinsic 'eq'(R1::RngDiffPol,R2::RngDiffPol)->BoolElt
+/////////////////////////////
+{}
+    return (baseRing(R1) eq baseRing(R2)) and (Nvariables(R1) eq Nvariables(R2));
+
+end intrinsic;
+
+/////////////////////////////
+intrinsic 'eq'(m1::RngDiffPolMon,m2::RngDiffPolMon)->BoolElt
+/////////////////////////////
+{}
+    return ((Parent(m1) eq Parent(m2)) and (exponent(m1) eq exponent(m2)));
+end intrinsic;
+
+/////////////////////////////
+intrinsic 'eq'(term1::RngDiffPolTerm,term2::RngDiffPolTerm)->BoolElt
+/////////////////////////////
+{}
+    return (coefficient(term1) eq coefficient(term2)) and (monomial(term1) eq monomial(term2));
+end intrinsic;
+
+/////////////////////////////
+intrinsic 'eq'(f1::RngDiffPolElt,f2::RngDiffPolElt)->BoolElt
+/////////////////////////////
+{}
+    return (terms(f1) eq terms(f2));
+end intrinsic;
+
+
+/////////////////////////////
+intrinsic isTerm(f::RngDiffPol)->BoolElt,.
+/////////////////////////////
+{}
+    ts:=[t: t in terms(f)];
+    if #ts eq 1 then
+        return true,ts[1];
+    else
+        return false;
+    end if;
+end intrinsic;
+
+/////////////////////////////
+intrinsic Hash(m1::RngDiffPolMon)->RngIntElt
+/////////////////////////////
+{}
+    return Hash(exponent(m1));
+end intrinsic;
+
+/////////////////////////////
+intrinsic Hash(term::RngDiffPolTerm)->RngIntElt
+/////////////////////////////
+{}
+    return Hash(<coefficient(term),monomial(term)>);
+end intrinsic;
+
+/////////////////////////////
+intrinsic Hash(f::RngDiffPolElt)->RngIntElt
+/////////////////////////////
+{}
+    return Hash(terms(f));
+end intrinsic;
+
+/////////////////////////////
+intrinsic Hash(R::RngDiffPol)->RngIntElt
+/////////////////////////////
+{}
+    return Hash(<Nvariables(R),baseRing(R)>);
+end intrinsic;
+
+
+//##################################################
+//##################################################
+//  COERCION
+//##################################################
+//##################################################
+
+/*
+monomial->term->differentialPolynomial
+constant->term
+*/
+
+
+/////////////////////////////
+intrinsic monomial(R::RngDiffPol, e::SeqEnum[RngElt])->RngDiffPolMon
+/////////////////////////////
+{}
+    require Nvariables(R) eq #e: "the number of exponents needs to be equal to the number of variables";
+    require e[1] in exponentRing(R): "entries need to be univariate polynomials with non-negative integer entries";
+    
+    mon:=New(RngDiffPolMon);
+    E:=exponentRing(R);
+    mon`exponent:=[E!x: x in e];
+    mon`parent:=R;
+    mon`coefficient:=baseRing(R)!1;
+    
+    return mon;
+    
+end intrinsic;
+
+/////////////////////////////
+intrinsic one(R:RngDiffPol) -> RngDiffPolMon
+/////////////////////////////
+{}
+    
+    E:=exponentRing(R);
+    return monomial(R,[E!0 : i in [1..Nvariables(R)]]);
+end intrinsic;
+
+/////////////////////////////
+intrinsic term(mon::RngDiffPolMon)->RngDiffPolTerm
+/////////////////////////////
+{}
+
+    trm:=New(RngDiffPolTerm);
+    trm`parent:=Parent(mon);
+    trm`coefficient:=baseRing(Parent(mon))!1;
+    trm`monomial:=mon;
+    
+    return trm;
+    
+end intrinsic;
+
+/////////////////////////////
+intrinsic term(R::RngDiffPol,c::RngElt) -> RngDiffPolTerm
+/////////////////////////////
+{}
+    t1:=New(RngDiffPolTerm);
+    t1`parent:=R;
+    t1`coefficient:=baseRing(R)!c;
+    t1`monomial:=one(R);
+    return t1;
+end intrinsic;
+
+/////////////////////////////
+intrinsic zero(R::RngDiffPol) -> RngDiffPolTerm
+/////////////////////////////
+{}
+    return monomial(R,baseRing(R)!0);
+end intrinsic;
+
+/////////////////////////////
+intrinsic differentialPolynomial(t1::RngDiffPolTerm)->RngDiffPolElt
+/////////////////////////////
+{}
+    dpoly:=New(RngDiffPolElt);
+    dpoly`parent:=t1`parent;
+    dpoly`terms:={t1};
+    return dpoly;
+    
+end intrinsic;
+
+/////////////////////////////
+intrinsic IsCoercible(R::RngDiffPol,x::.) -> BoolElt,.
+/////////////////////////////
+{}
+    vprintf RngDiffPol,5: "Coercions for RngDiffPol, type %o \n", Type(x);
+    
+    if x in baseRing(R) then
+        if x eq 0 then
+            return true, zero(R);
+        elif x eq 1 then
+            return true, one(R);
+        else
+            return true, term(R,x);
+        end if;
+    else
+        y:=x*(R!1);
+        return true, y;
+    end if;
+    
+end intrinsic;
+
+//##################################################
+//##################################################
+//  MULTIPLICATION
+//##################################################
+//##################################################
+/*
+Constant Monomial
+Monomial Constant
+
+Monomial Monomial
+
+Term Term
+
+Monomial Term
+Term Monomial
+
+Constant Term
+Term Constant
+
+Term Polymomial
+Polynomial Term
+
+Polynomial Polynomial
+*/
+
+/////////////////////////////
+intrinsic '*'(c::RngElt,m2::RngDiffPolMon)->.
+/////////////////////////////
+{}
+    vprintf RngDiffPol, 5: "entering multiplication between ring elements and monomials...\n";
+    R:=baseRing(Parent(m2));
+    
+    cR:=R!c;
+    
+    if cR eq 1 then
+        return m2;
+    else
+        return term(Parent(m2),c)*m2;
+    end if;
+    
+end intrinsic;
+
+/////////////////////////////
+intrinsic '*'(m2::RngDiffPolMon,c::RngElt)->.
+/////////////////////////////
+{}
+    return c*m2;
+end intrinsic;
+
+/////////////////////////////
+intrinsic '*'(m1::RngDiffPolMon,m2::RngDiffPolMon)->RngDiffPolMon
+/////////////////////////////
+{}
+    R:=Parent(m1);
+    require Parent(m2) eq R: "The element must be monomials for the same ring";
+    
+    n:=Nvariables(R);
+    e1:=exponent(m1);
+    e2:=exponent(m2);
+    return monomial(R,[e1[i]+e2[i] : i in [1..n]]);
+
+end intrinsic;
+
+/////////////////////////////
+intrinsic '*'(t1::RngDiffPolTerm,t2::RngDiffPolTerm)->RngDiffPolTerm
+/////////////////////////////
+{}
+    R:=Parent(t1);
+    require Parent(t2) eq R: "The element must be monomials for the same ring";
+    
+    t3:=New(RngDiffPolTerm);
+    t3`parent:=R;
+    t3`coefficient:=coeff(t1)*coeff(t2);
+    t3`monomial:=monomial(t1)*monomial(t2);
+    return t3;
+
+end intrinsic;
+
+/////////////////////////////
+intrinsic '*'(m1::RngDiffPolMon,t1::RngDiffPolTerm)->RngDiffPolTerm
+/////////////////////////////
+{}
+   return term(m1)*t1;
+   
+end intrinsic;
+
+/////////////////////////////
+intrinsic '*'(t1::RngDiffPolTerm,m1::RngDiffPolMon)->RngDiffPolTerm
+/////////////////////////////
+{}
+   return m1*t1;
+   
+end intrinsic;
+
+/////////////////////////////
+intrinsic '*'(c::RngElt,t1::RngDiffPolTerm)->RngDiffPolTerm
+/////////////////////////////
+{}
+    vprintf RngDiffPol, 5: "entering multiplication between ring elements and monomials...\n";
+    R:=Parent(t1);
+    return term(R,c)*t1;
+    
+end intrinsic;
+
+/////////////////////////////
+intrinsic '*'(t1::RngDiffPolTerm,c::RngElt)->RngDiffPolTerm
+/////////////////////////////
+{}
+    vprint RngDiffPol, 5: "entering multiplication between ring elements and monomials...\n";
+    return c*t1;
+    
+end intrinsic;
+
+/////////////////////////////
+intrinsic '*'(t1::RngDiffPolTerm,f::RngDiffPolElt)->RngDiffPolElt
+/////////////////////////////
+{}
+    return differentialPolynomial(t1)*f;
+    
+end intrinsic;
+
+/////////////////////////////
+intrinsic '*'(f::RngDiffPolElt,t1::RngDiffPolTerm)->RngDiffPolElt
+/////////////////////////////
+{}
+    return t1*f;
+end intrinsic;
+
+/////////////////////////////
+intrinsic '*'(c1::RngElt,f::RngDiffPolElt)->RngDiffPolElt
+/////////////////////////////
+{}
+    return &+[c1*t : t in terms(f)];
+end intrinsic;
+
+/////////////////////////////
+intrinsic '*'(f::RngDiffPolElt,c1::RngElt)->RngDiffPolElt
+/////////////////////////////
+{}
+    return c1*f;
+end intrinsic;
+
+/////////////////////////////
+intrinsic '*'(f1::RngDiffPolElt,f2::RngDiffPolElt)->RngDiffPolElt
+/////////////////////////////
+{}
+    R1:=Parent(f1);
+    require R1 eq Parent(f2): "The elements must be members of the same ring of differential polynomials";
+    T1:=terms(f1);
+    T2:=terms(f2);
+    return &+[t1*t2 : t1 in T1, t2 in T2];
+end intrinsic;
+
+
+//##################################################
+//##################################################
+//  DIFFERENTIATION
+//##################################################
+//##################################################
+/*
+
+Monomial -> Polynomial
+
+Term -> Polynomial
+
+Polymomial -> Polynomial
+
+*/
+
+/////////////////////////////
+intrinsic Diff(m::RngDiffPolMon)->RngDiffPolElt
+/////////////////////////////
+{}
+    R:=Parent(m);
+    E<d>:=exponentRing(R);
+    exp:=exponent(m);
+    factors:=[];
+    for i in [1..#exp] do
+        new_exp:=exp;
+        ei:=exp[i];
+        new_exp[i]:=0;
+        for tij in Terms(ei) do
+            cij:=Coefficients(tij)[1];
+            rij:=Degree(tij);
+            ei_new:=ei-tij;
+            ei_new:=(cij-1)*d^(rij)+d^(rij+1);
+            new_exp[i]:=ei_new;
+            moni:=cij*monomial(R,new_exp);
+            factors:=factors cat [moni];
+        end for;
+    end for;
+    
+    derivative:=&+factors;
+    return derivative;
+end intrinsic;
+
+
+/////////////////////////////
+intrinsic Diff(t1::RngDiffPolTerm)->RngDiffPolElt
+/////////////////////////////
+{}
+    return coefficient(t1)*Diff(monomial(t1));
+end intrinsic;
+
+
+
+/////////////////////////////
+intrinsic Diff(f1::RngDiffPolElt)->RngDiffPolElt
+/////////////////////////////
+{}
+    T1:=terms(f1);
+    return &+[Diff(t1) : t1 in T1];
+end intrinsic;
+
+/////////////////////////////
+intrinsic Diff(f1::RngDiffPolElt,n::RngIntElt)->RngDiffPolElt
+/////////////////////////////
+{}
+    require n ge 0: "Must take a non-negative number of derivatives";
+    
+    if n eq 0 then
+        return f1;
+    elif n eq 1 then
+        return Diff(f1);
+    else
+        return Diff(Diff(f1,n-1));
+    end if;
+    
+end intrinsic;
+
+//##################################################
+//##################################################
+//  EXPONENTIATION
+//##################################################
+//##################################################
+
+/////////////////////////////
+intrinsic '^'(f1::RngDiffPolElt,n::RngIntElt)->RngDiffPolElt
+/////////////////////////////
+{}
+
+require n gt 0: "n must be a non-negative integer";
+
+R:=Parent(f1);
+
+if n eq 0 then
+    return polynomial(one(R));
+else
+    return &*[f1 : i in [1..n]];
+end if;
+   
+end intrinsic;
+
+/////////////////////////////
+intrinsic '^'(f1::RngDiffPolTerm,n::RngIntElt)->RngDiffPolTerm
+/////////////////////////////
+{}
+
+require n gt 0: "n must be a non-negative integer";
+
+R:=Parent(f1);
+
+if n eq 0 then
+    return term(one(R));
+else
+    return &*[f1 : i in [1..n]];
+end if;
+   
+end intrinsic;
+
+/////////////////////////////
+intrinsic '^'(f1::RngDiffPolMon,n::RngIntElt)->RngDiffPolMon
+/////////////////////////////
+{}
+
+require n gt 0: "n must be a non-negative integer";
+
+R:=Parent(f1);
+
+if n eq 0 then
+    return one(R);
+else
+    return &*[f1 : i in [1..n]];
+end if;
+   
+end intrinsic;
+
+
+
+//##################################################
+//##################################################
+//  ADDITION
+//##################################################
+//##################################################
+/*
+Constant Monomial
+Monomial Constant
+
+Monomial Monomial
+
+Term Term
+
+Monomial Term
+Term Monomial
+
+Constant Term
+Term Constant
+
+Term Polymomial
+Polynomial Term
+
+Polynomial Polynomial
+*/
+
+/////////////////////////////
+intrinsic '+'(m0::RngDiffPolMon,c::RngElt)->RngDiffPolElt
+/////////////////////////////
+{}
+    //---printing---
+    vprintf RngDiffPol, 5: "entering addition function for monoid elements and constants...\n";
+
+    R:=Parent(m0);
+    B:=baseRing(R);
+    return term(m0)+term(R,c);
+    
+end intrinsic;
+
+/////////////////////////////
+intrinsic '+'(c::RngElt,m0::RngDiffPolMon)->RngDiffPolElt
+/////////////////////////////
+{}
+    m0+c;
+    
+end intrinsic;
+
+/////////////////////////////
+intrinsic '+'(f0::RngDiffPolMon,g0::RngDiffPolMon)->RngDiffPolElt
+/////////////////////////////
+{}
+    //---printing---
+    vprintf RngDiffPol, 5: "entering addition function for monoid elements...\n";
+
+    require Parent(f0) eq Parent(g0): "Must have terms from the same polynomial ring";
+    
+    //---printing---
+    vprintf RngDiffPol, 5: "computing terms...\n term(f0)=%o, term(g0)=%o ...\n", term(f0),term(g0);
+    
+    return term(f0)+term(g0);
+    
+end intrinsic;
+
+/////////////////////////////
+intrinsic '+'(m1::RngDiffPolMon,t1::RngDiffPolTerm)->RngDiffPolElt
+/////////////////////////////
+{}
+    return term(m1)+t1;
+end intrinsic;
+
+/////////////////////////////
+intrinsic '+'(t1::RngDiffPolTerm,m1::RngDiffPolMon)->RngDiffPolElt
+/////////////////////////////
+{}
+    return m1+t1;
+end intrinsic;
+
+/////////////////////////////
+intrinsic '+'(c1::RngElt, t1::RngDiffPolTerm)->RngDiffPolElt
+/////////////////////////////
+{}
+    R:=Parent(t1);
+    return term(R,c1)+t1;
+end intrinsic;
+
+/////////////////////////////
+intrinsic '+'(t1::RngDiffPolTerm,c1::RngElt)->RngDiffPolElt
+/////////////////////////////
+{}
+    return c1+t1;
+end intrinsic;
+
+/////////////////////////////
+intrinsic '+'(f0::RngDiffPolTerm,g0::RngDiffPolTerm)->RngDiffPolElt
+/////////////////////////////
+{}
+    R:=Parent(f0);
+    require Parent(f0) eq Parent(g0): "Must have terms from the same differential polynomial ring";
+    
+    //---printing---
+    vprintf RngDiffPol,5: "coming to you live from inside the '+' function for two RngDiffPolTerm objects...\n monomial(f0)=%o, monomial(g0)=%o ... \n", monomial(f0),monomial(g0);
+    
+    if monomial(f0) eq monomial(g0) then
+        h:=New(RngDiffPolTerm);
+        h`parent:=Parent(f0);
+        h`monomial:=monomial(f0);
+        h`coefficient:=coefficient(f0)+coefficient(g0);
+        if h`coefficient eq 0 then
+            return zero(R);
+        else
+            
+            //---printing---
+            vprintf RngDiffPol, 5: "we have computed h=%o...\n",h;
+            
+            return differentialPolynomial(h);
+        end if;
+    else
+    //---printing---
+    vprintf RngDiffPol, 5: "Determined that the two monomials are not indeed the same...\n";
+        h:=New(RngDiffPolElt);
+        h`terms:={f0,g0};
+        h`parent:=Parent(f0);
+        return h;
+    end if;
+    
+end intrinsic;
+
+/////////////////////////////
+intrinsic '+'(t0::RngDiffPolTerm,g0::RngDiffPolElt)->RngDiffPolElt
+/////////////////////////////
+{}
+    require Parent(t0) eq Parent(g0): "The term and differential polynomial must have the same differential polynomial ring.";
+    
+    if monomial(t0) in monomials(g0) then
+        h:=New(RngDiffPolElt);
+        h`terms:={ x: x in terms(g0)| monomial(x) ne monomial(t0) } join {x + t0 : x in terms(g0) | monomial(x) eq monomial(t0)};
+        h`parent:=Parent(g0);
+        return h;
+    else
+        h:=New(RngDiffPolElt);
+        h`terms := {t0} join terms(g0);
+        h`parent:=Parent(g0);
+        return h;
+    end if;
+
+end intrinsic;
+    
+
+/////////////////////////////
+intrinsic '+'(g0::RngDiffPolElt,f0::RngDiffPolTerm)->RngDiffPolElt
+/////////////////////////////
+{}
+    return f0+g0;
+    
+end intrinsic;
+
+/////////////////////////////
+intrinsic '+'(f1::RngDiffPolElt,f2::RngDiffPolElt)->RngDiffPolElt
+/////////////////////////////
+{}
+    //This can maybe be improved by going to element sequences so there isn't as much sorting
+    R:=Parent(f1);
+    terms1:=[t: t in terms(f1)];
+    
+    result:=f2;
+    
+    for t in terms1 do
+        result:=t+result;
+    end for;
+    
+    return result;
+end intrinsic;
+
+
+/////////////////////////////
+intrinsic '-'(f1::RngDiffPolMon)->RngDiffPolTerm
+/////////////////////////////
+{}
+    return -term(f1);
+    
+end intrinsic;
+
+/////////////////////////////
+intrinsic '-'(f1::RngDiffPolTerm)->RngDiffPolTerm
+/////////////////////////////
+{}
+    f2:=New(RngDiffPolTerm);
+    f2`monomial:=monomial(f1);
+    f2`coefficient:=-coefficient(f1);
+    f2`parent:=Parent(f1);
+    return f2;
+    
+end intrinsic;
+
+/////////////////////////////
+intrinsic '-'(f1::RngDiffPolElt)->RngDiffPolElt
+/////////////////////////////
+{}
+    f2:=New(RngDiffPolElt);
+    f2`terms:={-t: t in terms(f1)};
+    f2`parent:=Parent(f1);
+    return f2;
+    
+end intrinsic;
+
+
+//##################################################
+//##################################################
+//  SUBTRACTION
+//##################################################
+//##################################################
+/*
+Constant Monomial
+Monomial Constant
+
+Monomial Monomial
+
+Term Term
+
+Monomial Term
+Term Monomial
+
+Constant Term
+Term Constant
+
+Term Polymomial
+Polynomial Term
+
+Polynomial Polynomial
+*/
+
+/////////////////////////////
+intrinsic '-'(m0::RngDiffPolMon,c::RngDiffPolMon)->RngDiffPolElt
+/////////////////////////////
+{}
+    return -(c+(-m0));
+    
+end intrinsic;
+
+/////////////////////////////
+intrinsic '-'(c::RngDiffPolMon,m0::RngDiffPolMon)->RngDiffPolElt
+/////////////////////////////
+{}
+    return -(m0-c);
+    
+end intrinsic;
+
+/////////////////////////////
+intrinsic '-'(f0::RngDiffPolMon,g0::RngDiffPolMon)->RngDiffPolElt
+/////////////////////////////
+{}
+    return f0+(-g0);
+    
+end intrinsic;
+
+/////////////////////////////
+intrinsic '-'(m1::RngDiffPolMon,t1::RngDiffPolTerm)->RngDiffPolElt
+/////////////////////////////
+{}
+    return m1+(-t1);
+end intrinsic;
+
+/////////////////////////////
+intrinsic '-'(t1::RngDiffPolTerm,m1::RngDiffPolMon)->RngDiffPolElt
+/////////////////////////////
+{}
+    return t1+(-m1);
+end intrinsic;
+
+/////////////////////////////
+intrinsic '-'(c1::RngElt, t1::RngDiffPolTerm)->RngDiffPolElt
+/////////////////////////////
+{}
+    R:=Parent(t1);
+    return term(R,c1)-t1;
+end intrinsic;
+
+/////////////////////////////
+intrinsic '-'(t1::RngDiffPolTerm,c1::RngElt)->RngDiffPolElt
+/////////////////////////////
+{}
+    return -(c1-t1);
+end intrinsic;
+
+/////////////////////////////
+intrinsic '-'(f0::RngDiffPolTerm,g0::RngDiffPolTerm)->.
+/////////////////////////////
+{}
+    return f0+(-g0);
+    
+end intrinsic;
+
+/////////////////////////////
+intrinsic '-'(t0::RngDiffPolTerm,g0::RngDiffPolElt)->RngDiffPolElt
+/////////////////////////////
+{}
+    t0+(-g0);
+
+end intrinsic;
+    
+
+/////////////////////////////
+intrinsic '-'(g0::RngDiffPolElt,f0::RngDiffPolTerm)->RngDiffPolElt
+/////////////////////////////
+{}
+    return g0+(-f0);
+    
+end intrinsic;
+
+/////////////////////////////
+intrinsic '-'(f1::RngDiffPolElt,f2::RngDiffPolElt)->RngDiffPolElt
+/////////////////////////////
+{}
+    return f1+(-f2);
+end intrinsic;
+
+
+
+
+
+//##################################################
+//##################################################
+//  PRINTING
+//##################################################
+//##################################################
+
+intrinsic variableNames(R::RngDiffPol) -> SeqEnum
+{}
+    if not assigned R`variable_names then
+        R`variable_names:=[ Sprintf("x%o",i) : i in [1..Nvariables(R)]];
+    end if;
+    
+    return R`variable_names;
+end intrinsic;
+
+intrinsic NumberOfNames(R::RngDiffPol)->RngIntElt
+{}
+    return Nvariables(R);
+end intrinsic;
+
+
+intrinsic Name(R::RngDiffPol,i::RngIntElt)->RngDiffPolMon
+{}
+    return R.i;
+end intrinsic;
+
+intrinsic Name(R::RngDiffPol,pair::SeqEnum)->RngDiffPolMon
+{}
+    return R.pair;
+end intrinsic;
+
+intrinsic AssignNames(~R::RngDiffPol,s::SeqEnum)
+{}
+    R`variable_names := s;
+end intrinsic;
+
+intrinsic Print(R::RngDiffPol)
+{}
+    printf "Ordinary Differential Polynomial Ring over %o in %o variables. ", baseRing(R), Nvariables(R);
+    
+end intrinsic;
+
+intrinsic '.'(R::RngDiffPol,i::RngIntElt) -> RngDiffPolMon
+{}
+    P:=exponentRing(R);
+    one:=P!1;
+    e:=[P!0 : i in [1..Nvariables(R)]];
+    e[i]:=e[i]+one;
+    mon:=monomial(R,e);
+    return mon;
+end intrinsic;
+
+intrinsic '.'(R::RngDiffPol,pair::SeqEnum) -> RngDiffPolMon
+{}
+    i:=pair[1];
+    j:=pair[2];
+    P:=exponentRing(R);
+    one:=P!1;
+    e:=[P!0 : i in [1..Nvariables(R)]];
+    e[i]:=e[i]+P.1^j;
+    mon:=monomial(R,e);
+    return mon;
+end intrinsic;
+
+intrinsic Print(m1::RngDiffPolMon)
+{}
+    outputs:=[];
+    R:=Parent(m1);
+    es:=exponent(m1);
+    n:=Nvariables(R);
+    vs:=variableNames(R);
+    
+    factors:=[];
+    for i in [1..n] do
+        for t in Terms(es[i]) do
+            m:=Coefficients(t)[1];
+            ord:=Degree(t);
+            if ord eq 0 and m eq 1 then
+                Append(~factors,Sprintf("%o",vs[i]));
+            elif ord eq 0 and m gt 1 then
+                Append(~factors,Sprintf("%o^%o",vs[i],m));
+            elif ord gt 0 and m eq 1 then
+                Append(~factors,Sprintf("D^%o(%o)",ord,vs[i]));
+            elif ord gt 0 and m gt 1 then
+                Append(~factors,Sprintf("D^%o(%o)^%o",ord,vs[i],m));
+            end if;
+        end for;
+    end for;
+
+    vprintf RngDiffPol, 4: "factors %o \n", factors;
+    
+    if #factors gt 0 then
+        output:=factors[1];
+        for i in [2..#factors] do
+            output:=output * "*" * factors[i];
+        end for;
+    else
+        output:="";
+    end if;
+
+    print output;
+end intrinsic;
+
+intrinsic Print(f::RngDiffPolTerm)
+{}
+    if coeff(f) ne 1 then
+        printf "%o*%o",coeff(f),monomial(f);
+    else
+        printf "%o",monomial(f);
+    end if;
+end intrinsic;
+
+intrinsic Print(f::RngDiffPolElt)
+{}
+    terms:=[t : t in terms(f)];
+    //Sort(~terms);
+    printed_terms:=[Sprint(t): t in terms];
+    output:=printed_terms[1];
+    for i in [2..#terms] do
+        output:=output * " + " * printed_terms[i];
+    end for;
+    print output;
+end intrinsic;
+
+
+
+//##################################################
+//##################################################
+//  TERM ORDERS
+//##################################################
+//##################################################
+
+////////////////////////////////////
+intrinsic 'lt'(f1::RngDiffPolMon,f2::RngDiffPolMon)->BoolElt
+///////////////////////////////////
+{}
+    polynomial(f1) lt polynomial(f2);
+end intrinsic;
+
+////////////////////////////////////
+intrinsic 'le'(f1::RngDiffPolMon,f2::RngDiffPolMon)->BoolElt
+///////////////////////////////////
+{}
+    polynomial(f1) le polynomial(f2);
+end intrinsic;
+
+////////////////////////////////////
+intrinsic 'gt'(f1::RngDiffPolMon,f2::RngDiffPolMon)->BoolElt
+///////////////////////////////////
+{}
+    return polynomial(f1) gt polynomial(f2);
+end intrinsic;
+
+////////////////////////////////////
+intrinsic 'ge'(f1::RngDiffPolMon,f2::RngDiffPolMon)->BoolElt
+///////////////////////////////////
+{}
+    return polynomial(f1) ge polynomial(f2);
+end intrinsic;
+
+//------------------------
+
+////////////////////////////////////
+intrinsic 'lt'(f1::RngDiffPolTerm,f2::RngDiffPolTerm)->BoolElt
+///////////////////////////////////
+{}
+    polynomial(f1) lt polynomial(f2);
+end intrinsic;
+
+////////////////////////////////////
+intrinsic 'le'(f1::RngDiffPolTerm,f2::RngDiffPolTerm)->BoolElt
+///////////////////////////////////
+{}
+    polynomial(f1) le polynomial(f2);
+end intrinsic;
+
+////////////////////////////////////
+intrinsic 'gt'(f1::RngDiffPolTerm,f2::RngDiffPolTerm)->BoolElt
+///////////////////////////////////
+{}
+    return polynomial(f1) gt polynomial(f2);
+end intrinsic;
+
+////////////////////////////////////
+intrinsic 'ge'(f1::RngDiffPolTerm,f2::RngDiffPolTerm)->BoolElt
+///////////////////////////////////
+{}
+    return polynomial(f1) ge polynomial(f2);
+end intrinsic;
+
+//------------------------
+
+////////////////////////////////////
+intrinsic 'lt'(f1::RngDiffPolElt,f2::RngDiffPolElt)->BoolElt
+///////////////////////////////////
+{}
+    polynomial(f1) lt polynomial(f2);
+end intrinsic;
+
+////////////////////////////////////
+intrinsic 'le'(f1::RngDiffPolElt,f2::RngDiffPolElt)->BoolElt
+///////////////////////////////////
+{}
+    polynomial(f1) le polynomial(f2);
+end intrinsic;
+
+////////////////////////////////////
+intrinsic 'gt'(f1::RngDiffPolElt,f2::RngDiffPolElt)->BoolElt
+///////////////////////////////////
+{}
+    return polynomial(f1) gt polynomial(f2);
+end intrinsic;
+
+////////////////////////////////////
+intrinsic 'ge'(f1::RngDiffPolElt,f2::RngDiffPolElt)->BoolElt
+///////////////////////////////////
+{}
+    return polynomial(f1) ge polynomial(f2);
+end intrinsic;
+
+
+
+
+//##################################################
+//##################################################
+//  POLYNOMIAL ALGORITHMS
+//##################################################
+//##################################################
+
+////////////////////////////////////
+intrinsic polynomialTermOrder(R::RngDiffPol)->RngPol
+////////////////////////////////////
+{}
+    //http://magma.maths.usyd.edu.au/magma/handbook/text/1259#14366
+    // PolynomialRing(Z, 4, "elim", [1, 4], [2, 3])
+    //<"weight", [ 100, 10, 1, 1, 10, 100, 1, 1, 1 ]>
+    return <"weight",weights(R)>;
+end intrinsic;
+
+/////////////////////////////////
+intrinsic NpolynomialVariables(R::RngDiffPol)->RngIntElt
+/////////////////////////////////
+{}
+    max_orders:=maxOrders(R);
+    return #max_orders+&+max_orders;
+    
+end intrinsic;
+
+
+///////////////////////////////////////
+intrinsic weights(R::RngDiffPol,term_order)->SeqEnum
+///////////////////////////////////////
+{}
+    /*
+    Order the monomials and then figure out which variable they correspond to.
+    If lex, then you just put the standard basis vectors in rows corresponding to their order.
+    If block, then you need to do one block at a time as in the example below:
+    
+    <"elim", [ 1, 4 ], [ 2, 3 ]>
+    > MonomialOrderWeightVectors(P);
+
+    [ 1, 0, 0, 1 ],
+    [ 1, 0, 0, 0 ],
+    [ 0, 1, 1, 0 ],
+    [ 0, 1, 0, 0 ]
+    
+    We will have much larger blocks though.
+    First there will be max_order[1]+1 variables corresp to x1 and its ders.
+    Second there will be max_order[2]+1 variables corresp to x2 and its ders.
+    ...
+    If we have a block order [[3],[1],[2,4]] then this corresponds to a block order
+    [ [3,n3],...,[3,0] ], [ [1,n1],...,[1,0] ], [ [2,j],[4,j] ] ordered according to j first then according to 2]
+    
+    */
+    max_orders:=maxOrders(R);
+    N:=NpolynomialVariables(R);
+    
+    tup:=monomialOrder(R);
+    label:=tup[1];
+    data:=tup[2];
+    
+    if label eq "elim" then
+        dblocks:=data;
+        blocks:=dblocks_to_blocks(R,dblocks);
+        return MonomialOrderWeightVectors(<"elim",Explode(blocks)>);
+    elif label eq "rank" then
+        //data:=comparison_function;
+        seq:=[polynomialIndex(R,pair) : pair in rankingSeq(R)];
+        A:=FreeAbelianGroup(N);
+        W:=[Eltseq(A.i) : i in seq];
+        return W;
+    end if;
+end intrinsic;
+
+
+////////////////////////////////////
+intrinsic dblocks_to_blocks(R,dblocks::SeqEnum)->SeqEnum
+////////////////////////////////////
+{}
+
+/*
+dblocks:=[ [1,2],[3,4] ];
+dblocks:=[ [1,2,3,4]]; //pure lexicographic
+dblocks:=[[1],[2],[3],[4]]; //pure elimination
+
+*/
+    max_orders:=maxOrders(R);
+    return [ &cat[ Reverse([ polynomialIndex(R,[i,j]) : j in [0..max_orders[i]] ]) : i in dblock] : dblock in dblocks];
+end intrinsic;
+
+////////////////////////////////////
+intrinsic polynomialIndex(R::RngDiffElt,pair::SeqEnum[RngIntElt])->RngIntElt
+////////////////////////////////////
+{
+
+If the maximum orders are r(1),r(2),...,r(n) with n-variables, then
+    index of [i,r]= (r(1)+1)+(r(2)+1)+...+(r(i-1)+1)+r+1
+    
+}
+
+    i,r:=Explode(pair);
+    orders:=maxOrders(R);
+    require r le orders[i]: "The order exceeds the bound. Adjust the bound using setMaxOrder.";
+    
+    A:=&+[orders[j] : j in [1..i-1]];
+    B:=(#orders-i)-1;
+    C:=r;
+    
+    return A+B+C;
+    
+end intrinsic;
+
+
+////////////////////////////////////
+intrinsic monomialOrder(R::RngDiffElt)->Tup
+////////////////////////////////////
+{}
+    return R`term_order;
+end intrinsic;
+
+////////////////////////////////////
+intrinsic ranking(R::RngDiffPol)->UserProgram
+////////////////////////////////////
+{
+    
+}
+    //---printing---
+    vprintf RngDiffPol, 5: "Requesting the ranking of the ring of differential polynomials... \n";
+    
+
+
+    if not assigned R`ranking then
+        //---printing---
+        vprintf RngDiffPol, 5: "Ranking has not been assigned... \n";
+        
+        term_order:=R`term_order;
+        label:=term_order[1];
+        
+        if label eq "rank" then
+            
+            //---printing---
+            vprintf RngDiffPol, 5: "Setting the ranking... \n";
+            
+            dblocks:=term_order[2];
+            setRanking(R, dblocks);
+        else
+            error "The term order on the differential polynomial ring is not lexicographic induced by a ranking. The first part of the term_order tuple needs to be 'rank' (in quotes) and the second part needs to be a comparison function.";
+        end if;
+    end if;
+    
+    
+    //---printing---
+    vprintf RngDiffPol, 5: "Returning the ranking... \n";
+    return R`ranking;
+        
+    
+end intrinsic;
+
+
+////////////////////////////////////
+intrinsic setRanking(R::RngDiffPol, comparison::UserProgram)
+////////////////////////////////////
+{
+    
+}
+   R`ranking:=comparison;
+   setPolynomialRing(~R:term_order:=<"rank",comparison>);
+
+end intrinsic;
+
+////////////////////////////////////
+intrinsic setRanking(R::RngDiffPol, dblocks::SeqEnum)
+////////////////////////////////////
+{
+    
+}
+   R`ranking:=get_ranking(dblocks);
+   setPolynomialRing(~R:term_order:=<"rank",ranking>);
+
+end intrinsic;
+
+
+////////////////////////////////////
+intrinsic setPolynomialRing(~R::RngDiffPol:term_order:=Tup)
+////////////////////////////////////
+{
+    
+}
+    
+end intrinsic;
+
+
+////////////////////////////////////
+intrinsic rankingSeq(R::RngDiffPol)->SeqEnum
+////////////////////////////////////
+{
+    
+}
+    if not assigned R`ranking_sequence then
+        orders:=maxOrders(R);
+        
+        vprintf RngDiffPol, 5: "maxOrders %o ... \n", orders;
+        
+        all_indices:=[];
+        for i in [1..Nvariables(R)] do
+            for j in [0..orders[i]] do
+                Append(~all_indices,[i,j]);
+            end for;
+        end for;
+        
+        comparison_function:=ranking(R);
+        Sort(~all_indices,comparison_function);
+        R`ranking_sequence:=all_indices;
+    end if;
+        
+    return R`ranking_sequence;
+    
+end intrinsic;
+
+
+/////////////////////////////
+intrinsic polynomialGenerators(R::RngDiffPol)->SeqEnum
+/////////////////////////////
+{}
+    rs:=maxOrders(R);
+    n:=Nvariables(R);
+    monomials:=[];
+    for i in [1..n] do
+        for j in [1..rs[i]] do
+            Append(~monomials,Diff(R.i,n));
+        end for;
+    end for;
+    Sort(~monomials);
+    
+    return monomials;
+    
+end intrinsic;
+
+/////////////////////////////
+intrinsic setMaxOrders(R::RngDiffPol,rs::SeqEnum[RngIntElt])
+/////////////////////////////
+{}
+    rs:=maxOrders(R);
+    monomials:=polynomialGenerators(R);
+    new_ring:=polynomialRing(R,#monomials : order:=polynomialTermOrder(R));
+    
+    for i in [1..#monomials] do
+        monomials[i]`polynomial:=new_ring.i;
+    end for;
+    
+    R`polynomial_ring:=new_ring;
+    
+end intrinsic;
+
+intrinsic Eltseq(mon:RngMonElt)->SeqEnum
+{}
+    e:=exponent(mon);
+    n:=Nvariables(Parent(mon));
+    return &cat[[<[i,Degree(t)],Coefficients(t)[1]> : t in Terms(e[i])] : i in [1..n]];
+end intrinsic;
+
+/////////////////////////////
+intrinsic orders(mon::RngDiffPolMon)->SeqEnum
+/////////////////////////////
+{}
+    e:=exponent(mon);
+    return [Degree(x) : x in e];
+end intrinsic;
+
+
+/////////////////////////////
+intrinsic polynomial(mon::RngDiffPolMon)->RngMPolElt
+/////////////////////////////
+{}
+    R:=Parent(mon);
+    require orders(mon) le maxOrders(R): "The maximum orders for the polynomial ring need to be increased. Do this using setMaxOrders.";
+    
+    powers:=[];
+    for x in Eltseq(mon) do
+        pair:=x[1];
+        power:=x[2];
+        P:=polynomialRing(R);
+        i:=Index(rankingSeq(R),pair);
+        Append(~powers,(P.i)^power);
+    end for;
+    
+    return &*powers;
+end intrinsic;
+
+
+/////////////////////////////
+intrinsic polynomial(t1::RngDiffPolTerm)->RngMPolElt
+/////////////////////////////
+{}
+    R:=Parent(t1);
+    return coefficient(t1)*polynomial(monomial(t1));
+
+end intrinsic;
+
+/////////////////////////////
+intrinsic polynomial(dpoly::RngDiffPolElt)->RngDiffPolElt
+/////////////////////////////
+{}
+    if not assigned dpoly`polynomial then
+        dpoly`polynomial:=&+[polynomial(term) : term in terms(dpoly)];
+    elif not dpoly`polynomial in polynomialRing(Parent(dpoly)) then
+        dpoly`polynomial:=&+[polynomial(term) : term in terms(dpoly)];
+    end if;
+    
+    return dpoly`polynomial;
+        
+end intrinsic;
+
+
+/////////////////////////////
+intrinsic polynomial(dpoly::RngDiffPolElt)->RngDiffPolElt
+/////////////////////////////
+{}
+    if not assigned dpoly`polynomial then
+        dpoly`polynomial:=&+[polynomial(term) : term in terms(dpoly)];
+    elif not dpoly`polynomial in polynomialRing(Parent(dpoly)) then
+        dpoly`polynomial:=&+[polynomial(term) : term in terms(dpoly)];
+    end if;
+    
+    return dpoly`polynomial;
+        
+end intrinsic;
+
+
+//###########################
+intrinsic get_block_map(blocks::SeqEnum)->UserProgram
+//###########################
+{}
+/*
+    
+    EXAMPLES:
+    
+        >blocks:=[[3,2],[1,5],[4]];
+        >my_rank:=get_ranking(blocks);
+        >my_rank([1,2],[3,2]);
+        >my_rank([3,1],[2,1]);
+        >my_rank([2,2],[2,1]);
+        >my_rank([4,5],[2,1]);
+        -1
+        2
+        1
+        -2
+
+*/
+    
+    function block_map(n,blocks)
+    //The comparison function C must take two arguments and return an integer less than,
+    //equal to, or greater than 0 according to whether the first argument is less than,
+    //equal to, or greater than the second argument (e.g.: func<x, y | x - y>).
+        for i in [1..#blocks] do
+            if n in blocks[i] then
+                return i;
+            end if;
+        end for;
+    end function;
+    
+    block_map_red:=func<n|block_map(n,blocks)>;
+    
+    return block_map_red;
+    
+end intrinsic;
+
+//###########################
+intrinsic get_ranking(blocks::SeqEnum)->UserProgram
+//###########################
+{}
+/*
+    
+    EXAMPLES:
+    
+        >blocks:=[[3,2],[1,5],[4]];
+        >my_rank:=get_ranking(blocks);
+        
+    The variable is in a later block:
+        
+        >my_rank([1,2],[3,2]);
+        -1
+    
+    Same block, same order but 3 comes before 2.
+        
+        >my_rank([3,1],[2,1]);
+        2
+        
+    Same variable but higher order is higher rank.
+        
+        >my_rank([2,2],[2,1]);
+        1
+        
+    No matter how big you take the derivative, if it is
+    in a lower block it will be eliminated.
+        >my_rank([4,5],[2,1]);
+        -2
+
+*/
+    flattened:=&cat[b:b in blocks];
+    num_vars:=#flattened;
+    
+    if not Sort(flattened) eq [1..num_vars] then
+        printf "A complete set of numbers needs to appear in the blocks.";
+        return 0;
+    end if;
+    
+    
+    G:=Sym(#flattened);
+    sigma:=G!flattened;
+    tau:=sigma^(-1);
+    
+    block_map:=get_block_map(blocks);
+    
+    function block_rank(pair1,pair2)
+    //The comparison function C must take two arguments and return an integer less than,
+    //equal to, or greater than 0 according to whether the first argument is less than,
+    //equal to, or greater than the second argument (e.g.: func<x, y | x - y>).
+    /*
+    If the variable appears in an early block it wins.
+    If they are in the same block, use lexicographic rank.
+    */
+        i1:=pair1[1];
+        j1:=pair1[2];
+        i2:=pair2[1];
+        j2:=pair2[2];
+        
+        b1:=block_map(i1);
+        b2:=block_map(i2);
+        
+        //ans:=0;
+        
+        if b1 ne b2 then
+            ans:=b2-b1;
+        elif b1 eq b2 then
+            ii1:=i1^tau;
+            ii2:=j1^tau;
+            ans:=-rank_lex([ii1,j1],[ii2,j2]);
+        end if;
+        
+        return ans;
+        
+    end function;
+        
+    return block_rank;
+end intrinsic;
