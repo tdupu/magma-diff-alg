@@ -379,10 +379,6 @@ intrinsic monomial(p::RngDiffPolElt) -> RngDiffPolMon
    return mon;
 end intrinsic;
 
-/*
-
-*/
-
 /////////////////////////////
 intrinsic Hash(m1::RngDiffPolMon)->RngIntElt
 /////////////////////////////
@@ -580,26 +576,16 @@ intrinsic IsCoercible(R::RngDiffPol,x::.) -> BoolElt,.
         if Parent(x) eq R then
             return true, differentialPolynomial(x);
         end if;
-    end if;
-    
-    if Type(x) eq RngDiffPolMon then
+    elif Type(x) eq RngDiffPolMon then
         t:=term(x);
         if Parent(t) eq R then
             return true, differentialPolynomial(x);
         end if;
-    end if;
-    
-    if x in baseRing(R) then
-        if x eq 0 then
-            return true, differentialPolynomial(zero(R));
-        elif x eq 1 then
-            return true, differentialPolynomial(one(R));
-        else
-            return true, differentialPolynomial(term(R,x));
-        end if;
-    else
-        y:=x*(R!1);
-        return true, y;
+    elif x in baseRing(R) then
+        return true, differentialPolynomial(term(R,x));
+    //else
+    //    y:=x*(R!1);
+    //    return true, y;
     end if;
     
 end intrinsic;
@@ -984,14 +970,14 @@ intrinsic '+'(t1::RngDiffPolTerm,c1::RngElt)->RngDiffPolElt
 end intrinsic;
 
 /////////////////////////////
-intrinsic '+'(f0::RngDiffPolTerm,g0::RngDiffPolTerm)->RngDiffPolElt
+intrinsic '+'(f0::RngDiffPolTerm,g0::RngDiffPolTerm)->.
 /////////////////////////////
 {}
     R:=Parent(f0);
     require Parent(f0) eq Parent(g0): "Must have terms from the same differential polynomial ring";
     
     //---printing---
-    vprintf RngDiffPol,5: "coming to you live from inside the '+' function for two RngDiffPolTerm objects...\n monomial(f0)=%o, monomial(g0)=%o ... \n", monomial(f0),monomial(g0);
+    vprintf RngDiffPol,5: "inside '+', two RngDiffPolTerm...\n monomial(f0)=%o, monomial(g0)=%o ... \n", monomial(f0),monomial(g0);
     
     if monomial(f0) eq monomial(g0) then
         h:=New(RngDiffPolTerm);
@@ -1005,11 +991,11 @@ intrinsic '+'(f0::RngDiffPolTerm,g0::RngDiffPolTerm)->RngDiffPolElt
             //---printing---
             vprintf RngDiffPol, 5: "we have computed h=%o...\n",h;
             
-            return differentialPolynomial(h);
+            return h;
         end if;
     else
     //---printing---
-    vprintf RngDiffPol, 5: "Determined that the two monomials are not indeed the same...\n";
+    vprintf RngDiffPol, 5: "two monomials are not same...\n";
         h:=New(RngDiffPolElt);
         h`terms:={f0,g0};
         h`parent:=Parent(f0);
