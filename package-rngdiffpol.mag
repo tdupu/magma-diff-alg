@@ -93,15 +93,47 @@ intrinsic differentialPolynomialRing(R::Rng, n::RngIntElt: order:=<"rank",rank_l
     P`base_ring:=R;
     P`max_orders:=[5 : i in [1..n]];
     P`term_order:=order;
+    
     E<d>:=PolynomialRing(ZZ,1);
     P`exponent_ring:=E;
+    
     polynomial_ring:=PolynomialRing(R,n*6);
     coercion_maps:=AssociativeArray();
     coercion_maps[[0,0]]:=Id(polynomial_ring);
+    
     P`coercion_maps:=coercion_maps;
     P`polynomial_ring:=polynomial_ring;
     
     return P;
+end intrinsic;
+
+intrinsic Nvars(R::RngDiffPol)->RngIntElt
+{}
+    return R`number_of_variables;
+end intrinsic;
+
+intrinsic 'eq'(R1::RngDiffPol,R2::RngDiffPol) -> BoolElt
+{}
+/*
+I didn't really think about this.
+Really we should compare all of the attributes of the two rings.
+*/
+    if baseRing(R1) eq baseRing(R2) and Nvars(R1) eq Nvars(R2) then
+        if assigned(R1`variable_names) then
+            if assigned(R2`variable_names) then
+                if R1`variables_names eq R2`variable_names then
+                    return true;
+                else
+                    return false;
+                end if;
+            else
+                return false;
+            end if;
+        end if;
+    else
+        return false;
+    end if;
+
 end intrinsic;
 
 
@@ -172,7 +204,7 @@ end intrinsic;
 
 
 /////////////////////////////
-intrinsic monomials(dpoly::RngDiffPolElt)->RngDiffPolMon
+intrinsic monomials(dpoly::RngDiffPolElt)->Set
 /////////////////////////////
 {}
     return {monomial(t) : t in terms(dpoly)};
@@ -216,7 +248,7 @@ end intrinsic;
 intrinsic terms(m::RngDiffPolMon)->SetEnum[RngDiffPolTerm]
 /////////////////////////////
 {}
-    return [term(m)];
+    return {term(m)};
 end intrinsic;
 
 /////////////////////////////
@@ -302,7 +334,7 @@ end intrinsic;
 
 
 /////////////////////////////
-intrinsic isTerm(f::RngDiffPol)->BoolElt,.
+intrinsic isTerm(f::RngDiffPolElt)->BoolElt,.
 /////////////////////////////
 {}
     ts:=[t: t in terms(f)];
@@ -312,6 +344,44 @@ intrinsic isTerm(f::RngDiffPol)->BoolElt,.
         return false;
     end if;
 end intrinsic;
+
+/////////////////////////////
+intrinsic term(p::RngDiffPolElt) -> RngDiffPolTerm
+/////////////////////////////
+{}
+   is_term,term:=isTerm(p);
+   require is_term: "Can't be made a term";
+   return term;
+end intrinsic;
+
+/////////////////////////////
+intrinsic isMonomial(p::RngDiffPolElt) -> BoolElt,.
+/////////////////////////////
+{}
+    is_term,term:=isTerm(p);
+    if is_term then
+        if coeff(term) eq 1 then
+            return true,monomial(term);
+        else
+            return false;
+        end if;
+    else
+        return false;
+    end if;
+end intrinsic;
+
+/////////////////////////////
+intrinsic monomial(p::RngDiffPolElt) -> RngDiffPolMon
+/////////////////////////////
+{}
+   is_mon,mon:=isTerm(p);
+   require is_mon: "Can't be made a monomial";
+   return mon;
+end intrinsic;
+
+/*
+
+*/
 
 /////////////////////////////
 intrinsic Hash(m1::RngDiffPolMon)->RngIntElt
@@ -381,6 +451,38 @@ intrinsic one(R:RngDiffPol) -> RngDiffPolMon
 end intrinsic;
 
 /////////////////////////////
+intrinsic isOne(p::RngDiffPolElt) -> RngDiffPolMon
+/////////////////////////////
+{}
+    mybool,myterm:=isTerm(p);
+    if mybool then
+        if coefficient(myterm) eq 1 then
+            R:=Parent(myterm);
+            return (one(R) eq monomial(myterm));
+        else
+            return false;
+        end if;
+    else
+        return false;
+    end if;
+    
+end intrinsic;
+
+/////////////////////////////
+intrinsic isOne(t::RngDiffPolTerm) -> RngDiffPolMon
+/////////////////////////////
+{}
+    return isOne(differentialPolynomial(t));
+end intrinsic;
+
+/////////////////////////////
+intrinsic isOne(m::RngDiffPolMon) -> RngDiffPolMon
+/////////////////////////////
+{}
+    return isOne(differentialPolynomial(m));
+end intrinsic;
+
+/////////////////////////////
 intrinsic term(mon::RngDiffPolMon)->RngDiffPolTerm
 /////////////////////////////
 {}
@@ -400,17 +502,51 @@ intrinsic term(R::RngDiffPol,c::RngElt) -> RngDiffPolTerm
 {}
     t1:=New(RngDiffPolTerm);
     t1`parent:=R;
+    require c ne 0: "can't have a term with a zero coefficient";
     t1`coefficient:=baseRing(R)!c;
     t1`monomial:=one(R);
     return t1;
 end intrinsic;
 
 /////////////////////////////
-intrinsic zero(R::RngDiffPol) -> RngDiffPolTerm
+intrinsic isConstant(t::RngDiffPolTerm) -> BoolElt
 /////////////////////////////
 {}
-    return monomial(R,baseRing(R)!0);
+    if isOne(monomial(t)) then
+        return true;
+    else
+        return false;
+    end if;
 end intrinsic;
+
+/////////////////////////////
+intrinsic zero(R::RngDiffPol) -> RngDiffPolElt
+/////////////////////////////
+{}
+/*
+Zero is going to be a differential polynomial with no terms.
+*/
+    dpoly:=New(RngDiffPolElt);
+    dpoly`parent:=R;
+    dpoly`terms:={};
+    return dpoly;
+end intrinsic;
+
+/////////////////////////////
+intrinsic isZero(p::RngDiffPolElt) -> BoolElt
+/////////////////////////////
+{}
+/*
+Zero is going to be a differential polynomial with no terms.
+*/
+    if #terms(p) eq 0 then
+        return true;
+    else
+        return false;
+    end if;
+end intrinsic;
+
+
 
 /////////////////////////////
 intrinsic differentialPolynomial(t1::RngDiffPolTerm)->RngDiffPolElt
@@ -424,18 +560,42 @@ intrinsic differentialPolynomial(t1::RngDiffPolTerm)->RngDiffPolElt
 end intrinsic;
 
 /////////////////////////////
+intrinsic differentialPolynomial(t1::RngDiffPolMon)->RngDiffPolElt
+/////////////////////////////
+{}
+    dpoly:=New(RngDiffPolElt);
+    dpoly`parent:=t1`parent;
+    dpoly`terms:={term(t1)};
+    return dpoly;
+    
+end intrinsic;
+
+/////////////////////////////
 intrinsic IsCoercible(R::RngDiffPol,x::.) -> BoolElt,.
 /////////////////////////////
 {}
     vprintf RngDiffPol,5: "Coercions for RngDiffPol, type %o \n", Type(x);
+        
+    if Type(x) eq RngDiffPolTerm then
+        if Parent(x) eq R then
+            return true, differentialPolynomial(x);
+        end if;
+    end if;
+    
+    if Type(x) eq RngDiffPolMon then
+        t:=term(x);
+        if Parent(t) eq R then
+            return true, differentialPolynomial(x);
+        end if;
+    end if;
     
     if x in baseRing(R) then
         if x eq 0 then
-            return true, zero(R);
+            return true, differentialPolynomial(zero(R));
         elif x eq 1 then
-            return true, one(R);
+            return true, differentialPolynomial(one(R));
         else
-            return true, term(R,x);
+            return true, differentialPolynomial(term(R,x));
         end if;
     else
         y:=x*(R!1);
@@ -775,8 +935,7 @@ end intrinsic;
 intrinsic '+'(c::RngElt,m0::RngDiffPolMon)->RngDiffPolElt
 /////////////////////////////
 {}
-    m0+c;
-    
+    return m0+c;
 end intrinsic;
 
 /////////////////////////////
@@ -903,6 +1062,22 @@ intrinsic '+'(f1::RngDiffPolElt,f2::RngDiffPolElt)->RngDiffPolElt
     end for;
     
     return result;
+end intrinsic;
+
+/////////////////////////////
+intrinsic '+'(f1::RngDiffPolElt,c::RngElt)->RngDiffPolElt
+/////////////////////////////
+{}
+    R:=Parent(f1);
+    return f1+R!c;
+end intrinsic;
+
+/////////////////////////////
+intrinsic '+'(c::RngElt,f1::RngDiffPolElt)->RngDiffPolElt
+/////////////////////////////
+{}
+    R:=Parent(f1);
+    return f1+R!c;
 end intrinsic;
 
 
@@ -1049,6 +1224,19 @@ intrinsic '-'(f1::RngDiffPolElt,f2::RngDiffPolElt)->RngDiffPolElt
 end intrinsic;
 
 
+/////////////////////////////
+intrinsic '-'(f1::RngDiffPolElt,c::RngIntElt)->RngDiffPolElt
+/////////////////////////////
+{}
+    return f1+(-c);
+end intrinsic;
+
+/////////////////////////////
+intrinsic '-'(c::RngIntElt,f1::RngDiffPolElt)->RngDiffPolElt
+/////////////////////////////
+{}
+    return c+(-f1);
+end intrinsic;
 
 
 
@@ -1125,55 +1313,67 @@ intrinsic Print(m1::RngDiffPolMon)
     vs:=variableNames(R);
     
     factors:=[];
-    for i in [1..n] do
-        for t in Terms(es[i]) do
-            m:=Coefficients(t)[1];
-            ord:=Degree(t);
-            if ord eq 0 and m eq 1 then
-                Append(~factors,Sprintf("%o",vs[i]));
-            elif ord eq 0 and m gt 1 then
-                Append(~factors,Sprintf("%o^%o",vs[i],m));
-            elif ord gt 0 and m eq 1 then
-                Append(~factors,Sprintf("D^%o(%o)",ord,vs[i]));
-            elif ord gt 0 and m gt 1 then
-                Append(~factors,Sprintf("D^%o(%o)^%o",ord,vs[i],m));
-            end if;
-        end for;
-    end for;
-
-    vprintf RngDiffPol, 4: "factors %o \n", factors;
-    
-    if #factors gt 0 then
-        output:=factors[1];
-        for i in [2..#factors] do
-            output:=output * "*" * factors[i];
-        end for;
+    if isOne(m1) then
+        printf "1";
     else
-        output:="";
-    end if;
+        for i in [1..n] do
+            for t in Terms(es[i]) do
+                m:=Coefficients(t)[1];
+                ord:=Degree(t);
+                if ord eq 0 and m eq 1 then
+                    Append(~factors,Sprintf("%o",vs[i]));
+                elif ord eq 0 and m gt 1 then
+                    Append(~factors,Sprintf("%o^%o",vs[i],m));
+                elif ord gt 0 and m eq 1 then
+                    Append(~factors,Sprintf("D^%o(%o)",ord,vs[i]));
+                elif ord gt 0 and m gt 1 then
+                    Append(~factors,Sprintf("D^%o(%o)^%o",ord,vs[i],m));
+                end if;
+            end for;
+        end for;
 
-    print output;
+        vprintf RngDiffPol, 4: "factors %o \n", factors;
+        
+        if #factors gt 0 then
+            output:=factors[1];
+            for i in [2..#factors] do
+                output:=output * "*" * factors[i];
+            end for;
+        else
+            output:="";
+        end if;
+
+        printf output;
+    end if;
 end intrinsic;
 
 intrinsic Print(f::RngDiffPolTerm)
 {}
-    if coeff(f) ne 1 then
-        printf "%o*%o",coeff(f),monomial(f);
-    else
+    if isOne(f) then
+        printf "1";
+    elif isConstant(f) then
+        printf "%o",coeff(f);
+    elif coeff(f) eq 1 then
         printf "%o",monomial(f);
+    else
+        printf "%o*%o", coeff(f),monomial(f);
     end if;
 end intrinsic;
 
 intrinsic Print(f::RngDiffPolElt)
 {}
-    terms:=[t : t in terms(f)];
-    //Sort(~terms);
-    printed_terms:=[Sprint(t): t in terms];
-    output:=printed_terms[1];
-    for i in [2..#terms] do
-        output:=output * " + " * printed_terms[i];
-    end for;
-    print output;
+    if isZero(f) then
+        printf "0";
+    else
+        terms:=[t : t in terms(f)];
+        //Sort(~terms);
+        printed_terms:=[Sprint(t): t in terms];
+        output:=printed_terms[1];
+        for i in [2..#terms] do
+            output:=output * " + " * printed_terms[i];
+        end for;
+        printf output;
+    end if;
 end intrinsic;
 
 
