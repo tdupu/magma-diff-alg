@@ -80,19 +80,45 @@ induce lexicographic term orderings.
     end if;
 end function;
 
+//#############################
+function orderly_lex(var1,var2)
+//#############################
+/*
+A comparison function for on pairs [i1,j1], [i2,j2], the MAGMA official documentation
+for comparison functions is below:
+
+//The comparison function C must take two arguments and return an integer less than,
+//equal to, or greater than 0 according to whether the first argument is less than,
+//equal to, or greater than the second argument (e.g.: func<x, y | x - y>).
+
+The basic idea is that we are going to pass rankings to our variables and these can
+induce lexicographic term orderings.
+*/
+    i1:=var1[1];
+    j1:=var1[2];
+    i2:=var2[1];
+    j2:=var2[2];
+    order_diff:=j1-j2;
+    if order_diff ne 0 then
+        return order_diff;
+    else
+        return i1-i2;
+    end if;
+end function;
+
 //##################################################
 //##################################################
 //  MAIN FUNCTION
 //##################################################
 //##################################################
 
-intrinsic differentialPolynomialRing(R::Rng, n::RngIntElt: order:=<"rank",rank_lex>) -> RngDiffPol
+intrinsic differentialPolynomialRing(R::Rng, n::RngIntElt: term_order:=<"rank",orderlyLexRank>) -> RngDiffPol
 {}
     P:=New(RngDiffPol);
     P`number_of_variables:=n;
     P`base_ring:=R;
     P`max_orders:=[5 : i in [1..n]];
-    P`term_order:=order;
+    P`term_order:=term_order;
     
     E<d>:=PolynomialRing(ZZ,1);
     P`exponent_ring:=E;
@@ -281,6 +307,13 @@ end intrinsic;
 
 /////////////////////////////
 intrinsic polynomialRing(R::RngDiffPol)->RngPol
+/////////////////////////////
+{}
+    return R`polynomial_ring;
+end intrinsic;
+
+/////////////////////////////
+intrinsic JetRing(R::RngDiffPol,r::RngIntElt)->RngMPol
 /////////////////////////////
 {}
     return R`polynomial_ring;
@@ -1370,32 +1403,149 @@ end intrinsic;
 //##################################################
 //##################################################
 
+intrinsic multiOrder(m::RngDiffPolMon)->SeqEnum
+{}
+    return [Degree(p) : p in exponent(m)];
+end intrinsic;
+
+intrinsic order(m::RngDiffPolMon)->RngIntElt,RngIntElt
+{}
+    return Maximum(multiOrder(m));
+end intrinsic;
+
+//#############################
+intrinsic orderlyLexRank(var1::SeqEnum,var2::SeqEnum)->RngIntElt
+//#############################
+{}
+/*
+A comparison function for on pairs [i1,j1], [i2,j2], the MAGMA official documentation
+for comparison functions is below:
+
+//The comparison function C must take two arguments and return an integer less than,
+//equal to, or greater than 0 according to whether the first argument is less than,
+//equal to, or greater than the second argument (e.g.: func<x, y | x - y>).
+
+The basic idea is that we are going to pass rankings to our variables and these can
+induce lexicographic term orderings.
+*/
+if #var1 eq 0 then
+    if #var2 eq 0 then
+        return 0;
+    elif #var2 eq 2 then
+        return 1;
+    end if;
+elif #var2 eq 0 then
+    return -1;
+else
+    i1:=var1[1];
+    j1:=var1[2];
+    i2:=var2[1];
+    j2:=var2[2];
+    order_diff:=j1-j2;
+    if order_diff ne 0 then
+        return order_diff;
+    else
+        return i1-i2;
+    end if;
+end if;
+end intrinsic;
+
+function lexVectorComparison(v1,v2)
+    //require #Eltseq(vec1) eq #Eltseq(vec2): "vectors must be of the same size";
+    my_vec:=v1-v2;
+    for i in [1..#Eltseq(my_vec)] do
+        if my_vec[i] gt 0 then
+            return my_vec[i];
+        elif my_vec[i] lt 0 then
+            return my_vec[i];
+        end if;
+    end for;
+    return 0;
+end function;
+
+intrinsic termOrderComparator(m1::RngDiffPolMon,m2::RngDiffPolMon)->RngIntElt
+{}
+    require Parent(m1) eq Parent(m2): "The parents must be the same";
+    R:=Parent(m1);
+    tup:=R`term_order;
+    order_type:=tup[1];
+    require order_type eq "rank": "only lexicographic term orderings subject to a ranking are implemented";
+    
+    rank_intrinsic:=tup[2];
+    ranking:=func<m1,m2|rank_intrinsic(m1,m2)>;
+    
+    seq1:=Eltseq(m1);
+    seq2:=Eltseq(m2);
+    my_dict:=AssociativeArray();
+    keys:=[k : k in ({ s[1]: s in seq1} join {s[1]: s in seq2})];
+    dict1:=AssociativeArray();
+    dict2:=AssociativeArray();
+
+    for s in seq1 do
+        dict1[s[1]]:=s[2];
+    end for;
+
+    for k in [k : k in keys | not k in Keys(dict1)] do
+        dict1[k]:=0;
+    end for;
+
+    for s in seq2 do
+        dict2[s[1]]:=s[2];
+    end for;
+
+    for k in [k : k in keys | not k in Keys(dict2)] do
+        dict2[k]:=0;
+    end for;
+    
+    Sort(~keys,ranking);
+    
+    lex_vec:=Vector([dict1[k]-dict2[k] : k in keys]);
+    trivial_vec:=Vector([0 : k in keys]);
+    return lexVectorComparison(lex_vec,trivial_vec);
+end intrinsic;
+
+
 ////////////////////////////////////
 intrinsic 'lt'(f1::RngDiffPolMon,f2::RngDiffPolMon)->BoolElt
 ///////////////////////////////////
 {}
-    polynomial(f1) lt polynomial(f2);
+    return termOrderComparator(f1,f2) lt 0;
 end intrinsic;
+
+/*
+
+//
+//THIS WAS ALREADY DEFINED SO I'M COMMENTING OUT.
+//
+
+////////////////////////////////////
+intrinsic 'eq'(f1::RngDiffPolMon,f2::RngDiffPolMon)->BoolElt
+///////////////////////////////////
+{}
+    return termOrderComparator(f1,f2) eq 0;
+end intrinsic;
+
+*/
 
 ////////////////////////////////////
 intrinsic 'le'(f1::RngDiffPolMon,f2::RngDiffPolMon)->BoolElt
 ///////////////////////////////////
 {}
-    polynomial(f1) le polynomial(f2);
+    return termOrderComparator(f1,f2) le 0;
 end intrinsic;
 
 ////////////////////////////////////
 intrinsic 'gt'(f1::RngDiffPolMon,f2::RngDiffPolMon)->BoolElt
 ///////////////////////////////////
 {}
-    return polynomial(f1) gt polynomial(f2);
+    return termOrderComparator(f1,f2) gt 0;
 end intrinsic;
 
 ////////////////////////////////////
 intrinsic 'ge'(f1::RngDiffPolMon,f2::RngDiffPolMon)->BoolElt
 ///////////////////////////////////
 {}
-    return polynomial(f1) ge polynomial(f2);
+    return termOrderComparator(f1,f2) ge 0;
 end intrinsic;
 
 //------------------------
@@ -1404,28 +1554,40 @@ end intrinsic;
 intrinsic 'lt'(f1::RngDiffPolTerm,f2::RngDiffPolTerm)->BoolElt
 ///////////////////////////////////
 {}
-    polynomial(f1) lt polynomial(f2);
+/*
+https://magma.maths.usyd.edu.au/magma/handbook/text/118#981
+
+Sort(S) : SeqEnum -> SeqEnum
+
+Given a complete enumerated sequence S whose terms belong to a structure on which lt and eq are defined, create the enumerated sequence formed by (quick-)sorting the terms of S into increasing order.
+There are two versions of this: a procedure, where S is replaced by the new sequence, and a function, which returns the new sequence. The procedural version takes a reference ~S to S as an argument.
+
+Note that the procedural version is much more efficient since the sequence S will not be copied.
+
+*/
+
+    return termOrderComparator(monomial(f1),monomial(f2)) lt 0;
 end intrinsic;
 
 ////////////////////////////////////
 intrinsic 'le'(f1::RngDiffPolTerm,f2::RngDiffPolTerm)->BoolElt
 ///////////////////////////////////
 {}
-    polynomial(f1) le polynomial(f2);
+    return termOrderComparator(monomial(f1),monomial(f2)) le 0;
 end intrinsic;
 
 ////////////////////////////////////
 intrinsic 'gt'(f1::RngDiffPolTerm,f2::RngDiffPolTerm)->BoolElt
 ///////////////////////////////////
 {}
-    return polynomial(f1) gt polynomial(f2);
+    return termOrderComparator(monomial(f1),monomial(f2)) gt 0;
 end intrinsic;
 
 ////////////////////////////////////
 intrinsic 'ge'(f1::RngDiffPolTerm,f2::RngDiffPolTerm)->BoolElt
 ///////////////////////////////////
 {}
-    return polynomial(f1) ge polynomial(f2);
+    return termOrderComparator(monomial(f1),monomial(f2)) ge 0;
 end intrinsic;
 
 //------------------------
@@ -1434,28 +1596,28 @@ end intrinsic;
 intrinsic 'lt'(f1::RngDiffPolElt,f2::RngDiffPolElt)->BoolElt
 ///////////////////////////////////
 {}
-    polynomial(f1) lt polynomial(f2);
+    return 0;
 end intrinsic;
 
 ////////////////////////////////////
 intrinsic 'le'(f1::RngDiffPolElt,f2::RngDiffPolElt)->BoolElt
 ///////////////////////////////////
 {}
-    polynomial(f1) le polynomial(f2);
+    return 0;
 end intrinsic;
 
 ////////////////////////////////////
 intrinsic 'gt'(f1::RngDiffPolElt,f2::RngDiffPolElt)->BoolElt
 ///////////////////////////////////
 {}
-    return polynomial(f1) gt polynomial(f2);
+    return 0;
 end intrinsic;
 
 ////////////////////////////////////
 intrinsic 'ge'(f1::RngDiffPolElt,f2::RngDiffPolElt)->BoolElt
 ///////////////////////////////////
 {}
-    return polynomial(f1) ge polynomial(f2);
+    return 0;
 end intrinsic;
 
 
@@ -1714,9 +1876,17 @@ end intrinsic;
 
 intrinsic Eltseq(mon:RngMonElt)->SeqEnum
 {}
+
     e:=exponent(mon);
     n:=Nvariables(Parent(mon));
-    return &cat[[<[i,Degree(t)],Coefficients(t)[1]> : t in Terms(e[i])] : i in [1..n]];
+    
+    vprintf RngDiffPol, 4: "%o", mon;
+    
+    if e eq [0 : i in [1..n]] then
+        return [<[],0>];
+    else
+        return &cat[[<[i,Degree(t)],Coefficients(t)[1]> : t in Terms(e[i])] : i in [1..n]];
+    end if;
 end intrinsic;
 
 /////////////////////////////
