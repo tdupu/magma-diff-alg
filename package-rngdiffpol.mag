@@ -1769,6 +1769,77 @@ intrinsic factor(m::RngDiffPolMon)->SeqEnum
 end intrinsic;
 
 
+/////////////////////////////
+intrinsic valuation(m::RngDiffPolMon,u::RngDiffPolMon)->RngIntElt
+/////////////////////////////
+{}
+    for f in factor(m) do
+        if f[1] eq u then
+            return f[2];
+        end if;
+    end for;
+
+    return 0;
+end intrinsic;
+
+/////////////////////////////
+intrinsic valuation(f::RngDiffPolElt,u::RngDiffPolMon)->RngIntElt
+/////////////////////////////
+{}
+    return Min([valuation(m,u) : m in monomials(f)]);
+end intrinsic;
+
+
+/////////////////////////////
+intrinsic '/'(m1::RngDiffPolMon,m2::RngDiffPolMon)->RngDiffPolMon
+/////////////////////////////
+{}
+    require Parent(m1) eq Parent(m2):"elements must have the same parent";
+    e:=Eltseq(Vector(exponent(m1))-Vector(exponent(m2)));
+    require &and[a ge 0 : a in e]: "Not an integral division";
+    R:=Parent(m1);
+    return monomial(R,e);
+end intrinsic;
+
+/////////////////////////////
+intrinsic divides(m2::RngDiffPolMon,m1::RngDiffPolMon)->BoolElt
+/////////////////////////////
+{}
+    require Parent(m1) eq Parent(m2):"elements must have the same parent";
+    e:=Eltseq(Vector(exponent(m1))-Vector(exponent(m2)));
+    return &and[a ge 0 : a in e];
+end intrinsic;
+
+/////////////////////////////
+intrinsic gcd(m2::RngDiffPolMon,m1::RngDiffPolMon)->RngDiffPolMon
+/////////////////////////////
+{}
+    R:=Parent(m1);
+    require R eq Parent(m2):"Monomials not in same ring";
+    E:=exponentRing(R);
+    d:=E.1;
+    ff:=exponent(m1);
+    gg:=exponent(m2);
+    
+    function gcd_poly(f,g)
+        m:=Max([Degree(f),Degree(g)]);
+
+        function taylor_coeffs(f)
+            return [Integers()!Evaluate(Derivative(f,n,d),[0])/Factorial(n) : n in [0..m]];
+        end function;
+
+        coeffs:=[Integers()!Min(taylor_coeffs(f)[i],taylor_coeffs(g)[i]) : i in [1..m+1]];
+        return &+[coeffs[i]*d^(i-1) : i in [1..m+1]];
+    end function;
+    
+    len:=#ff;
+    new_e:=[gcd_poly(ff[i],gg[i]) : i in [1..len]];
+    
+    return monomial(R,new_e);
+    
+end intrinsic;
+
+
 //##################################################
 //##################################################
 //  POLYNOMIAL ALGORITHMS
@@ -1894,8 +1965,6 @@ intrinsic ranking(R::RngDiffPol)->UserProgram
 }
     //---printing---
     vprintf RngDiffPol, 5: "Requesting the ranking of the ring of differential polynomials... \n";
-    
-
 
     if not assigned R`ranking then
         //---printing---
