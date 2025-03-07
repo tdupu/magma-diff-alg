@@ -289,13 +289,6 @@ intrinsic terms(m::RngDiffPolMon)->SetEnum[RngDiffPolTerm]
     return {term(m)};
 end intrinsic;
 
-/////////////////////////////
-intrinsic sorted_terms(dpoly::RngDiffPolElt)->SetEnum[RngDiffPolTerm]
-/////////////////////////////
-{}
-    my_comparison:=func<x,y|termOrderComparator(monomial(x),monomial(y))>;
-    return mySort([t: t in terms(dpoly)],my_comparison);
-end intrinsic;
 
 /////////////////////////////
 intrinsic coeff(f0::RngDiffPolTerm)->RngElt
@@ -489,6 +482,17 @@ intrinsic monomial(R::RngDiffPol, e::SeqEnum[RngElt])->RngDiffPolMon
     
     return mon;
     
+end intrinsic;
+
+intrinsic monomial(R::RngDiffPol,seq::SeqEnum)->RngDiffPolMon
+{Create a monomial from an element sequence}
+/*
+f:=3*Diff(x,2)*Diff(y,1)^2+(1/2)*z+2;
+sortedTerms(f);
+m:=leadingMonomial(f);
+monomial(Parent(m),Eltseq_m(m)) eq m;
+*/
+    return &*[R.seqi[1]^seqi[2] : seqi in seq];
 end intrinsic;
 
 /////////////////////////////
@@ -1516,7 +1520,7 @@ else
     j1:=var1[2];
     i2:=var2[1];
     j2:=var2[2];
-    order_diff:=j1-j2;
+    order_diff:=j2-j1;
     if order_diff ne 0 then
         return order_diff;
     else
@@ -1542,41 +1546,45 @@ intrinsic termOrderComparator(m1::RngDiffPolMon,m2::RngDiffPolMon)->RngIntElt
 {}
     require Parent(m1) eq Parent(m2): "The parents must be the same";
     R:=Parent(m1);
-    tup:=R`term_order;
-    order_type:=tup[1];
-    require order_type eq "rank": "only lexicographic term orderings subject to a ranking are implemented";
     
-    rank_intrinsic:=tup[2];
-    ranking:=func<m1,m2|rank_intrinsic(m1,m2)>;
-    
-    seq1:=Eltseq_m(m1);
-    seq2:=Eltseq_m(m2);
-    my_dict:=AssociativeArray();
-    keys:=[k : k in ({ s[1]: s in seq1} join {s[1]: s in seq2})];
-    dict1:=AssociativeArray();
-    dict2:=AssociativeArray();
+    if m1 eq one(R) then
+        return -1;
+    else
+        tup:=R`term_order;
+        order_type:=tup[1];
+        require order_type eq "rank": "only lexicographic term orderings subject to a ranking are implemented";
+        rank_intrinsic:=tup[2];
+        ranking:=func<m1,m2|rank_intrinsic(m1,m2)>;
+        
+        seq1:=Eltseq_m(m1);
+        seq2:=Eltseq_m(m2);
+        my_dict:=AssociativeArray();
+        keys:=[k : k in ({ s[1]: s in seq1} join {s[1]: s in seq2})];
+        dict1:=AssociativeArray();
+        dict2:=AssociativeArray();
 
-    for s in seq1 do
-        dict1[s[1]]:=s[2];
-    end for;
+        for s in seq1 do
+            dict1[s[1]]:=s[2];
+        end for;
 
-    for k in [k : k in keys | not k in Keys(dict1)] do
-        dict1[k]:=0;
-    end for;
+        for k in [k : k in keys | not k in Keys(dict1)] do
+            dict1[k]:=0;
+        end for;
 
-    for s in seq2 do
-        dict2[s[1]]:=s[2];
-    end for;
+        for s in seq2 do
+            dict2[s[1]]:=s[2];
+        end for;
 
-    for k in [k : k in keys | not k in Keys(dict2)] do
-        dict2[k]:=0;
-    end for;
-    
-    Sort(~keys,ranking);
-    
-    lex_vec:=Vector([dict1[k]-dict2[k] : k in keys]);
-    trivial_vec:=Vector([0 : k in keys]);
-    return lexVectorComparison(lex_vec,trivial_vec);
+        for k in [k : k in keys | not k in Keys(dict2)] do
+            dict2[k]:=0;
+        end for;
+        
+        Sort(~keys,ranking);
+        
+        lex_vec:=Vector([dict1[k]-dict2[k] : k in keys]);
+        trivial_vec:=Vector([0 : k in keys]);
+        return lexVectorComparison(lex_vec,trivial_vec);
+    end if;
 end intrinsic;
 
 
@@ -1669,6 +1677,96 @@ intrinsic 'ge'(f1::RngDiffPolElt,f2::RngDiffPolElt)->BoolElt
 end intrinsic;
 
 
+//##################################################
+//  Leading Monomials/Leaders/Separants
+//##################################################
+
+
+/////////////////////////////
+intrinsic sortedTerms(dpoly::RngDiffPolElt)->SetEnum[RngDiffPolTerm]
+/////////////////////////////
+{}
+    my_comparison:=func<x,y|termOrderComparator(monomial(x),monomial(y))>;
+    return mySort([t: t in terms(dpoly)],my_comparison);
+end intrinsic;
+
+/////////////////////////////
+intrinsic sorted(seq::SeqEnum)->SeqEnum
+/////////////////////////////
+{}
+    //require &and[Type(x) eq RngDiffPolTerm : x in seq]: "Input not a sequence of terms";
+    my_comparison:=func<x,y|termOrderComparator(leadingMonomial(x),leadingMonomial(y))>;
+    return mySort(seq,my_comparison);
+end intrinsic;
+
+
+/////////////////////////////
+intrinsic leadingTerm(f::RngDiffPolElt)->RngDiffPolTerm
+/////////////////////////////
+{}
+    s:=sortedTerms(f);
+    return s[#s];
+end intrinsic;
+
+/////////////////////////////
+intrinsic leadingTerm(f::RngDiffPolTerm)->RngDiffPolTerm
+/////////////////////////////
+{}
+    return f;
+end intrinsic;
+
+/////////////////////////////
+intrinsic leadingTerm(f::RngDiffPolMon)->RngDiffPolTerm
+/////////////////////////////
+{}
+    return term(f);
+end intrinsic;
+
+/////////////////////////////
+intrinsic leadingMonomial(f::RngDiffPolElt)->RngDiffPolMon
+/////////////////////////////
+{}
+    return monomial(leadingTerm(f));
+end intrinsic;
+
+/////////////////////////////
+intrinsic leadingMonomial(f::RngDiffPolTerm)->RngDiffPolMon
+/////////////////////////////
+{}
+    return monomial(f);
+end intrinsic;
+
+/////////////////////////////
+intrinsic leadingMonomial(f::RngDiffPolMon)->RngDiffPolMon
+/////////////////////////////
+{}
+    return f;
+end intrinsic;
+
+
+/////////////////////////////
+intrinsic leader(f::RngDiffPolElt)->RngDiffPolMon
+/////////////////////////////
+{}
+    m:=leadingMonomial(f);
+    s:=sorted([monomial(Parent(m),[<s[1],1>]) : s in Eltseq_m(m)]);
+    return s[#s];
+end intrinsic;
+
+/////////////////////////////
+intrinsic leadingVariable(f::RngDiffPolElt)->RngDiffPolMon
+/////////////////////////////
+{}
+    R:=Parent(f);
+    return R.Eltseq_m(leader(f))[1][1][1];
+end intrinsic;
+
+/////////////////////////////
+intrinsic factor(m::RngDiffPolMon)->SeqEnum
+/////////////////////////////
+{Factor a monomial into a product of its variables}
+    return [ <monomial(Parent(m),[<s[1],1>]),s[2]> : s in Eltseq_m(m)];
+end intrinsic;
 
 
 //##################################################
