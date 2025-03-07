@@ -11,8 +11,10 @@ ZZ:=IntegerRing();
 QQ:=RationalField();
 
 declare type RngDiffPol[RngDiffPolElt];
-declare type RngDiffPolMon: RngDiffPolTerm, RngDiffPolElt;
-declare type RngDiffPolTerm: RngDiffPolElt;
+declare type RngDiffPolTerm;
+declare type RngDiffPolMon;
+//declare type RngDiffPolMon: RngDiffPolTerm, RngDiffPolElt;
+//declare type RngDiffPolTerm: RngDiffPolElt;
 
 declare attributes RngDiffPol:
     base_ring,
@@ -53,6 +55,16 @@ declare attributes RngDiffPolMon:
 This is used instantiate diffentialPolynomialFunction with lex_rank as a parameter.
 
 */
+
+function mySort(seq,comparison)
+    n:=#seq;
+    comp:=func<i,j|comparison(seq[i],seq[j])>;
+    new_seq:=Sort([1..n],comp);
+    return [seq[new_seq[i]] : i in [1..n]];
+end function;
+
+
+
     
 //#############################
 function rank_lex(var1,var2)
@@ -117,18 +129,10 @@ intrinsic differentialPolynomialRing(R::Rng, n::RngIntElt: term_order:=<"rank",o
     P:=New(RngDiffPol);
     P`number_of_variables:=n;
     P`base_ring:=R;
-    P`max_orders:=[5 : i in [1..n]];
     P`term_order:=term_order;
     
     E<d>:=PolynomialRing(ZZ,1);
     P`exponent_ring:=E;
-    
-    polynomial_ring:=PolynomialRing(R,n*6);
-    coercion_maps:=AssociativeArray();
-    coercion_maps[[0,0]]:=Id(polynomial_ring);
-    
-    P`coercion_maps:=coercion_maps;
-    P`polynomial_ring:=polynomial_ring;
     
     return P;
 end intrinsic;
@@ -228,6 +232,14 @@ intrinsic monomial(t1::RngDiffPolTerm)->RngDiffPolMon
 
 end intrinsic;
 
+/////////////////////////////
+intrinsic monomial(t1::RngDiffPolMon)->RngDiffPolMon
+/////////////////////////////
+{}
+    return t1;
+
+end intrinsic;
+
 
 /////////////////////////////
 intrinsic monomials(dpoly::RngDiffPolElt)->Set
@@ -246,7 +258,7 @@ intrinsic exponentRing(R::RngDiffPol)->RngUPol
 end intrinsic;
 
 /////////////////////////////
-intrinsic exponent(mon::RngDiffPolTerm)->SeqEnum[RngUPolElt]
+intrinsic exponent(mon::RngDiffPolMon)->SeqEnum[RngUPolElt]
 /////////////////////////////
 {}
     return mon`exponent;
@@ -275,6 +287,14 @@ intrinsic terms(m::RngDiffPolMon)->SetEnum[RngDiffPolTerm]
 /////////////////////////////
 {}
     return {term(m)};
+end intrinsic;
+
+/////////////////////////////
+intrinsic sorted_terms(dpoly::RngDiffPolElt)->SetEnum[RngDiffPolTerm]
+/////////////////////////////
+{}
+    my_comparison:=func<x,y|termOrderComparator(monomial(x),monomial(y))>;
+    return mySort([t: t in terms(dpoly)],my_comparison);
 end intrinsic;
 
 /////////////////////////////
@@ -367,25 +387,25 @@ end intrinsic;
 
 
 /////////////////////////////
-intrinsic isTerm(f::RngDiffPolElt)->BoolElt,.
+intrinsic isTerm(f::RngDiffPolElt)->BoolElt
 /////////////////////////////
 {}
     ts:=[t: t in terms(f)];
     if #ts eq 1 then
-        return true,ts[1];
+        return true;
     else
         return false;
     end if;
 end intrinsic;
 
 /////////////////////////////
-intrinsic term(p::RngDiffPolElt) -> RngDiffPolTerm
+intrinsic term(f::RngDiffPolElt) -> RngDiffPolTerm
 /////////////////////////////
 {}
-   is_term,term:=isTerm(p);
-   require is_term: "Can't be made a term";
-   return term;
-end intrinsic;
+    ts:=[t: t in terms(f)];
+    require #ts eq 1: "Differential polynomial must be a term";
+    return ts[1];
+    end intrinsic;
 
 /////////////////////////////
 intrinsic isMonomial(p::RngDiffPolElt) -> BoolElt,.
@@ -404,12 +424,13 @@ intrinsic isMonomial(p::RngDiffPolElt) -> BoolElt,.
 end intrinsic;
 
 /////////////////////////////
-intrinsic monomial(p::RngDiffPolElt) -> RngDiffPolMon
+intrinsic monomial(f::RngDiffPolElt) -> RngDiffPolMon
 /////////////////////////////
 {}
-   is_mon,mon:=isTerm(p);
-   require is_mon: "Can't be made a monomial";
-   return mon;
+    ts:=[t: t in terms(f)];
+    require #ts eq 1: "Differential polynomial must be a term";
+    t1:=ts[1];
+    return monomial(Parent(t1),exponent(t1));
 end intrinsic;
 
 /////////////////////////////
@@ -483,8 +504,9 @@ end intrinsic;
 intrinsic isOne(p::RngDiffPolElt) -> RngDiffPolMon
 /////////////////////////////
 {}
-    mybool,myterm:=isTerm(p);
+    mybool:=isTerm(p);
     if mybool then
+        myterm:=term(p);
         if coefficient(myterm) eq 1 then
             R:=Parent(myterm);
             return (one(R) eq monomial(myterm));
@@ -600,6 +622,14 @@ intrinsic differentialPolynomial(t1::RngDiffPolMon)->RngDiffPolElt
 end intrinsic;
 
 /////////////////////////////
+intrinsic differentialPolynomial(t1::RngDiffPolElt)->RngDiffPolElt
+/////////////////////////////
+{}
+    return t1;
+    
+end intrinsic;
+
+/////////////////////////////
 intrinsic IsCoercible(R::RngDiffPol,x::.) -> BoolElt,.
 /////////////////////////////
 {}
@@ -614,13 +644,26 @@ intrinsic IsCoercible(R::RngDiffPol,x::.) -> BoolElt,.
         if Parent(t) eq R then
             return true, differentialPolynomial(x);
         end if;
-    elif x in baseRing(R) then
-        return true, differentialPolynomial(term(R,x));
-    //else
-    //    y:=x*(R!1);
-    //    return true, y;
+    elif Type(x) eq RngIntElt then
+        if x eq 0 then
+            return true, zero(R);
+        else
+            return true, differentialPolynomial(term(R,baseRing(R)!x));
+        end if;
+    elif Type(x) eq SeqEnum then
+        if #x eq 0 then
+            return true, R!0;
+        else
+            return true, &+[s[1]*&*[(R.t[1])^t[2] : t in s[2]] : s in x];
+        end if;
+    elif Type(x) eq RngElt then
+        if x in baseRing(R) then
+            return true, differentialPolynomial(term(R,baseRing(R)!x));
+        end if;
+    else
+        return false;
     end if;
-    
+
 end intrinsic;
 
 //##################################################
@@ -850,6 +893,21 @@ intrinsic Diff(f1::RngDiffPolElt,n::RngIntElt)->RngDiffPolElt
     else
         return Diff(Diff(f1,n-1));
     end if;
+end intrinsic;
+
+/////////////////////////////
+intrinsic Diff(f1::RngDiffPolMon,n::RngIntElt)->RngDiffPolElt
+/////////////////////////////
+{}
+    require n ge 0: "Must take a non-negative number of derivatives";
+    
+    if n eq 0 then
+        return f1;
+    elif n eq 1 then
+        return Diff(f1);
+    else
+        return Diff(Diff(f1,n-1));
+    end if;
     
 end intrinsic;
 
@@ -864,12 +922,12 @@ intrinsic '^'(f1::RngDiffPolElt,n::RngIntElt)->RngDiffPolElt
 /////////////////////////////
 {}
 
-require n gt 0: "n must be a non-negative integer";
+require n ge 0: "n must be a non-negative integer";
 
 R:=Parent(f1);
 
 if n eq 0 then
-    return polynomial(one(R));
+    return differentialPolynomial(one(R));
 else
     return &*[f1 : i in [1..n]];
 end if;
@@ -881,7 +939,7 @@ intrinsic '^'(f1::RngDiffPolTerm,n::RngIntElt)->RngDiffPolTerm
 /////////////////////////////
 {}
 
-require n gt 0: "n must be a non-negative integer";
+require n ge 0: "n must be a non-negative integer";
 
 R:=Parent(f1);
 
@@ -898,7 +956,7 @@ intrinsic '^'(f1::RngDiffPolMon,n::RngIntElt)->RngDiffPolMon
 /////////////////////////////
 {}
 
-require n gt 0: "n must be a non-negative integer";
+require n ge 0: "n must be a non-negative integer";
 
 R:=Parent(f1);
 
@@ -1403,6 +1461,23 @@ end intrinsic;
 //##################################################
 //##################################################
 
+/*
+https://magma.maths.usyd.edu.au/magma/handbook/text/118#981
+
+Sort(S) : SeqEnum -> SeqEnum
+
+Given a complete enumerated sequence S whose terms belong to a structure on which lt and eq are defined, create the enumerated sequence formed by (quick-)sorting the terms of S into increasing order.
+There are two versions of this: a procedure, where S is replaced by the new sequence, and a function, which returns the new sequence. The procedural version takes a reference ~S to S as an argument.
+
+Note that the procedural version is much more efficient since the sequence S will not be copied.
+
+*/
+
+
+/*
+Something is wrong with the sorting... I tried playing with the universes and all sorts of coercion but that doesn't seem to work so I'm making my own sorting function for monomials which is a hack that bypasses the types.
+*/
+
 intrinsic multiOrder(m::RngDiffPolMon)->SeqEnum
 {}
     return [Degree(p) : p in exponent(m)];
@@ -1474,8 +1549,8 @@ intrinsic termOrderComparator(m1::RngDiffPolMon,m2::RngDiffPolMon)->RngIntElt
     rank_intrinsic:=tup[2];
     ranking:=func<m1,m2|rank_intrinsic(m1,m2)>;
     
-    seq1:=Eltseq(m1);
-    seq2:=Eltseq(m2);
+    seq1:=Eltseq_m(m1);
+    seq2:=Eltseq_m(m2);
     my_dict:=AssociativeArray();
     keys:=[k : k in ({ s[1]: s in seq1} join {s[1]: s in seq2})];
     dict1:=AssociativeArray();
@@ -1512,21 +1587,6 @@ intrinsic 'lt'(f1::RngDiffPolMon,f2::RngDiffPolMon)->BoolElt
     return termOrderComparator(f1,f2) lt 0;
 end intrinsic;
 
-/*
-
-//
-//THIS WAS ALREADY DEFINED SO I'M COMMENTING OUT.
-//
-
-////////////////////////////////////
-intrinsic 'eq'(f1::RngDiffPolMon,f2::RngDiffPolMon)->BoolElt
-///////////////////////////////////
-{}
-    return termOrderComparator(f1,f2) eq 0;
-end intrinsic;
-
-*/
-
 ////////////////////////////////////
 intrinsic 'le'(f1::RngDiffPolMon,f2::RngDiffPolMon)->BoolElt
 ///////////////////////////////////
@@ -1554,18 +1614,6 @@ end intrinsic;
 intrinsic 'lt'(f1::RngDiffPolTerm,f2::RngDiffPolTerm)->BoolElt
 ///////////////////////////////////
 {}
-/*
-https://magma.maths.usyd.edu.au/magma/handbook/text/118#981
-
-Sort(S) : SeqEnum -> SeqEnum
-
-Given a complete enumerated sequence S whose terms belong to a structure on which lt and eq are defined, create the enumerated sequence formed by (quick-)sorting the terms of S into increasing order.
-There are two versions of this: a procedure, where S is replaced by the new sequence, and a function, which returns the new sequence. The procedural version takes a reference ~S to S as an argument.
-
-Note that the procedural version is much more efficient since the sequence S will not be copied.
-
-*/
-
     return termOrderComparator(monomial(f1),monomial(f2)) lt 0;
 end intrinsic;
 
@@ -1596,28 +1644,28 @@ end intrinsic;
 intrinsic 'lt'(f1::RngDiffPolElt,f2::RngDiffPolElt)->BoolElt
 ///////////////////////////////////
 {}
-    return 0;
+    return termOrderComparator(monomial(f1),monomial(f2)) lt 0;;
 end intrinsic;
 
 ////////////////////////////////////
 intrinsic 'le'(f1::RngDiffPolElt,f2::RngDiffPolElt)->BoolElt
 ///////////////////////////////////
 {}
-    return 0;
+    return termOrderComparator(monomial(f1),monomial(f2)) le 0;;
 end intrinsic;
 
 ////////////////////////////////////
 intrinsic 'gt'(f1::RngDiffPolElt,f2::RngDiffPolElt)->BoolElt
 ///////////////////////////////////
 {}
-    return 0;
+    return termOrderComparator(monomial(f1),monomial(f2)) gt 0;;
 end intrinsic;
 
 ////////////////////////////////////
 intrinsic 'ge'(f1::RngDiffPolElt,f2::RngDiffPolElt)->BoolElt
 ///////////////////////////////////
 {}
-    return 0;
+    return termOrderComparator(monomial(f1),monomial(f2)) gt 0;;
 end intrinsic;
 
 
@@ -1874,8 +1922,12 @@ intrinsic setMaxOrders(R::RngDiffPol,rs::SeqEnum[RngIntElt])
     
 end intrinsic;
 
-intrinsic Eltseq(mon:RngMonElt)->SeqEnum
+intrinsic Eltseq_m(mon:RngPolDiffMon)->SeqEnum
 {}
+/*
+We want all the element sequences to be the same to the user.
+These element sequences for Rngare going to be special.
+*/
 
     e:=exponent(mon);
     n:=Nvariables(Parent(mon));
@@ -1883,10 +1935,29 @@ intrinsic Eltseq(mon:RngMonElt)->SeqEnum
     vprintf RngDiffPol, 4: "%o", mon;
     
     if e eq [0 : i in [1..n]] then
-        return [<[],0>];
+        return [<[1,0],0>];
     else
         return &cat[[<[i,Degree(t)],Coefficients(t)[1]> : t in Terms(e[i])] : i in [1..n]];
     end if;
+end intrinsic;
+
+intrinsic Eltseq(f::RngDiffPolElt)->SeqEnum
+{}
+    if f eq Parent(f)!0 then
+        return [];
+    else
+        return [ <coeff(t),Eltseq_m(monomial(t))> : t in terms(f)];
+    end if;
+end intrinsic;
+
+intrinsic Eltseq(f::RngDiffPolMon)->SeqEnum
+{}
+    return Eltseq(differentialPolynomial(f));
+end intrinsic;
+
+intrinsic Eltseq(f::RngDiffPolTerm)->SeqEnum
+{}
+    return Eltseq(differentialPolynomial(f));
 end intrinsic;
 
 /////////////////////////////
