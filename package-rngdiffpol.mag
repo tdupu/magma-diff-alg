@@ -118,6 +118,56 @@ induce lexicographic term orderings.
     end if;
 end function;
 
+//#############################
+//intrinsic orderlyLexRank(var1::SeqEnum,var2::SeqEnum)->RngIntElt
+function orderlyLexRank(var1,var2)
+//#############################
+/*
+A comparison function for on pairs [i1,j1], [i2,j2], the MAGMA official documentation
+for comparison functions is below:
+
+//The comparison function C must take two arguments and return an integer less than,
+//equal to, or greater than 0 according to whether the first argument is less than,
+//equal to, or greater than the second argument (e.g.: func<x, y | x - y>).
+
+The basic idea is that we are going to pass rankings to our variables and these can
+induce lexicographic term orderings.
+*/
+if #var1 eq 0 then
+    if #var2 eq 0 then
+        return 0;
+    elif #var2 eq 2 then
+        return 1;
+    end if;
+elif #var2 eq 0 then
+    return -1;
+else
+    i1:=var1[1];
+    j1:=var1[2];
+    i2:=var2[1];
+    j2:=var2[2];
+    order_diff:=j2-j1;
+    if order_diff ne 0 then
+        return order_diff;
+    else
+        return i1-i2;
+    end if;
+end if;
+end function;
+
+function lexVectorComparison(v1,v2)
+    //require #Eltseq(vec1) eq #Eltseq(vec2): "vectors must be of the same size";
+    my_vec:=v1-v2;
+    for i in [1..#Eltseq(my_vec)] do
+        if my_vec[i] gt 0 then
+            return my_vec[i];
+        elif my_vec[i] lt 0 then
+            return my_vec[i];
+        end if;
+    end for;
+    return 0;
+end function;
+
 //##################################################
 //##################################################
 //  MAIN FUNCTION
@@ -1486,77 +1536,9 @@ Note that the procedural version is much more efficient since the sequence S wil
 Something is wrong with the sorting... I tried playing with the universes and all sorts of coercion but that doesn't seem to work so I'm making my own sorting function for monomials which is a hack that bypasses the types.
 */
 
-intrinsic orders(m::RngDiffPolMon)->SeqEnum
-{}
-    return [Degree(p) : p in exponent(m)];
-end intrinsic;
 
-intrinsic order(m::RngDiffPolMon)->RngIntElt,RngIntElt
-{}
-    return Maximum(orders(m));
-end intrinsic;
 
-intrinsic orders(f::RngDiffPolElt)->SeqEnum
-{Get the sequences of orders of differential polynomials with respect to each of the variables.}
-    R:=Parent(f);
-    ords:=[orders(monomial(t)) : t in terms(f)];
-    return [Maximum([ord[j] : ord in ords]): j in [1..Nvariables(R)]];
-end intrinsic;
 
-intrinsic order(f::RngDiffPolElt)->SeqEnum
-{Get the maximum order of a derivative appearing in a differential polynomial.}
-    return Maximum(orders(f));
-end intrinsic;
-
-//#############################
-intrinsic orderlyLexRank(var1::SeqEnum,var2::SeqEnum)->RngIntElt
-//#############################
-{}
-/*
-A comparison function for on pairs [i1,j1], [i2,j2], the MAGMA official documentation
-for comparison functions is below:
-
-//The comparison function C must take two arguments and return an integer less than,
-//equal to, or greater than 0 according to whether the first argument is less than,
-//equal to, or greater than the second argument (e.g.: func<x, y | x - y>).
-
-The basic idea is that we are going to pass rankings to our variables and these can
-induce lexicographic term orderings.
-*/
-if #var1 eq 0 then
-    if #var2 eq 0 then
-        return 0;
-    elif #var2 eq 2 then
-        return 1;
-    end if;
-elif #var2 eq 0 then
-    return -1;
-else
-    i1:=var1[1];
-    j1:=var1[2];
-    i2:=var2[1];
-    j2:=var2[2];
-    order_diff:=j2-j1;
-    if order_diff ne 0 then
-        return order_diff;
-    else
-        return i1-i2;
-    end if;
-end if;
-end intrinsic;
-
-function lexVectorComparison(v1,v2)
-    //require #Eltseq(vec1) eq #Eltseq(vec2): "vectors must be of the same size";
-    my_vec:=v1-v2;
-    for i in [1..#Eltseq(my_vec)] do
-        if my_vec[i] gt 0 then
-            return my_vec[i];
-        elif my_vec[i] lt 0 then
-            return my_vec[i];
-        end if;
-    end for;
-    return 0;
-end function;
 
 intrinsic termOrderComparator(m1::RngDiffPolMon,m2::RngDiffPolMon)->RngIntElt
 {}
@@ -1697,6 +1679,27 @@ end intrinsic;
 //  Leading Monomials/Leaders/Separants
 //##################################################
 
+intrinsic orders(m::RngDiffPolMon)->SeqEnum
+{}
+    return [Degree(p) : p in exponent(m)];
+end intrinsic;
+
+intrinsic order(m::RngDiffPolMon)->RngIntElt,RngIntElt
+{}
+    return Maximum(orders(m));
+end intrinsic;
+
+intrinsic orders(f::RngDiffPolElt)->SeqEnum
+{Get the sequences of orders of differential polynomials with respect to each of the variables.}
+    R:=Parent(f);
+    ords:=[orders(monomial(t)) : t in terms(f)];
+    return [Maximum([ord[j] : ord in ords]): j in [1..Nvariables(R)]];
+end intrinsic;
+
+intrinsic order(f::RngDiffPolElt)->SeqEnum
+{Get the maximum order of a derivative appearing in a differential polynomial.}
+    return Maximum(orders(f));
+end intrinsic;
 
 /////////////////////////////
 intrinsic sortedTerms(dpoly::RngDiffPolElt)->SetEnum[RngDiffPolTerm]
@@ -1831,8 +1834,6 @@ intrinsic '/'(t1::RngDiffPolTerm,u::RngDiffPolMon)->RngDiffPolMon
     return coefficient(t1)*(monomial(t1)/u);
 end intrinsic;
 
-
-
 /////////////////////////////
 intrinsic divides(m2::RngDiffPolMon,m1::RngDiffPolMon)->BoolElt
 /////////////////////////////
@@ -1908,254 +1909,6 @@ intrinsic separant(f::RngDiffPolElt)->RngDiffPolElt
 end intrinsic;
 
 
-//##################################################
-//##################################################
-//  POLYNOMIAL ALGORITHMS
-//##################################################
-//##################################################
-
-////////////////////////////////////
-intrinsic polynomialTermOrder(R::RngDiffPol)->RngPol
-////////////////////////////////////
-{}
-    //http://magma.maths.usyd.edu.au/magma/handbook/text/1259#14366
-    // PolynomialRing(Z, 4, "elim", [1, 4], [2, 3])
-    //<"weight", [ 100, 10, 1, 1, 10, 100, 1, 1, 1 ]>
-    return <"weight",weights(R)>;
-end intrinsic;
-
-/////////////////////////////////
-intrinsic NpolynomialVariables(R::RngDiffPol)->RngIntElt
-/////////////////////////////////
-{}
-    max_orders:=maxOrders(R);
-    return #max_orders+&+max_orders;
-    
-end intrinsic;
-
-
-///////////////////////////////////////
-intrinsic weights(R::RngDiffPol,term_order)->SeqEnum
-///////////////////////////////////////
-{}
-    /*
-    Order the monomials and then figure out which variable they correspond to.
-    If lex, then you just put the standard basis vectors in rows corresponding to their order.
-    If block, then you need to do one block at a time as in the example below:
-    
-    <"elim", [ 1, 4 ], [ 2, 3 ]>
-    > MonomialOrderWeightVectors(P);
-
-    [ 1, 0, 0, 1 ],
-    [ 1, 0, 0, 0 ],
-    [ 0, 1, 1, 0 ],
-    [ 0, 1, 0, 0 ]
-    
-    We will have much larger blocks though.
-    First there will be max_order[1]+1 variables corresp to x1 and its ders.
-    Second there will be max_order[2]+1 variables corresp to x2 and its ders.
-    ...
-    If we have a block order [[3],[1],[2,4]] then this corresponds to a block order
-    [ [3,n3],...,[3,0] ], [ [1,n1],...,[1,0] ], [ [2,j],[4,j] ] ordered according to j first then according to 2]
-    */
-    max_orders:=maxOrders(R);
-    N:=NpolynomialVariables(R);
-    
-    tup:=monomialOrder(R);
-    label:=tup[1];
-    data:=tup[2];
-    
-    if label eq "elim" then
-        dblocks:=data;
-        blocks:=dblocks_to_blocks(R,dblocks);
-        return MonomialOrderWeightVectors(<"elim",Explode(blocks)>);
-    elif label eq "rank" then
-        //data:=comparison_function;
-        seq:=[polynomialIndex(R,pair) : pair in rankingSeq(R)];
-        A:=FreeAbelianGroup(N);
-        W:=[Eltseq(A.i) : i in seq];
-        return W;
-    end if;
-end intrinsic;
-
-
-////////////////////////////////////
-intrinsic dblocks_to_blocks(R,dblocks::SeqEnum)->SeqEnum
-////////////////////////////////////
-{}
-
-/*
-dblocks:=[ [1,2],[3,4] ];
-dblocks:=[ [1,2,3,4]]; //pure lexicographic
-dblocks:=[[1],[2],[3],[4]]; //pure elimination
-
-*/
-    max_orders:=maxOrders(R);
-    return [ &cat[ Reverse([ polynomialIndex(R,[i,j]) : j in [0..max_orders[i]] ]) : i in dblock] : dblock in dblocks];
-end intrinsic;
-
-////////////////////////////////////
-intrinsic polynomialIndex(R::RngDiffElt,pair::SeqEnum[RngIntElt])->RngIntElt
-////////////////////////////////////
-{
-
-If the maximum orders are r(1),r(2),...,r(n) with n-variables, then
-    index of [i,r]= (r(1)+1)+(r(2)+1)+...+(r(i-1)+1)+r+1
-    
-}
-
-    i,r:=Explode(pair);
-    orders:=maxOrders(R);
-    require r le orders[i]: "The order exceeds the bound. Adjust the bound using setMaxOrder.";
-    
-    A:=&+[orders[j] : j in [1..i-1]];
-    B:=(#orders-i)-1;
-    C:=r;
-    
-    return A+B+C;
-    
-end intrinsic;
-
-
-////////////////////////////////////
-intrinsic monomialOrder(R::RngDiffElt)->Tup
-////////////////////////////////////
-{}
-    return R`term_order;
-end intrinsic;
-
-////////////////////////////////////
-intrinsic ranking(R::RngDiffPol)->UserProgram
-////////////////////////////////////
-{
-    
-}
-    //---printing---
-    vprintf RngDiffPol, 5: "Requesting the ranking of the ring of differential polynomials... \n";
-
-    if not assigned R`ranking then
-        //---printing---
-        vprintf RngDiffPol, 5: "Ranking has not been assigned... \n";
-        
-        term_order:=R`term_order;
-        label:=term_order[1];
-        
-        if label eq "rank" then
-            
-            //---printing---
-            vprintf RngDiffPol, 5: "Setting the ranking... \n";
-            
-            dblocks:=term_order[2];
-            setRanking(R, dblocks);
-        else
-            error "The term order on the differential polynomial ring is not lexicographic induced by a ranking. The first part of the term_order tuple needs to be 'rank' (in quotes) and the second part needs to be a comparison function.";
-        end if;
-    end if;
-    
-    
-    //---printing---
-    vprintf RngDiffPol, 5: "Returning the ranking... \n";
-    return R`ranking;
-        
-    
-end intrinsic;
-
-
-////////////////////////////////////
-intrinsic setRanking(R::RngDiffPol, comparison::UserProgram)
-////////////////////////////////////
-{
-    
-}
-   R`ranking:=comparison;
-   setPolynomialRing(~R:term_order:=<"rank",comparison>);
-
-end intrinsic;
-
-////////////////////////////////////
-intrinsic setRanking(R::RngDiffPol, dblocks::SeqEnum)
-////////////////////////////////////
-{
-    
-}
-   R`ranking:=get_ranking(dblocks);
-   setPolynomialRing(~R:term_order:=<"rank",ranking>);
-
-end intrinsic;
-
-
-////////////////////////////////////
-intrinsic setPolynomialRing(~R::RngDiffPol:term_order:=Tup)
-////////////////////////////////////
-{
-    
-}
-    
-end intrinsic;
-
-
-////////////////////////////////////
-intrinsic rankingSeq(R::RngDiffPol)->SeqEnum
-////////////////////////////////////
-{
-    
-}
-    if not assigned R`ranking_sequence then
-        orders:=maxOrders(R);
-        
-        vprintf RngDiffPol, 5: "maxOrders %o ... \n", orders;
-        
-        all_indices:=[];
-        for i in [1..Nvariables(R)] do
-            for j in [0..orders[i]] do
-                Append(~all_indices,[i,j]);
-            end for;
-        end for;
-        
-        comparison_function:=ranking(R);
-        Sort(~all_indices,comparison_function);
-        R`ranking_sequence:=all_indices;
-    end if;
-        
-    return R`ranking_sequence;
-    
-end intrinsic;
-
-
-/////////////////////////////
-intrinsic polynomialGenerators(R::RngDiffPol)->SeqEnum
-/////////////////////////////
-{}
-    rs:=maxOrders(R);
-    n:=Nvariables(R);
-    monomials:=[];
-    for i in [1..n] do
-        for j in [1..rs[i]] do
-            Append(~monomials,Diff(R.i,n));
-        end for;
-    end for;
-    Sort(~monomials);
-    
-    return monomials;
-    
-end intrinsic;
-
-/////////////////////////////
-intrinsic setMaxOrders(R::RngDiffPol,rs::SeqEnum[RngIntElt])
-/////////////////////////////
-{}
-    rs:=maxOrders(R);
-    monomials:=polynomialGenerators(R);
-    new_ring:=polynomialRing(R,#monomials : order:=polynomialTermOrder(R));
-    
-    for i in [1..#monomials] do
-        monomials[i]`polynomial:=new_ring.i;
-    end for;
-    
-    R`polynomial_ring:=new_ring;
-    
-end intrinsic;
-
 intrinsic Eltseq_m(mon:RngPolDiffMon)->SeqEnum
 {}
 /*
@@ -2202,65 +1955,11 @@ intrinsic orders(mon::RngDiffPolMon)->SeqEnum
     return [Degree(x) : x in e];
 end intrinsic;
 
-
-/////////////////////////////
-intrinsic polynomial(mon::RngDiffPolMon)->RngMPolElt
-/////////////////////////////
-{}
-    R:=Parent(mon);
-    require orders(mon) le maxOrders(R): "The maximum orders for the polynomial ring need to be increased. Do this using setMaxOrders.";
-    
-    powers:=[];
-    for x in Eltseq(mon) do
-        pair:=x[1];
-        power:=x[2];
-        P:=polynomialRing(R);
-        i:=Index(rankingSeq(R),pair);
-        Append(~powers,(P.i)^power);
-    end for;
-    
-    return &*powers;
-end intrinsic;
-
-
-/////////////////////////////
-intrinsic polynomial(t1::RngDiffPolTerm)->RngMPolElt
-/////////////////////////////
-{}
-    R:=Parent(t1);
-    return coefficient(t1)*polynomial(monomial(t1));
-
-end intrinsic;
-
-/////////////////////////////
-intrinsic polynomial(dpoly::RngDiffPolElt)->RngDiffPolElt
-/////////////////////////////
-{}
-    if not assigned dpoly`polynomial then
-        dpoly`polynomial:=&+[polynomial(term) : term in terms(dpoly)];
-    elif not dpoly`polynomial in polynomialRing(Parent(dpoly)) then
-        dpoly`polynomial:=&+[polynomial(term) : term in terms(dpoly)];
-    end if;
-    
-    return dpoly`polynomial;
-        
-end intrinsic;
-
-
-/////////////////////////////
-intrinsic polynomial(dpoly::RngDiffPolElt)->RngDiffPolElt
-/////////////////////////////
-{}
-    if not assigned dpoly`polynomial then
-        dpoly`polynomial:=&+[polynomial(term) : term in terms(dpoly)];
-    elif not dpoly`polynomial in polynomialRing(Parent(dpoly)) then
-        dpoly`polynomial:=&+[polynomial(term) : term in terms(dpoly)];
-    end if;
-    
-    return dpoly`polynomial;
-        
-end intrinsic;
-
+//##################################################
+//##################################################
+//  POLYNOMIAL ALGORITHMS
+//##################################################
+//##################################################
 
 //###########################
 intrinsic get_block_map(blocks::SeqEnum)->UserProgram
@@ -2379,3 +2078,247 @@ intrinsic get_ranking(blocks::SeqEnum)->UserProgram
         
     return block_rank;
 end intrinsic;
+
+////////////////////////////////////
+intrinsic termOrder(R::RngDiffPol)->Tup
+////////////////////////////////////
+{}
+    return R`term_order;
+end intrinsic;
+
+////////////////////////////////////
+intrinsic NTraceVariables(R::RngDiffPol,r::RngIntElt)->RngIntElt
+////////////////////////////////////
+{}
+    return (r+1)*Nvariables(R);
+end intrinsic;
+
+
+///////////////////////////////////////
+intrinsic traceWeights(R::RngDiffPol,r::RngIntElt)->SeqEnum
+///////////////////////////////////////
+{}
+    /*
+    Order the monomials and then figure out which variable they correspond to.
+    If lex, then you just put the standard basis vectors in rows corresponding to their order.
+    If block, then you need to do one block at a time as in the example below:
+    
+    <"elim", [ 1, 4 ], [ 2, 3 ]>
+    > MonomialOrderWeightVectors(P);
+
+    [ 1, 0, 0, 1 ],
+    [ 1, 0, 0, 0 ],
+    [ 0, 1, 1, 0 ],
+    [ 0, 1, 0, 0 ]
+    
+    We will have much larger blocks though.
+    First there will be max_order[1]+1 variables corresp to x1 and its ders.
+    Second there will be max_order[2]+1 variables corresp to x2 and its ders.
+    ...
+    If we have a block order [[3],[1],[2,4]] then this corresponds to a block order
+    [ [3,n3],...,[3,0] ], [ [1,n1],...,[1,0] ], [ [2,j],[4,j] ] ordered according to j first then according to 2]
+    */
+    N:=NTraceVariables(R,r);
+    
+    tup:=termOrder(R);
+    label:=tup[1];
+    data:=tup[2];
+    
+    if label eq "elim" then
+        dblocks:=data;
+        blocks:=dblocks_to_blocks(R,dblocks);
+        return MonomialOrderWeightVectors(<"elim",Explode(blocks)>);
+    elif label eq "rank" then
+        seq:=[traceIndex(R,pair) : pair in rankingSeq(R,r)];
+        A:=FreeAbelianGroup(#seq);
+        W:=[Eltseq(A.seq[i]) : i in [1..#seq]];
+        return W;
+    end if;
+end intrinsic;
+
+
+////////////////////////////////////
+intrinsic dblocks_to_blocks(R::RngDiffPol,r::RngIntElt,dblocks::SeqEnum)->SeqEnum
+////////////////////////////////////
+{}
+
+/*
+dblocks:=[ [1,2],[3,4] ];
+dblocks:=[ [1,2,3,4]]; //pure orderly lexicographic
+dblocks:=[[1],[2],[3],[4]]; //pure elimination
+*/
+    return [ &cat[ Reverse([ traceIndex(R,[i,j]) : j in [0..r] ]) : i in dblock] : dblock in dblocks];
+end intrinsic;
+
+////////////////////////////////////
+intrinsic traceIndex(R::RngDiffPol,pair::SeqEnum[RngIntElt])->RngIntElt
+////////////////////////////////////
+{
+Given a pair [i,j] corresponding to D^i(x_j) compute the index of that variable in the sequence of all of these.
+}
+
+/*
+If the maximum orders are r(1),r(2),...,r(n) with n-variables, then
+    index of [i,r]= (r(1)+1)+(r(2)+1)+...+(r(i-1)+1)+r+1
+    
+*/
+
+    i,r:=Explode(pair);
+    
+    A:=r*(i-1);
+    B:=(Nvariables(R)-i)-1;
+    C:=r;
+    
+    return A+B+C;
+    
+end intrinsic;
+
+////////////////////////////////////
+intrinsic traceTermOrder(R::RngDiffPol,r::RngIntElt)->RngPol
+////////////////////////////////////
+{}
+    //http://magma.maths.usyd.edu.au/magma/handbook/text/1259#14366
+    // PolynomialRing(Z, 4, "elim", [1, 4], [2, 3])
+    //<"weight", [ 100, 10, 1, 1, 10, 100, 1, 1, 1 ]>
+    return <"weight",traceWeights(R,r)>;
+end intrinsic;
+
+////////////////////////////////////
+intrinsic ranking(R::RngDiffPol)->UserProgram
+////////////////////////////////////
+{
+    
+}
+    //---printing---
+    vprintf RngDiffPol, 5: "Requesting the ranking of the ring of differential polynomials... \n";
+    
+    term_order:=termOrder(R);
+    label:=term_order[1];
+    
+    if label eq "rank" then
+        if Type(term_order[2]) eq UserProgram then
+            //do nothing
+        elif Type(term_order[2]) eq SeqEnum then
+            //---printing---
+            vprintf RngDiffPol, 5: "Setting the ranking from dblocks... \n";
+            dblocks:=term_order[2];
+            setRanking(R, dblocks);
+        end if;
+    else
+        error "The term order is not induced by a rank. The first part of the term_order tuple needs to be 'rank' (in quotes) and the second part needs to be a comparison function.";
+    end if;
+    
+    rank_comparison:=termOrder(R)[2];
+    //---printing---
+    vprintf RngDiffPol, 5: "Returning the ranking... \n";
+    return rank_comparison;
+    
+end intrinsic;
+
+
+////////////////////////////////////
+intrinsic setRanking(R::RngDiffPol, comparison::UserProgram)
+////////////////////////////////////
+{
+Set the term order to one for ranking for a given user program.
+}
+   R`term_order:=<"rank",comparison>;
+   
+end intrinsic;
+
+////////////////////////////////////
+intrinsic setRanking(R::RngDiffPol,dblocks::SeqEnum)
+////////////////////////////////////
+{
+Given blocks defining a ranking set the ranking of R to the term order.
+}
+   setRanking(R,get_ranking(dblocks));
+
+end intrinsic;
+
+
+////////////////////////////////////
+intrinsic rankingSeq(R::RngDiffPol,r::RngIntElt)->SeqEnum
+////////////////////////////////////
+{
+The element [i,j] corresonds to R.[i,j] and it returns them in order.
+The element of lowest index will be of highest order.
+}
+    all_indices:=[];
+    for i in [1..Nvariables(R)] do
+        for j in [0..r] do
+            Append(~all_indices,[i,j]);
+        end for;
+    end for;
+
+    Sort(~all_indices,ranking(R));
+    return all_indices;
+    
+end intrinsic;
+
+
+/////////////////////////////
+intrinsic traceGenerators(R::RngDiffPol,r::RngIntElt)->SeqEnum
+/////////////////////////////
+{}
+    n:=Nvariables(R);
+    monomials:=[];
+    for i in [1..n] do
+        for j in [1..r] do
+            Append(~monomials,Diff(R.i,n));
+        end for;
+    end for;
+    monomials:=sorted(monomials);
+    
+    return monomials;
+end intrinsic;
+
+/////////////////////////////
+intrinsic trace(R::RngDiffPol,r::RngIntElt)->RngMPol
+/////////////////////////////
+{}
+    monomials:=traceGenerators(R,r);
+    rthJetRing:=PolynomialRing(baseRing(R),#monomials:order:=traceTermOrder(R,r));
+    return rthJetRing;
+    
+end intrinsic;
+
+
+/////////////////////////////
+intrinsic trace(mon::RngDiffPolMon,r::RngIntElt)->RngMPolElt
+/////////////////////////////
+{}
+    require order(mon) le r: "The differential polynomial order exceeds the trace order";
+    R:=Parent(mon);
+    P:=trace(R,r);
+    
+    powers:=[];
+    for x in Eltseq_m(mon) do
+        pair:=x[1];
+        power:=x[2];
+        i:=Index(rankingSeq(R,r),pair);
+        Append(~powers,(P.i)^power);
+    end for;
+
+    return &*powers;
+end intrinsic;
+
+
+/////////////////////////////
+intrinsic trace(t1::RngDiffPolTerm,r::RngIntElt)->RngMPolElt
+/////////////////////////////
+{}
+    R:=Parent(t1);
+    return coefficient(t1)*trace(monomial(t1),r);
+
+end intrinsic;
+
+/////////////////////////////
+intrinsic trace(dpoly::RngDiffPolElt,r::RngIntElt)->RngDiffPolElt
+/////////////////////////////
+{}
+    R:=Parent(dpoly);
+    return R!0;
+end intrinsic;
+
+
