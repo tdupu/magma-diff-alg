@@ -11,10 +11,10 @@ ZZ:=IntegerRing();
 QQ:=RationalField();
 
 declare type RngDiffPol[RngDiffPolElt];
-declare type RngDiffPolTerm;
-declare type RngDiffPolMon;
-//declare type RngDiffPolMon: RngDiffPolTerm, RngDiffPolElt;
-//declare type RngDiffPolTerm: RngDiffPolElt;
+//declare type RngDiffPolTerm;
+//declare type RngDiffPolMon;
+declare type RngDiffPolMon: RngDiffPolTerm, RngDiffPolElt;
+declare type RngDiffPolTerm: RngDiffPolElt;
 
 declare attributes RngDiffPol:
     base_ring,
@@ -1054,7 +1054,11 @@ intrinsic '+'(c1::RngElt, t1::RngDiffPolTerm)->RngDiffPolElt
 /////////////////////////////
 {}
     R:=Parent(t1);
-    return term(R,c1)+t1;
+    if c1 eq 0 then
+        return t1;
+    else
+        return term(R,c1)+t1;
+    end if;
 end intrinsic;
 
 /////////////////////////////
@@ -1482,14 +1486,26 @@ Note that the procedural version is much more efficient since the sequence S wil
 Something is wrong with the sorting... I tried playing with the universes and all sorts of coercion but that doesn't seem to work so I'm making my own sorting function for monomials which is a hack that bypasses the types.
 */
 
-intrinsic multiOrder(m::RngDiffPolMon)->SeqEnum
+intrinsic orders(m::RngDiffPolMon)->SeqEnum
 {}
     return [Degree(p) : p in exponent(m)];
 end intrinsic;
 
 intrinsic order(m::RngDiffPolMon)->RngIntElt,RngIntElt
 {}
-    return Maximum(multiOrder(m));
+    return Maximum(orders(m));
+end intrinsic;
+
+intrinsic orders(f::RngDiffPolElt)->SeqEnum
+{Get the sequences of orders of differential polynomials with respect to each of the variables.}
+    R:=Parent(f);
+    ords:=[orders(monomial(t)) : t in terms(f)];
+    return [Maximum([ord[j] : ord in ords]): j in [1..Nvariables(R)]];
+end intrinsic;
+
+intrinsic order(f::RngDiffPolElt)->SeqEnum
+{Get the maximum order of a derivative appearing in a differential polynomial.}
+    return Maximum(orders(f));
 end intrinsic;
 
 //#############################
@@ -1693,7 +1709,7 @@ end intrinsic;
 /////////////////////////////
 intrinsic sorted(seq::SeqEnum)->SeqEnum
 /////////////////////////////
-{}
+{Given a sequence RngDiffPolTerm sort them according to their term ordering}
     //require &and[Type(x) eq RngDiffPolTerm : x in seq]: "Input not a sequence of terms";
     my_comparison:=func<x,y|termOrderComparator(leadingMonomial(x),leadingMonomial(y))>;
     return mySort(seq,my_comparison);
@@ -1783,6 +1799,13 @@ intrinsic valuation(m::RngDiffPolMon,u::RngDiffPolMon)->RngIntElt
 end intrinsic;
 
 /////////////////////////////
+intrinsic valuation(t::RngDiffPolTerm,u::RngDiffPolMon)->RngIntElt
+/////////////////////////////
+{}
+    return valuation(monomial(t),u);
+end intrinsic;
+
+/////////////////////////////
 intrinsic valuation(f::RngDiffPolElt,u::RngDiffPolMon)->RngIntElt
 /////////////////////////////
 {}
@@ -1800,6 +1823,15 @@ intrinsic '/'(m1::RngDiffPolMon,m2::RngDiffPolMon)->RngDiffPolMon
     R:=Parent(m1);
     return monomial(R,e);
 end intrinsic;
+
+/////////////////////////////
+intrinsic '/'(t1::RngDiffPolTerm,u::RngDiffPolMon)->RngDiffPolMon
+/////////////////////////////
+{}
+    return coefficient(t1)*(monomial(t1)/u);
+end intrinsic;
+
+
 
 /////////////////////////////
 intrinsic divides(m2::RngDiffPolMon,m1::RngDiffPolMon)->BoolElt
@@ -1837,6 +1869,42 @@ intrinsic gcd(m2::RngDiffPolMon,m1::RngDiffPolMon)->RngDiffPolMon
     
     return monomial(R,new_e);
     
+end intrinsic;
+
+/*
+lcm(m1,m2)=m1*m2/gcd(m1,m2);
+
+*/
+
+intrinsic derivative(f::RngDiffPolElt,u::RngDiffPolMon)->RngDiffPolElt
+{Computer the partial derivative with respect to a variable.}
+    der:=0;
+    for t in terms(f) do
+        n:=valuation(t,u);
+        if n gt 0 then
+           der:=der+n*(t/u^n)*(u)^(n-1);
+        end if;
+    end for;
+    
+    return der;
+end intrinsic;
+
+intrinsic derivative(f::RngDiffPolElt,n::RngIntElt,u::RngDiffPolMon)->RngDiffPolElt
+{Computer the partial derivative with respect to a variable n-times.}
+    require n ge 0: "must take a non-negative number of partial derivatives.";
+    if n eq 0 then
+        return f;
+    elif n eq 1 then
+        return derivative(f,u);
+    elif n gt 1 then
+        return derivative(derivative(f,u),n-1,u);
+    end if;
+end intrinsic;
+
+intrinsic separant(f::RngDiffPolElt)->RngDiffPolElt
+{Take the partial derivative of f with respect to its leader.}
+    u:=leader(f);
+    return derivative(f,u);
 end intrinsic;
 
 
@@ -1889,7 +1957,6 @@ intrinsic weights(R::RngDiffPol,term_order)->SeqEnum
     ...
     If we have a block order [[3],[1],[2,4]] then this corresponds to a block order
     [ [3,n3],...,[3,0] ], [ [1,n1],...,[1,0] ], [ [2,j],[4,j] ] ordered according to j first then according to 2]
-    
     */
     max_orders:=maxOrders(R);
     N:=NpolynomialVariables(R);
