@@ -7,18 +7,12 @@ Kernels are morphisms of R-algebras A->B and a derivation d:A->B that extends a 
 declare type KerJ;
 declare attributes KerJ: delta,map;
 
-declare type RngMPolKerJ;
-declare attributes RngMPolKerJ: term_order;
-
 /*
 Prolongations are A->B->C with A->B and B->C kernels.
 */
 
 declare type Prol;
 declare attributes Prol: ker1, ker2;
-
-declare type RngMPolProl: Prol;
-declare attributes RngMPolProl: term_order;
 
 /*
 Sequences of Prolongations
@@ -80,9 +74,9 @@ end function;
 ////////////////////
 function std_to_pair(nvars,m)
 ////////////////////
-    i:=Floor(m/nvars);
-    j:=Integers()!(m-i)/nvars;
-    return i+j*nvars;
+    i:=m mod nvars;
+    j:=Z!((m-i)/nvars);
+    return [i,j];
 end function;
 
 ////////////////////
@@ -779,4 +773,23 @@ intrinsic 'eq'(f1::RngMPolProlSeqElt,f2::RngMPolProlSeqElt)->BoolElt
     return ff1 eq ff2;
 end intrinsic;
 
-
+intrinsic Leader(f::RngMPolProlSeqElt)->RngMPolProlSeqElt,RngIntElt
+{Return the leader of a differential polynomials which is the leading }
+    ltu:=LeadingTerm(f`elt);
+    eltu:=Exponents(ltu);
+    n:=1;
+        while eltu[n] eq 0 do
+             n:=n+1;
+        end while;
+    y:=New(RngMPolProlSeqElt);
+    P:=Parent(f);
+    num_vars:=Ngens(P);
+    pair:=std_to_pair(num_vars,n);
+    pair;
+    i:=pair[1];
+    j:=pair[2];
+    y`parent:=P;
+    y`order:=j;
+    y`elt:=Jet(P,j).n;
+    return y,eltu[n];
+end intrinsic;
