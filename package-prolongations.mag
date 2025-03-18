@@ -6,6 +6,8 @@ Kernels are morphisms of R-algebras A->B and a derivation d:A->B that extends a 
 declare type KerJ;
 declare attributes KerJ: delta,map;
 
+declare type RngMPolKerJ;
+declare attributes RngMPolKerJ: term_order;
 
 /*
 Prolongations are A->B->C with A->B and B->C kernels.
@@ -14,12 +16,15 @@ Prolongations are A->B->C with A->B and B->C kernels.
 declare type Prol;
 declare attributes Prol: ker1, ker2;
 
+declare type RngMPolProl: Prol;
+declare attributes RngMPolProl: term_order;
+
 /*
 Sequences of Prolongations
 */
 
 declare type RngMPolProlSeq[RngMPolProlSeqElt];
-declare attributes RngMPolProlSeq: sequence;
+declare attributes RngMPolProlSeq: sequence,term_order;
 declare attributes RngMPolProlSeqElt: parent,elt,order;
 
 /*
@@ -28,11 +33,90 @@ The order 0 jet space is the original ring.
 The order -1 jet space is the base ring.
 */
 
-
 /*
 Universal Kernels:
 Given a differential ring A, and some A-algebra B, there is a universal kernel A->B.
 */
+
+
+/*
+--------------------
+--------------------
+TERM ORDER FUNCTIONS
+--------------------
+--------------------
+/*
+
+/*
+Order the monomials and then figure out which variable they correspond to.
+If lex, then you just put the standard basis vectors in rows corresponding to their order.
+If block, then you need to do one block at a time as in the example below:
+
+<"elim", [ 1, 4 ], [ 2, 3 ]>
+> MonomialOrderWeightVectors(P);
+
+[ 1, 0, 0, 1 ],
+[ 1, 0, 0, 0 ],
+[ 0, 1, 1, 0 ],
+[ 0, 1, 0, 0 ]
+
+We will have much larger blocks though.
+First there will be max_order[1]+1 variables corresp to x1 and its ders.
+Second there will be max_order[2]+1 variables corresp to x2 and its ders.
+...
+If we have a block order [[3],[1],[2,4]] then this corresponds to a block order
+[ [3,n3],...,[3,0] ], [ [1,n1],...,[1,0] ], [ [2,j],[4,j] ] ordered according to j first then according to 2]
+*/
+
+////////////////////
+function pair_to_std(nvars,pair)
+////////////////////
+    i:=pair[1];
+    j:=pair[2];
+    return i+j*nvars;
+end function;
+
+////////////////////
+function std_to_pair(nvars,m)
+////////////////////
+    i:=Floor(m/nvars);
+    j:=Integers()!(m-i)/nvars;
+    return i+j*nvars;
+end function;
+
+////////////////////
+function dblocks_to_blocks(nvars,r,dblocks)
+////////////////////
+/*
+dblocks:=[ [1,2],[3,4] ];
+dblocks:=[ [1,2,3,4]]; //pure orderly lexicographic
+dblocks:=[[1],[2],[3],[4]]; //pure elimination
+*/
+    return [ &cat[ Reverse([ pair_to_std(nvars,[i,j]) : j in [0..r] ]) : i in dblock] : dblock in dblocks];
+end function;
+
+////////////////////
+function trace_order(nvars,r,T)
+////////////////////
+    lab:=T[1];
+    data:=T[2];
+    if lab eq "dblocks" then
+        labr:="elim";
+        blocks:=dblocks_to_blocks(nvars,r,data);
+        Tr:=<labr,blocks>;
+        return Tr;
+    else
+        error "Not implemented";
+    end if;
+end function;
+
+/*
+--------------------
+--------------------
+Kernels, Prolongations, Prolongation Sequences
+--------------------
+--------------------
+/*
 
 //////////////////////
 intrinsic Diff(f::RngDiffElt)->RngDiffElt
@@ -69,6 +153,23 @@ intrinsic JKernel(P::Rng)->KerJ
     end if;
     
     return JKernel(incl,delta);
+end intrinsic;
+
+//////////////////////
+intrinsic JKernel(P::RngMPol:term_order:=<"dblocks",[]>)->RngMPolKerJ
+//////////////////////
+{Create the universal Johnson kernel for a ring defined over a differential ring. If the base is not a differential ring, it is given the structure of a differential ring with a trivial derivation.}
+    B:=BaseRing(P);
+    if Type(B) eq RngDiff then
+        delta:=map<B->P|f:->P!Diff(f)>;
+        incl:=hom<B->P|f:->P!f>;
+    else
+        incl:=hom<B->P|f:->P!f>;
+        delta:=map<B->P|f:->P!0>;
+    end if;
+    
+    ker:=JKernel(incl,delta);
+    ker`term_order:=term_order;
 end intrinsic;
 
 //////////////////////
@@ -167,13 +268,13 @@ intrinsic Print(prol::Prol)
 end intrinsic;
 
 //////////////////////
-intrinsic Prolongation(B::RngMPol)->Prol
+intrinsic Prolongation(B::RngMPol: term_order:=TO)->Prol
 //////////////////////
 {For a polynomials ring return its first prolongation sequence.}
     ker1:=JKernel(B);
-    
     nvars:=Ngens(B);
-    jet1:=PolynomialRing(BaseRing(B),2*nvars);
+    TO1:=trace_order(nvars,1,TO);
+    jet1:=PolynomialRing(BaseRing(B),2*nvars,TO1);
     names:=Names(B);
     names1:=[Sprintf("Diff(%o)",n) :n in names];
     jet1_names:=names cat names1;
@@ -184,8 +285,9 @@ intrinsic Prolongation(B::RngMPol)->Prol
     delta:=map<B->jet1|g:->&+[incl(Derivative(g,B.i))*jet1.(i+Ngens(B)) : i in [1..Ngens(B)]]>;
     ker2:=JKernel(incl,delta);
     
-    my_prol:=New(Prol);
-    return Prolongation(ker1,ker2);
+    my_prol:=Prolongation(ker1,ker2);
+    my_prol`term_order:=TO;
+    return my_prol;
 end intrinsic;
 
 intrinsic 'eq'(prol1::Prol,prol2::Prol)->BoolElt
@@ -195,12 +297,23 @@ intrinsic 'eq'(prol1::Prol,prol2::Prol)->BoolElt
 end intrinsic;
 
 ////////////////////
-intrinsic ProlongationSequence(B::RngMPol)->RngMPolProlSeq
+intrinsic ProlongationSequence(B::RngMPol : term_order:=<"dblocks",[]>)->RngMPolProlSeq
 ////////////////////
 {Make a single prolongation sequence involving the base ring and the first jet space.}
-    prol_seq:=New(RngMPolProlSeq);
-    prol_seq`sequence:=[Prolongation(B)];
-    return prol_seq;
+    if term_order[1] eq "dblocks" then
+        if #term_order[2] eq 0 then
+            num_vars:=Ngens(B);
+            TO:=<"dblocks",[[i] : i in [1..num_vars]]>;
+        else
+            TO:=term_order;
+        end if;
+        prol_seq:=New(RngMPolProlSeq);
+        prol_seq`sequence:=[Prolongation(B:term_order:=TO)];
+        prol_seq`term_order:=TO;
+        return prol_seq;
+    else
+        error "Term order not implemented";
+    end if;
 end intrinsic;
 
 ////////////////////
@@ -497,6 +610,17 @@ intrinsic '-'(x1::RngMPolProlSeqElt,x2::RngMPolProlSeqElt)->RngMPolProlSeqElt
     end if;
 end intrinsic;
 
+////////////////////
+intrinsic '^'(f1::RngMPolProlSeqElt,n::RngIntElt)->BoolElt
+////////////////////
+{}
+    f2:=New(RngMPolProlSeqElt);
+    f2`parent:=Parent(f1);
+    f2`order:=f1`order;
+    f2`elt:=(f1`elt)^n;
+    return f2;
+end intrinsic;
+
 //////////////////////
 intrinsic Diff(f::RngMPolProlSeqElt)->RngMPolProlSeqElt
 //////////////////////
@@ -547,11 +671,26 @@ intrinsic AssignNames(~P::RngMPolProlSeq,s::SeqEnum)
 end intrinsic;
 
 ////////////////////
-intrinsic PolynomialRingProlSeq(F::.,num_vars::RngIntElt)->RngMPolProlSeq
+intrinsic PolynomialRingProlSeq(F::.,num_vars::RngIntElt: term_order:=<"dblocks",[]>)->RngMPolProlSeq
 ////////////////////
 {}
-    B:=PolynomialRing(F,num_vars);
-    return ProlongationSequence(B);
+    if term_order[1] eq "dblocks" then
+        if #term_order[2] eq 0 then
+            TO:=<"dblocks",[ [i] : i in [1..num_vars]]>;
+        else
+            TO:=term_order;
+            T0:=trace_order(num_vars,0,TO);
+            B:=PolynomialRing(F,num_vars,T0);
+            return ProlongationSequence(B : term_order:=TO);
+        end if;
+    else
+        error "this term order is not implemented";
+    end if;
+end intrinsic;
+
+intrinsic MonomialOrder(P::RngMPolProlSeq)->Tup
+{}
+    return P`term_order;
 end intrinsic;
 
 ////////////////////
@@ -612,4 +751,5 @@ intrinsic 'eq'(f1::RngMPolProlSeqElt,f2::RngMPolProlSeqElt)->BoolElt
     ff2:=map2(f2`elt);
     return ff1 eq ff2;
 end intrinsic;
+
 
