@@ -1,0 +1,546 @@
+
+
+/*
+Kernels are morphisms of R-algebras A->B and a derivation d:A->B that extends a derivations on the base.
+*/
+declare type KerJ;
+declare attributes KerJ: delta,map;
+
+
+/*
+Prolongations are A->B->C with A->B and B->C kernels.
+*/
+
+declare type Prol;
+declare attributes Prol: ker1, ker2;
+
+/*
+Sequences of Prolongations
+*/
+
+declare type RngMPolProlSeq[RngMPolProlSeqElt];
+declare attributes RngMPolProlSeq: sequence;
+declare attributes RngMPolProlSeqElt: parent,elt,order;
+
+/*
+The convention is that an element order order r will be in the rth jet space.
+The order 0 jet space is the original ring.
+The order -1 jet space is the base ring.
+*/
+
+
+/*
+Universal Kernels:
+Given a differential ring A, and some A-algebra B, there is a universal kernel A->B.
+*/
+
+//////////////////////
+intrinsic Diff(f::RngDiffElt)->RngDiffElt
+//////////////////////
+{Differentiate and element of a differential ring.}
+    P:=Parent(f);
+    D:=Derivation(P);
+    return D(f);
+end intrinsic;
+
+//////////////////////
+intrinsic JKernel(f::Map,delta::Map)->KerJ
+//////////////////////
+{Given a ring homomorphism and a derivation of the ring homomorphism, construct a Kernel in the sense of Johnson.}
+    my_kernel:=New(KerJ);
+    require Domain(f) eq Domain(delta): "The domains of the map and the derivation be the same";
+    require Codomain(f) eq Codomain(delta):"The codomains of the map and the derivation must be the same";
+    my_kernel`delta:=delta;
+    my_kernel`map:=f;
+    return my_kernel;
+end intrinsic;
+
+//////////////////////
+intrinsic JKernel(P::Rng)->KerJ
+//////////////////////
+{Create the universal Johnson kernel for a ring defined over a differential ring. If the base is not a differential ring, it is given the structure of a differential ring with a trivial derivation.}
+    B:=BaseRing(P);
+    if Type(B) eq RngDiff then
+        delta:=map<B->P|f:->P!Diff(f)>;
+        incl:=hom<B->P|f:->P!f>;
+    else
+        incl:=hom<B->P|f:->P!f>;
+        delta:=map<B->P|f:->P!0>;
+    end if;
+    
+    return JKernel(incl,delta);
+end intrinsic;
+
+//////////////////////
+intrinsic 'eq'(k1::KerJ,k2::KerJ)->BoolElt
+//////////////////////
+{Return the morphism of rings in the Johnson kernel.}
+    return ( (map(k1) eq map(k2)) and (derivation(k1) eq derivation(k2)));
+end intrinsic;
+
+//////////////////////
+intrinsic Hash(k1::KerJ)->BoolElt
+//////////////////////
+{Return the morphism of rings in the Johnson kernel.}
+    return [Hash(map(k1)),Hash(derivation(k1))];
+end intrinsic;
+
+//////////////////////
+intrinsic map(my_kernel::KerJ)->Map
+//////////////////////
+{Return the morphism of rings in the Johnson kernel.}
+    return my_kernel`map;
+end intrinsic;
+
+//////////////////////
+intrinsic derivation(my_kernel::KerJ)->Map
+//////////////////////
+{Return the derivation of the Johnson kernel.}
+    return my_kernel`delta;
+end intrinsic;
+
+//////////////////////
+intrinsic domain(my_kernel::KerJ)->Map
+//////////////////////
+{}
+    return Domain(map(my_kernel));
+end intrinsic;
+
+//////////////////////
+intrinsic codomain(my_kernel::KerJ)->Map
+//////////////////////
+{}
+    return Codomain(map(my_kernel));
+end intrinsic;
+
+
+/*
+Universal Prolongations:
+Given f:A->B with D:A->B then there is a universal prolongation which is the quotient of the symmetric algebra of B by d(f(a))-D(a) where d is the Kahler differentia and a in A.
+*/
+
+//////////////////////
+intrinsic Print(X::KerJ)
+//////////////////////
+{}
+printf "An affine Johnson kernel from %o to %o", domain(X),codomain(X);
+end intrinsic;
+
+
+//////////////////////
+intrinsic Prolongation(ker1::KerJ,ker2::KerJ)->Prol
+//////////////////////
+{}
+require domain(ker2) eq codomain(ker1): "The codomain of the first kernel must be the domain of the second kernel";
+    my_prol:=New(Prol);
+    my_prol`ker1:=ker1;
+    my_prol`ker2:=ker2;
+    return my_prol;
+end intrinsic;
+
+//////////////////////
+intrinsic Hash(k1::KerJ)->BoolElt
+//////////////////////
+{Return the morphism of rings in the Johnson kernel.}
+    return [Hash(map(k1)),Hash(derivation(k1))];
+end intrinsic;
+
+//////////////////////
+intrinsic first(prol::Prol)->KerJ
+//////////////////////
+{}
+    return prol`ker1;
+end intrinsic;
+
+//////////////////////
+intrinsic second(prol::Prol)->KerJ
+//////////////////////
+{}
+    return prol`ker2;
+end intrinsic;
+
+//////////////////////
+intrinsic Print(prol::Prol)
+//////////////////////
+{Printing statement for prolongations}
+    printf "A prolongation from %o to %o to %o", domain(first(prol)), codomain(first(prol)), codomain(second(prol));
+end intrinsic;
+
+//////////////////////
+intrinsic Prolongation(B::RngMPol)->Prol
+//////////////////////
+{For a polynomials ring return its first prolongation sequence.}
+    ker1:=JKernel(B);
+    
+    nvars:=Ngens(B);
+    jet1:=PolynomialRing(BaseRing(B),2*nvars);
+    names:=Names(B);
+    names1:=[Sprintf("Diff(%o)",n) :n in names];
+    jet1_names:=names cat names1;
+    AssignNames(~jet1,jet1_names);
+    
+
+    incl:=hom<B->jet1| [jet1.i : i in [1..Ngens(B)]]>;
+    delta:=map<B->jet1|g:->&+[incl(Derivative(g,B.i))*jet1.(i+Ngens(B)) : i in [1..Ngens(B)]]>;
+    ker2:=JKernel(incl,delta);
+    
+    my_prol:=New(Prol);
+    return Prolongation(ker1,ker2);
+end intrinsic;
+
+intrinsic 'eq'(prol1::Prol,prol2::Prol)->BoolElt
+{}
+    return (first(prol1) eq first(prol2)) and (second(prol1) eq second(prol2));
+
+end intrinsic;
+
+intrinsic ProlongationSequence(B::RngMPol)->RngMPolProlSeq
+{Make a single prolongation sequence involving the base ring and the first jet space.}
+    prol_seq:=New(RngMPolProlSeq);
+    prol_seq`sequence:=[Prolongation(B)];
+    return prol_seq;
+end intrinsic;
+
+function next_names(names)
+/*
+This is used for defining jet rings of polynomials.
+*/
+    return [Sprintf("Diff(%o,)",n) :n in names];
+end function;
+
+function jet_r_names(names,r)
+/*
+This is used for defining jet rings of polynomials.
+*/
+    return [Sprintf("Diff(%o,%o)",n,r) :n in names];
+end function;
+
+intrinsic ProlongationSequence(B::RngMPol,r::RngIntElt)->RngMPolProlSeq
+{Create a prolongation sequence up to jet spaces of order r.
+If r<=0 it returns a prolongation sequence of length 1.}
+    P:=ProlongationSequence(B);
+    if r gt 1 then
+        Extend(P,r);
+        return P;
+    else
+        return P;
+    end if;
+end intrinsic;
+
+intrinsic sequence(P::RngMPolProlSeq)->SeqEnum
+{}
+    return P`sequence;
+
+end intrinsic;
+
+/*
+intrinsic `[]`(M::RngMPolProlSeq, i::RngIntElt, j::RngIntElt) -> RngMPol
+{Allows you to access the sequence elements}
+   return 0;
+end intrinsic;
+*/
+
+intrinsic Function(M::RngMPolProlSeq, i::RngIntElt) -> JKer
+{}
+    return sequence(M)[i];
+end intrinsic;
+
+
+intrinsic order(P::RngMPolProlSeq)->RngIntElt
+{Return the order to which the prolongation sequence has been computed.}
+    return #sequence(P);
+end intrinsic;
+
+intrinsic '#'(P::RngMPolProlSeq)->RngIntElt
+{Return the order to which the prolongation sequence has been computed.}
+    return #sequence(P);
+end intrinsic;
+
+intrinsic Extend(P::RngMPolProlSeq)
+{Given a prolongation sequence extend the sequence canonically}
+    prolongations:=sequence(P);
+    r:=#prolongations;
+    ker0:=second(prolongations[r]);
+    
+    B:=codomain(first(prolongations[1]));
+    original_names:=Names(B);
+    nvars:=Ngens(B);
+    jet0:=codomain(ker0);
+    names0:=Names(jet0);
+    jet1:=PolynomialRing(BaseRing(B),(r+2)*nvars);
+    names1:=jet_r_names(original_names,r+1);
+    all_names:=names0 cat names1;
+    AssignNames(~jet1,all_names);
+    f1:=hom<jet0->jet1| [jet1.i : i in [1..Ngens(jet0)]]>;
+    delta1:=map<jet0->jet1|g:->&+[f1(Derivative(g,jet0.i))*jet1.(i+Ngens(B)) : i in [1..Ngens(jet0)]]>;
+    ker1:=JKernel(f1,delta1);
+    prol_new:=Prolongation(ker0,ker1);
+    Append(~P`sequence,prol_new);
+end intrinsic;
+
+intrinsic Extend(P::RngMPolProlSeq,r::RngIntElt)
+{Given a prolongation sequence extend the sequence canonically}
+    while order(P) lt r do
+        Extend(P);
+    end while;
+end intrinsic;
+
+intrinsic BaseRing(P::RngMPolProlSeq)->Rng
+{Return the "-1" term of the prolongation sequence}
+    return domain(first(sequence(P)[1]));
+end intrinsic;
+
+
+intrinsic Jet(P::RngMPolProlSeq,i::RngIntElt)->.
+{Return the rth term of the prolongation sequence}
+    if i eq -1 then
+        return domain(first(sequence(P)[1]));
+    else
+        if #(P) lt i+1 then
+            Extend(P,i+1);
+        end if;
+        return codomain(first(sequence(P)[i+1]));
+    end if;
+end intrinsic;
+
+intrinsic IsCoercible(P::RngMPolProlSeq,x::.)->BoolElt,.
+{}
+    if Type(x) eq RngDiff then
+        if x in Jet(P,-1) then
+            y:=New(RngMPolProlSeqElt);
+            y`parent:=P;
+            y`elt:=x;
+            y`order:=-1;
+            return true, y;
+        else
+            return false;
+        end if;
+    elif Type(x) eq RngMPolElt then
+        r:=0;
+        while r lt order(P) do
+            if x in Jet(P,r) then
+                y:=New(RngMPolProlSeqElt);
+                y`parent:=P;
+                y`elt:=x;
+                y`order:=r;
+                return true,y;
+            else
+                r:=r+1;
+            end if;
+        end while;
+        return false;
+    end if;
+end intrinsic;
+
+intrinsic Parent(x::RngMPolProlSeqElt)->RngMPolProlSeq
+{}
+    return x`parent;
+end intrinsic;
+
+////////////////////
+intrinsic Print(P::RngMPolProlSeq)
+////////////////////
+{Polynomial prolongation sequence printing}
+    printf "A prolongation sequence for a polynomial ring in %o variables over a field.", Ngens(P);
+end intrinsic;
+
+////////////////////
+intrinsic Print(x::RngMPolProlSeqElt)
+////////////////////
+{}
+    printf "%o",x`elt;
+end intrinsic;
+
+////////////////////
+intrinsic map(P::RngMPolProlSeq,m::RngIntElt)->Map
+////////////////////
+{This gives the morphism from Jm to Jm+1}
+    require m ge -1: "Must have input bigger than -1. Jet spaces start at -1 which is the base ring.";
+    if order(P) lt m then
+        Extend(P,m);
+    end if;
+    
+    return map(first(sequence(P)[m+2]));
+    
+end intrinsic;
+
+////////////////////
+intrinsic derivation(P::RngMPolProlSeq,m::RngIntElt)->Map
+////////////////////
+{This gives the derivative from Jm to Jm+1}
+    require m ge -1: "Must have input bigger than -1. Jet spaces start at -1 which is the base ring.";
+    if order(P) lt m then
+        Extend(P,m);
+    end if;
+    
+    return derivation(first(sequence(P)[m+2]));
+    
+end intrinsic;
+
+////////////////////
+intrinsic map(P::RngMPolProlSeq,m::RngIntElt,n::RngIntElt)->Map
+////////////////////
+{This gives the morphism from Jm to Jn}
+    require m le n: "The map must be from one a lower order jet space to a higher order jet space.";
+    return &*[map(P,i) : i in [m..n-1]];
+end intrinsic;
+    
+////////////////////
+intrinsic '+'(x1::RngMPolProlSeqElt,x2::RngMPolProlSeqElt)->RngMPolProlSeqElt
+////////////////////
+{}
+    P:=Parent(x1);
+    require P eq Parent(x2): "Elements must be in the same prolongation sequence";
+    n1:=x1`order;
+    n2:=x2`order;
+    if n1 eq n2 then
+        y:=New(RngMPolProlSeqElt);
+        y`parent:=Parent(x1);
+        y`order:=n1;
+        y`elt := x1`elt+x2`elt;
+        return y;
+    else
+        max:=Maximum([n1,n2]);
+        f1:=map(P,n1,max);
+        f2:=map(P,n2,max);
+        y:=New(RngMPolProlSeqElt);
+        y`parent:=Parent(x1);
+        y`order:=n1;
+        y`elt := f1(x1`elt)+f2(x2`elt);
+        return y;
+    end if;
+end intrinsic;
+
+////////////////////
+intrinsic '*'(x1::RngMPolProlSeqElt,x2::RngMPolProlSeqElt)->RngMPolProlSeqElt
+////////////////////
+{}
+    P:=Parent(x1);
+    require P eq Parent(x2): "Elements must be in the same prolongation sequence";
+    n1:=x1`order;
+    n2:=x2`order;
+    if n1 eq n2 then
+        y:=New(RngMPolProlSeqElt);
+        y`parent:=Parent(x1);
+        y`order:=n1;
+        y`elt := x1`elt*x2`elt;
+        return y;
+    else
+        max:=Maximum([n1,n2]);
+        f1:=map(P,n1,max);
+        f2:=map(P,n2,max);
+        y:=New(RngMPolProlSeqElt);
+        y`parent:=Parent(x1);
+        y`order:=n1;
+        y`elt := f1(x1`elt)*f2(x2`elt);
+        return y;
+    end if;
+end intrinsic;
+
+////////////////////
+intrinsic '-'(x1::RngMPolProlSeqElt,x2::RngMPolProlSeqElt)->RngMPolProlSeqElt
+////////////////////
+{}
+    P:=Parent(x1);
+    require P eq Parent(x2): "Elements must be in the same prolongation sequence";
+    n1:=x1`order;
+    n2:=x2`order;
+    if n1 eq n2 then
+        y:=New(RngMPolProlSeqElt);
+        y`parent:=Parent(x1);
+        y`order:=n1;
+        y`elt := x1`elt-x2`elt;
+        return y;
+    else
+        max:=Maximum([n1,n2]);
+        f1:=map(P,n1,max);
+        f2:=map(P,n2,max);
+        y:=New(RngMPolProlSeqElt);
+        y`parent:=Parent(x1);
+        y`order:=n1;
+        y`elt := f1(x1`elt)-f2(x2`elt);
+        return y;
+    end if;
+end intrinsic;
+
+//////////////////////
+intrinsic Diff(f::RngMPolProlSeqElt)->RngMPolProlSeqElt
+//////////////////////
+{Differentiate and element of a prolongation sequence.}
+    P:=Parent(f);
+    Df:=New(RngMPolProlSeqElt);
+    r:=f`order;
+    D:=derivation(P,r);
+    Df`parent:=P;
+    Df`elt:=D(f`elt);
+    Df`order:=f`order+1;
+    return Df;
+end intrinsic;
+
+//////////////////////
+intrinsic Diff(f::RngMPolProlSeqElt,n::RngIntElt)->RngMPolProlSeqElt
+//////////////////////
+{Differentiate and element of a prolongation sequence.}
+    P:=Parent(f);
+    if order(P) lt n+f`order+2 then
+        Extend(P,n+f`order+2);
+    end if;
+    
+    if n eq 0 then
+        return f;
+    elif n eq 1 then
+        return Diff(f);
+    elif n gt 1 then
+        return Diff(Diff(f),n-1);
+    end if;
+end intrinsic;
+
+////////////////////
+intrinsic AssignNames(~P::RngMPolProlSeq,s::SeqEnum)
+////////////////////
+{}
+    B:=Jet(P,0);
+    AssignNames(~B,s);
+    original_names:=Names(B);
+    all_names:=original_names;
+    R:=order(P);
+    for r in [1..R] do
+        jet1:=Jet(P,r);
+        new_names:=jet_r_names(original_names,r);
+        all_names:=all_names cat new_names;
+        AssignNames(~jet1,all_names);
+    end for;
+end intrinsic;
+
+////////////////////
+intrinsic PolynomialRingProlSeq(F::.,num_vars::RngIntElt)->RngMPolProlSeq
+////////////////////
+{}
+    B:=PolynomialRing(F,num_vars);
+    return ProlongationSequence(B);
+end intrinsic;
+
+////////////////////
+intrinsic Name(P::RngMPolProl,pair::SeqEnum)->RngMPolProlSeqElt
+////////////////////
+{}
+    i:=pair[1];
+    j:=pair[2];
+    B:=Jet(P,0);
+    return Diff(P!B.i,j);
+end intrinsic;
+
+////////////////////
+intrinsic Name(P::RngMPolProlSeq,i::RngIntElt)->RngMPolProlSeqElt
+////////////////////
+{}
+    B:=Jet(P,0);
+    return P!B.i;
+end intrinsic;
+
+////////////////////
+intrinsic Ngens(P::RngMPolProlSeq)->RngIntElt
+////////////////////
+{}
+    return Ngens(Jet(P,0));
+end intrinsic;
