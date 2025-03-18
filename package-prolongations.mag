@@ -194,12 +194,22 @@ intrinsic 'eq'(prol1::Prol,prol2::Prol)->BoolElt
 
 end intrinsic;
 
+////////////////////
 intrinsic ProlongationSequence(B::RngMPol)->RngMPolProlSeq
+////////////////////
 {Make a single prolongation sequence involving the base ring and the first jet space.}
     prol_seq:=New(RngMPolProlSeq);
     prol_seq`sequence:=[Prolongation(B)];
     return prol_seq;
 end intrinsic;
+
+////////////////////
+intrinsic 'eq'(P1::RngMPolProlSeq,P2::RngMPolProlSeq)->BoolElt
+////////////////////
+{}
+    return sequence(P1) eq sequence(P2);
+end intrinsic;
+
 
 function next_names(names)
 /*
@@ -215,7 +225,9 @@ This is used for defining jet rings of polynomials.
     return [Sprintf("Diff(%o,%o)",n,r) :n in names];
 end function;
 
+////////////////////
 intrinsic ProlongationSequence(B::RngMPol,r::RngIntElt)->RngMPolProlSeq
+////////////////////
 {Create a prolongation sequence up to jet spaces of order r.
 If r<=0 it returns a prolongation sequence of length 1.}
     P:=ProlongationSequence(B);
@@ -227,7 +239,9 @@ If r<=0 it returns a prolongation sequence of length 1.}
     end if;
 end intrinsic;
 
+////////////////////
 intrinsic sequence(P::RngMPolProlSeq)->SeqEnum
+////////////////////
 {}
     return P`sequence;
 
@@ -240,23 +254,30 @@ intrinsic `[]`(M::RngMPolProlSeq, i::RngIntElt, j::RngIntElt) -> RngMPol
 end intrinsic;
 */
 
+////////////////////
 intrinsic Function(M::RngMPolProlSeq, i::RngIntElt) -> JKer
+////////////////////
 {}
     return sequence(M)[i];
 end intrinsic;
 
-
+////////////////////
 intrinsic order(P::RngMPolProlSeq)->RngIntElt
+////////////////////
 {Return the order to which the prolongation sequence has been computed.}
     return #sequence(P);
 end intrinsic;
 
+////////////////////
 intrinsic '#'(P::RngMPolProlSeq)->RngIntElt
+////////////////////
 {Return the order to which the prolongation sequence has been computed.}
     return #sequence(P);
 end intrinsic;
 
+////////////////////
 intrinsic Extend(P::RngMPolProlSeq)
+////////////////////
 {Given a prolongation sequence extend the sequence canonically}
     prolongations:=sequence(P);
     r:=#prolongations;
@@ -278,20 +299,25 @@ intrinsic Extend(P::RngMPolProlSeq)
     Append(~P`sequence,prol_new);
 end intrinsic;
 
+////////////////////
 intrinsic Extend(P::RngMPolProlSeq,r::RngIntElt)
+////////////////////
 {Given a prolongation sequence extend the sequence canonically}
     while order(P) lt r do
         Extend(P);
     end while;
 end intrinsic;
 
+////////////////////
 intrinsic BaseRing(P::RngMPolProlSeq)->Rng
+////////////////////
 {Return the "-1" term of the prolongation sequence}
     return domain(first(sequence(P)[1]));
 end intrinsic;
 
-
+////////////////////
 intrinsic Jet(P::RngMPolProlSeq,i::RngIntElt)->.
+////////////////////
 {Return the rth term of the prolongation sequence}
     if i eq -1 then
         return domain(first(sequence(P)[1]));
@@ -303,7 +329,9 @@ intrinsic Jet(P::RngMPolProlSeq,i::RngIntElt)->.
     end if;
 end intrinsic;
 
+////////////////////
 intrinsic IsCoercible(P::RngMPolProlSeq,x::.)->BoolElt,.
+////////////////////
 {}
     if Type(x) eq RngDiff then
         if x in Jet(P,-1) then
@@ -332,7 +360,9 @@ intrinsic IsCoercible(P::RngMPolProlSeq,x::.)->BoolElt,.
     end if;
 end intrinsic;
 
+////////////////////
 intrinsic Parent(x::RngMPolProlSeqElt)->RngMPolProlSeq
+////////////////////
 {}
     return x`parent;
 end intrinsic;
@@ -539,8 +569,43 @@ intrinsic Name(P::RngMPolProlSeq,i::RngIntElt)->RngMPolProlSeqElt
 end intrinsic;
 
 ////////////////////
+intrinsic '.'(P::RngMPolProlSeq,i::RngIntElt)->RngMPolProlSeqElt
+////////////////////
+{}
+    B:=Jet(P,0);
+    return P!B.i;
+end intrinsic;
+
+////////////////////
+intrinsic '.'(P::RngMPolProl,pair::SeqEnum)->RngMPolProlSeqElt
+////////////////////
+{}
+    i:=pair[1];
+    j:=pair[2];
+    B:=Jet(P,0);
+    return Diff(P!B.i,j);
+end intrinsic;
+
+////////////////////
 intrinsic Ngens(P::RngMPolProlSeq)->RngIntElt
 ////////////////////
 {}
     return Ngens(Jet(P,0));
 end intrinsic;
+
+////////////////////
+intrinsic 'eq'(f1::RngMPolProlSeqElt,f2::RngMPolProlSeqElt)->BoolElt
+////////////////////
+{}
+    P:=Parent(f1);
+    require Parent(f2) eq f1: "Elements must have the same parent";
+    r1:=f1`order;
+    r2:=f2`order;
+    max:=Maximum([r1,r2]);
+    map1:=map(P,r1,max);
+    map2:=map(P,r2,max);
+    ff1:=map1(f1);
+    ff2:=map2(f2);
+    return ff1 eq ff2;
+end intrinsic;
+
