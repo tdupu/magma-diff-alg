@@ -464,7 +464,13 @@ end intrinsic;
 intrinsic IsCoercible(P::RngMPolProlSeq,x::.)->BoolElt,.
 ////////////////////
 {}
-    if Type(x) eq RngDiff then
+    if Type(x) eq RngIntElt then
+        y:=New(RngMPolProlSeqElt);
+        y`parent:=P;
+        y`elt:=BaseRing(P)!x;
+        y`order:=-1;
+        return true,y;
+    elif Type(x) eq RngDiff then
         if x in Jet(P,-1) then
             y:=New(RngMPolProlSeqElt);
             y`parent:=P;
@@ -487,6 +493,8 @@ intrinsic IsCoercible(P::RngMPolProlSeq,x::.)->BoolElt,.
                 r:=r+1;
             end if;
         end while;
+        return false;
+    else
         return false;
     end if;
 end intrinsic;
@@ -596,11 +604,27 @@ intrinsic '*'(x1::RngMPolProlSeqElt,x2::RngMPolProlSeqElt)->RngMPolProlSeqElt
         f2:=map(P,n2,max);
         y:=New(RngMPolProlSeqElt);
         y`parent:=Parent(x1);
-        y`order:=n1;
+        y`order:=max;
         y`elt := f1(x1`elt)*f2(x2`elt);
         return y;
     end if;
 end intrinsic;
+
+////////////////////
+intrinsic '*'(x1::RngElt,x2::RngMPolProlSeqElt)->RngMPolProlSeqElt
+////////////////////
+{}
+    P:=Parent(x2);
+    return (P!x1)*x2;
+end intrinsic;
+
+////////////////////
+intrinsic '*'(x2::RngMPolProlSeqElt,x1::RngElt)->RngMPolProlSeqElt
+////////////////////
+{}
+    return x1*x2;
+end intrinsic;
+
 
 ////////////////////
 intrinsic '-'(x1::RngMPolProlSeqElt,x2::RngMPolProlSeqElt)->RngMPolProlSeqElt
@@ -771,6 +795,17 @@ intrinsic 'eq'(f1::RngMPolProlSeqElt,f2::RngMPolProlSeqElt)->BoolElt
     ff1:=map1(f1`elt);
     ff2:=map2(f2`elt);
     return ff1 eq ff2;
+end intrinsic;
+
+intrinsic LeadingTerm(f::RngMPolProlSeqElt)->RngMPolProlSeqElt,RngIntElt
+{Return the leader of a differential polynomials which is the leading }
+    ltu:=LeadingTerm(f`elt);
+    y:=New(RngMPolProlSeqElt);
+    P:=Parent(f);
+    y`parent:=P;
+    y`order:=f`order;
+    y`elt:=ltu;
+    return y;
 end intrinsic;
 
 intrinsic Leader(f::RngMPolProlSeqElt)->RngMPolProlSeqElt,RngIntElt
