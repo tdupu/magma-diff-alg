@@ -1,3 +1,15 @@
+/*
+Taylor Dupuy -- Spring 2025
+
+This gives a way of talking about differential polynomials via prolongation sequences and kernels in the sense of Johnson. This is basically keeping track of jet spaces and how they map to each other. Each jet ring both has a derivative and a map to the subsequent jet space. We have defined a prolongation element to be an element whichh is in one of these spaces and then allowed ourselves to add, multiply, etc elements by going to jet rings of deep enough order and doing it there. This approach is slower than the RngDiffPol but it makes accessing the functions like Grobner bases to RngMPol a lot easier.
+
+Basic reference for this material:
+
+Buium, Differential Algebra and Diophantine Geometry
+Chapter 3, section 2, page 60
+
+*/
+
 Q:=RationalField();
 Z:=Integers();
 
