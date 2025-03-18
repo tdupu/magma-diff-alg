@@ -591,7 +591,7 @@ intrinsic '+'(x1::RngMPolProlSeqElt,x2::RngMPolProlSeqElt)->RngMPolProlSeqElt
     z1,z2:=match_orders(x1,x2);
     y:=New(RngMPolProlSeqElt);
     y`parent:=Parent(z1);
-    y`order:=order`z1;
+    y`order:=z1`order;
     y`elt := z1`elt+z2`elt;
     return y;
   
@@ -822,7 +822,8 @@ intrinsic Coefficients(B::RngMPolProlSeqElt,u::RngMPolProlSeqElt)->RngMPolProlSe
 //%%%%%%%%%%%%%%%%%%%%%%%
 {}
         B1,u1:=match_orders(B,u);
-        return Coefficients(B1`elt,u`elt);
+        P:=Parent(B1);
+        return [P!c: c in Coefficients(B1`elt,u`elt)];
 end intrinsic;
 
 //%%%%%%%%%%%%%%%%%%%%%%%
@@ -831,7 +832,38 @@ intrinsic TopCoeff(B::RngMPolProlSeqElt,u::RngMPolProlSeqElt)->RngMPolProlSeqElt
 {}
         coeffs:=Coefficients(B,u);
         degB:=#coeffs-1;
-        IB:=Parent(B)!coeffs[#coeffs];
+        IB:=coeffs[#coeffs];
         return IB,degB;
+end intrinsic;
+
+//%%%%%%%%%%%%%%%%%%%%%%
+intrinsic Initial(B::RngMPolProlSeqElt)->RngMPolProlSeqElt
+//%%%%%%%%%%%%%%%%%%%%%%
+{}
+    lB,degB:=Leader(B);
+    return TopCoeff(B,lB),degB;
+end intrinsic;
+
+//%%%%%%%%%%%%%%%%%%%
+intrinsic Derivative(B::RngMPolProlSeqElt,u::RngMPolProlSeqElt)->RngMPolProlSeqElt
+//%%%%%%%%%%%%%%%%%%%
+{}
+    B1,u1:=match_orders(B,u);
+    P:=Parent(B1);
+    y:=New(RngMPolProlSeqElt);
+    y`parent:=P;
+    y`order:=B1`order;
+    y`elt:=Derivative(B1`elt,u`elt);
+    return y;
+
+end intrinsic;
+
+
+//%%%%%%%%%%%%%%%%%%%
+intrinsic Separant(B::RngMPolProlSeqElt)->RngMPolProlSeqElt
+//%%%%%%%%%%%%%%%%%%%
+{The partial derivative of a differential polynomial with respect to its leader.}
+    lB,dB:=Leader(B);
+    return Derivative(B,lB);
 end intrinsic;
 
