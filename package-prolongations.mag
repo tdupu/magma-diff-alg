@@ -412,7 +412,11 @@ intrinsic map(P::RngMPolProlSeq,m::RngIntElt,n::RngIntElt)->Map
 ////////////////////
 {This gives the morphism from Jm to Jn}
     require m le n: "The map must be from one a lower order jet space to a higher order jet space.";
-    return &*[map(P,i) : i in [m..n-1]];
+    if m eq n then
+        return map<Jet(P,m)->Jet(P,m)|f:->f>;
+    else
+        return &*[map(P,i) : i in [m..n-1]];
+    end if;
 end intrinsic;
     
 ////////////////////
@@ -598,14 +602,14 @@ intrinsic 'eq'(f1::RngMPolProlSeqElt,f2::RngMPolProlSeqElt)->BoolElt
 ////////////////////
 {}
     P:=Parent(f1);
-    require Parent(f2) eq f1: "Elements must have the same parent";
+    require Parent(f2) eq P: "Elements must have the same parent";
     r1:=f1`order;
     r2:=f2`order;
     max:=Maximum([r1,r2]);
     map1:=map(P,r1,max);
     map2:=map(P,r2,max);
-    ff1:=map1(f1);
-    ff2:=map2(f2);
+    ff1:=map1(f1`elt);
+    ff2:=map2(f2`elt);
     return ff1 eq ff2;
 end intrinsic;
 
