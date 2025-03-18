@@ -557,6 +557,30 @@ intrinsic map(P::RngMPolProlSeq,m::RngIntElt,n::RngIntElt)->Map
         return &*[map(P,i) : i in [m..n-1]];
     end if;
 end intrinsic;
+
+intrinsic match_orders(x1::RngMPolProlSeqElt,x2::RngMPolProlSeqElt)->RngMPolProlSeqElt,RngMPolProlSeqElt
+{Given two elements bump them up to the same jet ring.}
+    P:=Parent(x1);
+    require P eq Parent(x2): "Elements must be in the same prolongation sequence";
+    n1:=x1`order;
+    n2:=x2`order;
+    if n1 eq n2 then
+        return x1,x2;
+    else
+        max:=Maximum([n1,n2]);
+        f1:=map(P,n1,max);
+        f2:=map(P,n2,max);
+        y1:=New(RngMPolProlSeqElt);
+        y2:=New(RngMPolProlSeqElt);
+        y1`parent:=Parent(x1);
+        y2`parent:=Parent(x2);
+        y1`order:=max;
+        y2`order:=max;
+        y1`elt:=f1(x1`elt);
+        y2`elt:=f2(x2`elt);
+        return y1,y2;
+    end if;
+end intrinsic;
     
 ////////////////////
 intrinsic '+'(x1::RngMPolProlSeqElt,x2::RngMPolProlSeqElt)->RngMPolProlSeqElt
@@ -564,24 +588,13 @@ intrinsic '+'(x1::RngMPolProlSeqElt,x2::RngMPolProlSeqElt)->RngMPolProlSeqElt
 {}
     P:=Parent(x1);
     require P eq Parent(x2): "Elements must be in the same prolongation sequence";
-    n1:=x1`order;
-    n2:=x2`order;
-    if n1 eq n2 then
-        y:=New(RngMPolProlSeqElt);
-        y`parent:=Parent(x1);
-        y`order:=n1;
-        y`elt := x1`elt+x2`elt;
-        return y;
-    else
-        max:=Maximum([n1,n2]);
-        f1:=map(P,n1,max);
-        f2:=map(P,n2,max);
-        y:=New(RngMPolProlSeqElt);
-        y`parent:=Parent(x1);
-        y`order:=n1;
-        y`elt := f1(x1`elt)+f2(x2`elt);
-        return y;
-    end if;
+    z1,z2:=match_orders(x1,x2);
+    y:=New(RngMPolProlSeqElt);
+    y`parent:=Parent(z1);
+    y`order:=order`z1;
+    y`elt := z1`elt+z2`elt;
+    return y;
+  
 end intrinsic;
 
 ////////////////////
@@ -590,24 +603,12 @@ intrinsic '*'(x1::RngMPolProlSeqElt,x2::RngMPolProlSeqElt)->RngMPolProlSeqElt
 {}
     P:=Parent(x1);
     require P eq Parent(x2): "Elements must be in the same prolongation sequence";
-    n1:=x1`order;
-    n2:=x2`order;
-    if n1 eq n2 then
-        y:=New(RngMPolProlSeqElt);
-        y`parent:=Parent(x1);
-        y`order:=n1;
-        y`elt := x1`elt*x2`elt;
-        return y;
-    else
-        max:=Maximum([n1,n2]);
-        f1:=map(P,n1,max);
-        f2:=map(P,n2,max);
-        y:=New(RngMPolProlSeqElt);
-        y`parent:=Parent(x1);
-        y`order:=max;
-        y`elt := f1(x1`elt)*f2(x2`elt);
-        return y;
-    end if;
+    z1,z2:=match_orders(x1,x2);
+    y:=New(RngMPolProlSeqElt);
+    y`parent:=Parent(z1);
+    y`order:=z1`order;
+    y`elt := z1`elt*z2`elt;
+    return y;
 end intrinsic;
 
 ////////////////////
@@ -632,24 +633,12 @@ intrinsic '-'(x1::RngMPolProlSeqElt,x2::RngMPolProlSeqElt)->RngMPolProlSeqElt
 {}
     P:=Parent(x1);
     require P eq Parent(x2): "Elements must be in the same prolongation sequence";
-    n1:=x1`order;
-    n2:=x2`order;
-    if n1 eq n2 then
-        y:=New(RngMPolProlSeqElt);
-        y`parent:=Parent(x1);
-        y`order:=n1;
-        y`elt := x1`elt-x2`elt;
-        return y;
-    else
-        max:=Maximum([n1,n2]);
-        f1:=map(P,n1,max);
-        f2:=map(P,n2,max);
-        y:=New(RngMPolProlSeqElt);
-        y`parent:=Parent(x1);
-        y`order:=n1;
-        y`elt := f1(x1`elt)-f2(x2`elt);
-        return y;
-    end if;
+    z1,z2:=match_orders(x1,x2);
+    y:=New(RngMPolProlSeqElt);
+    y`parent:=Parent(z1);
+    y`order:=order`z1;
+    y`elt := z1`elt-z2`elt;
+    return y;
 end intrinsic;
 
 ////////////////////
@@ -798,7 +787,7 @@ intrinsic 'eq'(f1::RngMPolProlSeqElt,f2::RngMPolProlSeqElt)->BoolElt
 end intrinsic;
 
 intrinsic LeadingTerm(f::RngMPolProlSeqElt)->RngMPolProlSeqElt,RngIntElt
-{Return the leader of a differential polynomials which is the leading }
+{Return the leading term of an element of a prolongation sequence.}
     ltu:=LeadingTerm(f`elt);
     y:=New(RngMPolProlSeqElt);
     P:=Parent(f);
@@ -820,7 +809,6 @@ intrinsic Leader(f::RngMPolProlSeqElt)->RngMPolProlSeqElt,RngIntElt
     P:=Parent(f);
     num_vars:=Ngens(P);
     pair:=std_to_pair(num_vars,n);
-    pair;
     i:=pair[1];
     j:=pair[2];
     y`parent:=P;
@@ -828,3 +816,22 @@ intrinsic Leader(f::RngMPolProlSeqElt)->RngMPolProlSeqElt,RngIntElt
     y`elt:=Jet(P,j).n;
     return y,eltu[n];
 end intrinsic;
+
+//%%%%%%%%%%%%%%%%%%%%%%%
+intrinsic Coefficients(B::RngMPolProlSeqElt,u::RngMPolProlSeqElt)->RngMPolProlSeqElt
+//%%%%%%%%%%%%%%%%%%%%%%%
+{}
+        B1,u1:=match_orders(B,u);
+        return Coefficients(B1`elt,u`elt);
+end intrinsic;
+
+//%%%%%%%%%%%%%%%%%%%%%%%
+intrinsic TopCoeff(B::RngMPolProlSeqElt,u::RngMPolProlSeqElt)->RngMPolProlSeqElt
+//%%%%%%%%%%%%%%%%%%%%%%%
+{}
+        coeffs:=Coefficients(B,u);
+        degB:=#coeffs-1;
+        IB:=Parent(B)!coeffs[#coeffs];
+        return IB,degB;
+end intrinsic;
+
