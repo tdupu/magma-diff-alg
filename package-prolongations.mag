@@ -1062,11 +1062,11 @@ intrinsic Reduction(f::RngMPolProlSeqElt,g::RngMPolProlSeqElt,r::RngIntElt)->Rng
     elif Divides(LMg,LMf) then
         LCf:=LeadingCoefficient(f);
         LCg:=LeadingCoefficient(g);
-        return reduction(f-(LCf/LCg)*(LMf/LMg)*g,g,1);
+        return Reduction(f-(LCf/LCg)*(LMf/LMg)*g,g,1);
     else
-        f2:=reduction(f,Diff(g,1),1);
+        f2:=Reduction(f,Diff(g,1),1);
         if f2 ne f then
-            return reduction(f2,g,1);
+            return Reduction(f2,g,1);
         end if;
     end if;
 end intrinsic;
