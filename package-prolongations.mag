@@ -1021,3 +1021,13 @@ intrinsic Order(f::RngMPolProlSeqElt)->SeqEnum
 {}
     return Maximum(Orders(f));
 end intrinsic;
+
+intrinsic Weights(f1::RngMPolProlSeqElt)->SeqEnum
+{}
+    return [&+[m1[2]*m1[1,2] : m1 in t[2]] : t in Eltseq(f1)];
+end intrinsic;
+
+intrinsic Weight(f1::RngMPolProlSeqElt)->SeqEnum
+{}
+    return Maximum(Weights(f1));
+end intrinsic;
