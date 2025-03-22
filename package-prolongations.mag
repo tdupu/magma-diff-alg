@@ -92,14 +92,31 @@ function std_to_pair(nvars,m)
 end function;
 
 ////////////////////
-function dblocks_to_blocks(nvars,r,dblocks)
+function dblocks_to_blocks_pair(nvars,r,dblocks)
 ////////////////////
 /*
 dblocks:=[ [1,2],[3,4] ];
 dblocks:=[ [1,2,3,4]]; //pure orderly lexicographic
 dblocks:=[[1],[2],[3],[4]]; //pure elimination
 */
-    return [ &cat[ Reverse([ pair_to_std(nvars,[i,j]) : j in [0..r] ]) : i in dblock] : dblock in dblocks];
+    function single_block(r,dblock)
+        return [ [ [x,r-i] : x in dblock ] : i in [0..r]];
+    end function;
+    
+    return &cat [single_block(r,dblock) : dblock in dblocks];
+end function;
+
+////////////////////
+function dblocks_to_blocks_std(nvars,r,dblocks)
+////////////////////
+/*
+dblocks:=[ [1,2],[3,4] ];
+dblocks:=[ [1,2,3,4]]; //pure orderly lexicographic
+dblocks:=[[1],[2],[3],[4]]; //pure elimination
+*/
+    blocks_p:=dblocks_to_blocks_pair(nvars,r,dblocks);
+    blocks_s:=[ [pair_to_std(nvars,x) : x in block]: block in blocks_p];
+    return blocks_s;
 end function;
 
 ////////////////////
@@ -109,7 +126,7 @@ function trace_order_blocks(nvars,r,T)
     data:=T[2];
     if lab eq "dblocks" then
         labr:="elim";
-        blocks:=dblocks_to_blocks(nvars,r,data);
+        blocks:=dblocks_to_blocks_std(nvars,r,data);
         Tr:=<labr,blocks>;
         return Tr;
     else
@@ -136,7 +153,7 @@ end function;
 function trace_order_weight(nvars,r,T)
 ////////////////////
     if T[1] eq "dblocks" then
-        blocks:=dblocks_to_blocks(nvars,r,T[2]);
+        blocks:=dblocks_to_blocks_std(nvars,r,T[2]);
         M:=weight_matrix(blocks);
         weights:=&cat[Eltseq(r):r in Rows(M)];
         return <"weight",weights>;
