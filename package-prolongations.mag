@@ -1019,6 +1019,11 @@ end intrinsic;
 
 intrinsic Order(f::RngMPolProlSeqElt)->SeqEnum
 {}
+    /*
+    We should really reset f`order here using
+    Parent(f)!Eltseq(f);
+    We should make sure the order of the new one is the order of f as computed.
+    */
     return Maximum(Orders(f));
 end intrinsic;
 
@@ -1030,4 +1035,43 @@ end intrinsic;
 intrinsic Weight(f1::RngMPolProlSeqElt)->SeqEnum
 {}
     return Maximum(Weights(f1));
+end intrinsic;
+
+intrinsic Divides(f1::RngMPolProlSeqElt,f2::RngMPolProlSeqElt)->BoolElt
+{}
+    g1,g2:=match_orders(f1,f2);
+    return Divides(g1`elt,g2`elt);
+end intrinsic;
+
+intrinsic '/'(f2::RngMPolProlSeqElt,f1::RngMPolProlSeqElt)->BoolElt
+{}
+    g1,g2:=match_orders(f1,f2);
+    h:=New(RngMPolProlSeqElt);
+    h`parent:=Parent(f2);
+    h`order:=g1`order;
+    h`elt:=g1`elt/g2`elt;
+    return h;
+end intrinsic;
+
+intrinsic Reduction(f::RngMPolProlSeqElt,g::RngMPolProlSeqElt,r::RngIntElt)->RngMPolProlSeqElt
+{}
+    LMf:=LeadingMonomial(f);
+    LMg:=LeadingMonomial(g);
+    if Degree(LMf) gt Degree(LMg) or Weight(LMf) gt Weight(LMg) then
+        return f;
+    elif Divides(LMg,LMf) then
+        LCf:=LeadingCoefficient(f);
+        LCg:=LeadingCoefficient(g);
+        return reduction(f-(LCf/LCg)*(LMf/LMg)*g,g,1);
+    else
+        f2:=reduction(f,Diff(g,1),1);
+        if f2 ne f then
+            return reduction(f2,g,1);
+        end if;
+    end if;
+end intrinsic;
+
+intrinsic Reduction(f::RngMPolProlSeqElt,g::RngMPolProlSeqElt)->RngMPolProlSeqElt
+{}
+    return Reduction(f,g,1);
 end intrinsic;
