@@ -509,13 +509,14 @@ end intrinsic;
 intrinsic IsCoercible(P::RngMPolProlSeq,x::.)->BoolElt,.
 ////////////////////
 {}
-    if Type(x) eq RngIntElt then
+    if Type(x) eq SeqEnum then
+        return true,&+[term[1]*&*[(P.t[1])^t[2]: t in term[2]] : term in x];
+    elif Type(x) eq RngIntElt then
         y:=New(RngMPolProlSeqElt);
         y`parent:=P;
         y`elt:=BaseRing(P)!x;
         y`order:=-1;
         return true,y;
-    
     elif x in Jet(P,-1) then
         y:=New(RngMPolProlSeqElt);
         y`parent:=P;
@@ -809,16 +810,21 @@ end intrinsic;
 intrinsic '.'(P::RngMPolProlSeq,i::RngIntElt)->RngMPolProlSeqElt
 ////////////////////
 {}
-    B:=Jet(P,0);
-    return P!B.i;
+    if i le Ngens(P) then
+        B:=Jet(P,0);
+        return P!B.i;
+    else
+        return P.std_to_pair(i);
+    end if;
 end intrinsic;
 
 ////////////////////
-intrinsic '.'(P::RngMPolProl,pair::SeqEnum)->RngMPolProlSeqElt
+intrinsic '.'(P::RngMPolProlSeq,pair::SeqEnum)->RngMPolProlSeqElt
 ////////////////////
 {}
     i:=pair[1];
     j:=pair[2];
+    require i gt 0 and i le Ngens(P): "Not in variable range.";
     B:=Jet(P,0);
     return Diff(P!B.i,j);
 end intrinsic;
@@ -960,3 +966,32 @@ This is the set of collection of pairs [i,j] that appear in the polynomial.
     return [[ std_to_pair(ngens,x) : x in Support(m)] : m in Monomials(f`elt)];
 end intrinsic;
 
+//%%%%%%%%%%%%%%%%%%%
+intrinsic Eltseq(f1::RngMPolProlSeqElt)->Seq
+//%%%%%%%%%%%%%%%%%%%
+{}
+    P:=Parent(f1);
+    num_vars:=Ngens(P);
+    
+    function monomial_seq(m)
+        if Degree(m) eq 0 then
+            return [<[1,0],0>];
+        else
+            return [<std_to_pair(num_vars,j),Exponents(m)[j]>: j in [1..#Exponents(m)] | Exponents(m)[j] ne 0];
+        end if;
+    end function;
+    
+    f1_elt:=f1`elt;
+    coeffs:=Coefficients(f1`elt);
+    monomials:=[monomial_seq(m) : m in Monomials(f1_elt)];
+    terms:=[<coeffs[i],monomials[i]> : i in [1..#monomials] ];
+    if #coeffs gt #monomials then
+        terms:=terms cat [<coeffs[#coeffs],<[1,0],0>>];
+    end if;
+        return terms;
+end intrinsic;
+
+intrinsic Monomials(f::RngMPolProlSeqElt)->SeqEnum
+{}
+    return [P![<1,ss[2]>] : ss in Eltseq(f)];
+end intrinsic;
