@@ -27,7 +27,8 @@ declare attributes RngDiffPol:
     term_order,
     polynomial_ring,
     ranking,
-    ranking_sequence;
+    ranking_sequence,
+    prolongation_sequence;
     
 declare attributes RngDiffPolElt:
     parent,

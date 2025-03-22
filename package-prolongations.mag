@@ -31,7 +31,7 @@ Sequences of Prolongations
 */
 
 declare type RngMPolProlSeq[RngMPolProlSeqElt];
-declare attributes RngMPolProlSeq: sequence,term_order;
+declare attributes RngMPolProlSeq: sequence,term_order,rngdiffpol;
 declare attributes RngMPolProlSeqElt: parent,elt,order;
 
 /*
@@ -301,11 +301,6 @@ intrinsic Prolongation(B::RngMPol: term_order:=<"dblocks",[]>)->Prol
        
         TO1:=trace_order_weight(nvars,1,TO);
         jet1:=PolynomialRing(BaseRing(B),2*nvars,TO1[1],TO1[2]);
-        names:=Names(B);
-        names1:=[Sprintf("Diff(%o)",n) :n in names];
-        jet1_names:=names cat names1;
-        AssignNames(~jet1,jet1_names);
-        
 
         incl:=hom<B->jet1| [jet1.i : i in [1..Ngens(B)]]>;
         delta:=map<B->jet1|g:->&+[incl(Derivative(g,B.i))*jet1.(i+Ngens(B)) : i in [1..Ngens(B)]]>;
@@ -426,8 +421,12 @@ intrinsic Extend(P::RngMPolProlSeq)
     B:=codomain(first(prolongations[1]));
     original_names:=Names(B);
     nvars:=Ngens(B);
+    
+    first_part:=Names(domain(ker0));
+    second_part:=jet_r_names(original_names,(#first_part)/(#original_names));
+    names0:=first_part cat second_part;
     jet0:=codomain(ker0);
-    names0:=Names(jet0);
+    AssignNames(~jet0,names0);
     
     TO:=MonomialOrder(P);
     TOr:=trace_order_weight(nvars,r+1,TO);
@@ -482,16 +481,13 @@ intrinsic IsCoercible(P::RngMPolProlSeq,x::.)->BoolElt,.
         y`elt:=BaseRing(P)!x;
         y`order:=-1;
         return true,y;
-    elif Type(x) eq RngDiff then
-        if x in Jet(P,-1) then
-            y:=New(RngMPolProlSeqElt);
-            y`parent:=P;
-            y`elt:=x;
-            y`order:=-1;
-            return true, y;
-        else
-            return false;
-        end if;
+    
+    elif x in Jet(P,-1) then
+        y:=New(RngMPolProlSeqElt);
+        y`parent:=P;
+        y`elt:=x;
+        y`order:=-1;
+        return true, y;
     elif Type(x) eq RngMPolElt then
         r:=0;
         while r lt order(P) do
@@ -610,6 +606,24 @@ intrinsic '+'(x1::RngMPolProlSeqElt,x2::RngMPolProlSeqElt)->RngMPolProlSeqElt
 end intrinsic;
 
 ////////////////////
+intrinsic '+'(x1::RngMPolProlSeqElt,x2::.)->RngMPolProlSeqElt
+////////////////////
+{}
+   return x1+Parent(x1)!x2;
+  
+end intrinsic;
+
+////////////////////
+intrinsic '+'(x2::.,x1::RngMPolProlSeqElt)->RngMPolProlSeqElt
+////////////////////
+{}
+   return x1+x2;
+  
+end intrinsic;
+
+
+
+////////////////////
 intrinsic '*'(x1::RngMPolProlSeqElt,x2::RngMPolProlSeqElt)->RngMPolProlSeqElt
 ////////////////////
 {}
@@ -702,8 +716,8 @@ intrinsic AssignNames(~P::RngMPolProlSeq,s::SeqEnum)
 {}
     B:=Jet(P,0);
     AssignNames(~B,s);
-    original_names:=Names(B);
-    all_names:=original_names;
+    original_names:=s;
+    all_names:=s;
     R:=order(P);
     for r in [1..R] do
         jet1:=Jet(P,r);
@@ -798,7 +812,7 @@ intrinsic 'eq'(f1::RngMPolProlSeqElt,f2::RngMPolProlSeqElt)->BoolElt
     return ff1 eq ff2;
 end intrinsic;
 
-intrinsic LeadingTerm(f::RngMPolProlSeqElt)->RngMPolProlSeqElt,RngIntElt
+intrinsic LeadingTerm(f::RngMPolProlSeqElt)->RngMPolProlSeqElt
 {Return the leading term of an element of a prolongation sequence.}
     ltu:=LeadingTerm(f`elt);
     y:=New(RngMPolProlSeqElt);
@@ -807,6 +821,28 @@ intrinsic LeadingTerm(f::RngMPolProlSeqElt)->RngMPolProlSeqElt,RngIntElt
     y`order:=f`order;
     y`elt:=ltu;
     return y;
+end intrinsic;
+
+intrinsic LeadingMonomial(f::RngMPolProlSeqElt)->RngMPolProlSeqElt
+{Return the leading term of an element of a prolongation sequence.}
+    lm:=LeadingMonomial(f`elt);
+    y:=New(RngMPolProlSeqElt);
+    P:=Parent(f);
+    y`parent:=P;
+    y`order:=f`order;
+    y`elt:=lm;
+    return y;
+end intrinsic;
+
+intrinsic LeadingCoefficient(f::RngMPolProlSeqElt)->RngElt
+{Return the leading coefficient of an element of a prolongation sequence.}
+    lc:=LeadingCoefficient(f`elt);
+    return lc;
+end intrinsic;
+
+intrinsic Degree(f::RngMPolProlSeqElt)->RngElt
+{Return the degree element of a prolongation sequence.}
+    return Degree(f`elt);
 end intrinsic;
 
 intrinsic Leader(f::RngMPolProlSeqElt)->RngMPolProlSeqElt,RngIntElt
@@ -881,7 +917,7 @@ end intrinsic;
 
 
 //%%%%%%%%%%%%%%%%%%%
-intrinsic Support(A::RngMPolProlSeqElt)->SeqEnum
+intrinsic Support(f::RngMPolProlSeqElt)->SeqEnum
 //%%%%%%%%%%%%%%%%%%%
 {
 This is the set of collection of pairs [i,j] that appear in the polynomial.
