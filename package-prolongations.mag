@@ -993,5 +993,31 @@ end intrinsic;
 
 intrinsic Monomials(f::RngMPolProlSeqElt)->SeqEnum
 {}
-    return [P![<1,ss[2]>] : ss in Eltseq(f)];
+    return [Parent(f)![<1,ss[2]>] : ss in Eltseq(f)];
+end intrinsic;
+
+intrinsic Orders(f1::RngMPolProlSeqElt)->SeqEnum
+{}
+    orders:=AssociativeArray();
+    for i in [1..Ngens(Parent(f1))] do
+        orders[i]:=0;
+    end for;
+
+    for t in Eltseq(f1) do
+        m:=t[2];
+        for a in m do
+            pair:=a[1];
+            if orders[pair[1]] lt pair[2] then
+                orders[pair[1]]:= pair[2];
+            end if;
+        end for;
+    end for;
+
+    return [orders[i] : i in [1..Ngens(Parent(f1))]];
+
+end intrinsic;
+
+intrinsic Order(f::RngMPolProlSeqElt)->SeqEnum
+{}
+    return Maximum(Orders(f));
 end intrinsic;
