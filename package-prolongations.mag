@@ -76,20 +76,37 @@ If we have a block order [[3],[1],[2,4]] then this corresponds to a block order
 */
 
 ////////////////////
-function pair_to_std(nvars,pair)
+intrinsic pair_to_std(nvars::RngIntElt,pair::SeqEnum)->RngIntElt
 ////////////////////
+{Given a pair [i,j] return the lexicographic index of x_i^(j) in the standard ordering}
+/*
+[std_to_pair(2,i) : i in [1..6]];
+*/
     i:=pair[1];
     j:=pair[2];
     return i+j*nvars;
-end function;
+end intrinsic;
 
 ////////////////////
-function std_to_pair(nvars,m)
+intrinsic std_to_pair(nvars::RngIntElt,m::RngIntElt)->SeqEnum
 ////////////////////
-    i:=m mod nvars;
-    j:=Z!((m-i)/nvars);
-    return [i,j];
-end function;
+{Given an index k return the pair [i,j] corresponding to the variable x_i^(j) in the standard ordering}
+/*
+[pair_to_std(2,x) : x in [[1,0],[2,0],[1,1],[2,1],[1,2],[2,2]]];
+*/
+    if m eq 1 then
+        return [1,0];
+    else
+        pair0:=std_to_pair(nvars,m-1);
+        i:=pair0[1];
+        j:=pair0[2];
+        if i eq nvars then
+            return [1,j+1];
+        else
+            return [i+1,j];
+        end if;
+    end if;
+end intrinsic;
 
 ////////////////////
 function dblocks_to_blocks_pair(nvars,r,dblocks)
