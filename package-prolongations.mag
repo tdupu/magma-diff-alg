@@ -541,7 +541,13 @@ end intrinsic;
 intrinsic IsCoercible(P::RngMPolProlSeq,x::.)->BoolElt,.
 ////////////////////
 {}
-    if Type(x) eq SeqEnum then
+    if Type(x) eq RngMPolProlSeqElt then
+        if Parent(x) eq P then
+            return true, x;
+        else
+            return false;
+        end if;
+    elif Type(x) eq SeqEnum then
         return true,&+[term[1]*&*[(P.t[1])^t[2]: t in term[2]] : term in x];
     elif Type(x) eq RngIntElt then
         y:=New(RngMPolProlSeqElt);
@@ -884,7 +890,30 @@ intrinsic 'eq'(f1::RngMPolProlSeqElt,f2::RngMPolProlSeqElt)->BoolElt
     return ff1 eq ff2;
 end intrinsic;
 
+////////////////////
+intrinsic 'eq'(f1::RngMPolProlSeqElt,x::.)->BoolElt
+////////////////////
+{}
+    return f1 eq Parent(f1)!x;
+end intrinsic;
+
+////////////////////
+intrinsic 'ne'(f1::RngMPolProlSeqElt,f2::RngMPolProlSeqElt)->BoolElt
+////////////////////
+{}
+    return not (f1 eq f2);
+end intrinsic;
+
+////////////////////
+intrinsic 'ne'(f1::RngMPolProlSeqElt,x::.)->BoolElt
+////////////////////
+{}
+    return (f1 ne Parent(f1)!x);
+end intrinsic;
+
+////////////////////
 intrinsic LeadingTerm(f::RngMPolProlSeqElt)->RngMPolProlSeqElt
+////////////////////
 {Return the leading term of an element of a prolongation sequence.}
     ltu:=LeadingTerm(f`elt);
     y:=New(RngMPolProlSeqElt);
