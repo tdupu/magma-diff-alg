@@ -22,3 +22,16 @@ f1:=x^2+Diff(y,2)*Diff(x,1)+t;
 f2:=Diff(x,1)+Diff(y,3);
 ```
 
+There is some support for leading monomials, element sequences. We can also take the P.[i,j] to take the jth derivative of the ith variable. 
+```
+LeadingMonomial(f1);
+P.[1,2];
+f1 eq P!Eltseq(f1);
+```
+
+Output:
+```
+Diff(x,1)*Diff(y,2)
+Diff(x,2)
+true
+```
