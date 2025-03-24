@@ -198,6 +198,24 @@ intrinsic Diff(f::RngDiffElt)->RngDiffElt
 end intrinsic;
 
 //////////////////////
+intrinsic Diff(f::RngIntElt)->RngIntElt
+//////////////////////
+{Differentiate and element of a differential ring.}
+    return Z!0;
+end intrinsic;
+
+//////////////////////
+intrinsic Diff(f::RngIntElt,n::RngIntElt)->RngIntElt
+//////////////////////
+{Differentiate and element of a differential ring.}
+    if n gt 0 then
+        return Z!0;
+    elif n eq 0 then
+        return f;
+    end if;
+end intrinsic;
+
+//////////////////////
 intrinsic JKernel(f::Map,delta::Map)->KerJ
 //////////////////////
 {Given a ring homomorphism and a derivation of the ring homomorphism, construct a Kernel in the sense of Johnson.}
@@ -230,6 +248,20 @@ intrinsic 'eq'(k1::KerJ,k2::KerJ)->BoolElt
 //////////////////////
 {Return the morphism of rings in the Johnson kernel.}
     return ( (map(k1) eq map(k2)) and (derivation(k1) eq derivation(k2)));
+end intrinsic;
+
+//////////////////////
+intrinsic 'in'(x::RngMPolProlSeqElt,P::RngMPolProlSeq)->BoolElt
+//////////////////////
+{}
+    return Parent(x) eq P;
+end intrinsic;
+
+//////////////////////
+intrinsic 'in'(x::.,P::RngMPolProlSeq)->BoolElt
+//////////////////////
+{}
+    return P!x in P;
 end intrinsic;
 
 //////////////////////
