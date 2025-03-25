@@ -553,10 +553,10 @@ The multiplication for Weyl Algebra elements represented as tuples.
 The examples are wrong because of a bug.
 
         EXAMPLES:
-            >L1:=<<x1,2>,<1,2>>;
-            >L2:=< <x2^2,1>,<x1*x2,0> >;
+            >L1:=[<x1,2>,<1,2>];
+            >L2:=[ <x2^2,1>,<x1*x2,0> ];
             >mult_weyltup(L1,L2);
-            <<3*d2x1*x1*x2 + 3*d2x2*x1^2 + 6*d1x1*d1x2*x1 + 2*d1x1*x1*x2^3 + 2*d1x1*x2^2 + 2*d1x2*x1^2*x2^2 + 2*d1x2*x1*x2, 1>, <3*d1x1*x1*x2 + 3*d1x2*x1^2 + x1^2*x2^3 + x1*x2^2, 2>, <6*d2x2*x1*x2 + 6*d1x2^2*x1 + 4*d1x2*x1*x2^3 + 4*d1x2*x2^2 + x1^2*x2, 3>, <6*d1x2*x1*x2 + x1*x2^4 + x2^3, 4>, <x1*x2^2, 5>>
+            [<3*d2x1*x1*x2 + 3*d2x2*x1^2 + 6*d1x1*d1x2*x1 + 2*d1x1*x1*x2^3 + 2*d1x1*x2^2 + 2*d1x2*x1^2*x2^2 + 2*d1x2*x1*x2, 1>, <3*d1x1*x1*x2 + 3*d1x2*x1^2 + x1^2*x2^3 + x1*x2^2, 2>, <6*d2x2*x1*x2 + 6*d1x2^2*x1 + 4*d1x2*x1*x2^3 + 4*d1x2*x2^2 + x1^2*x2, 3>, <6*d1x2*x1*x2 + x1*x2^4 + x2^3, 4>, <x1*x2^2, 5>]
 */
     W:=x`parent;
     require W eq y`parent: "Parents must be the same.";

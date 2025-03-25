@@ -198,6 +198,21 @@ intrinsic Diff(f::RngDiffElt)->RngDiffElt
 end intrinsic;
 
 //////////////////////
+intrinsic Diff(f::RngDiffElt,n::RngIntElt)->RngDiffElt
+//////////////////////
+{Differentiate and element of a differential ring.}
+    if n eq 0 then
+        return f;
+    elif n eq 1 then
+        return Diff(f);
+    elif n gt 2 then
+        return Diff(Diff(f),n-1);
+    end if;
+end intrinsic;
+
+
+
+//////////////////////
 intrinsic Diff(f::RngIntElt)->RngIntElt
 //////////////////////
 {Differentiate and element of a differential ring.}
@@ -369,7 +384,7 @@ intrinsic Prolongation(B::RngMPol: term_order:=<"dblocks",[]>)->Prol
         jet1:=PolynomialRing(BaseRing(B),2*nvars,TO1[1],TO1[2]);
 
         incl:=hom<B->jet1| [jet1.i : i in [1..Ngens(B)]]>;
-        delta:=map<B->jet1|g:->&+[incl(Derivative(g,B.i))*jet1.(i+Ngens(B)) : i in [1..Ngens(B)]]>;
+        delta:=map<B->jet1|g:->&+[incl(Derivative(g,B.i))*jet1.(i+Ngens(B)) : i in [1..Ngens(B)]]+incl(&+[Diff(Coefficients(g)[i])*Monomials(g)[i] : i in [1..#Monomials(g)]])>;
         ker2:=JKernel(incl,delta);
         
         my_prol:=Prolongation(ker1,ker2);
@@ -726,18 +741,23 @@ intrinsic '*'(x2::RngMPolProlSeqElt,x1::RngElt)->RngMPolProlSeqElt
 end intrinsic;
 
 
+
+////////////////////
+intrinsic '-'(x1::RngMPolProlSeqElt)->RngMPolProlSeqElt
+////////////////////
+{}
+    y:=New(RngMPolProlSeqElt);
+    y`parent:=Parent(x1);
+    y`order:=x1`order;
+    y`elt := -x1`elt;
+    return y;
+end intrinsic;
+
 ////////////////////
 intrinsic '-'(x1::RngMPolProlSeqElt,x2::RngMPolProlSeqElt)->RngMPolProlSeqElt
 ////////////////////
 {}
-    P:=Parent(x1);
-    require P eq Parent(x2): "Elements must be in the same prolongation sequence";
-    z1,z2:=match_orders(x1,x2);
-    y:=New(RngMPolProlSeqElt);
-    y`parent:=Parent(z1);
-    y`order:=order`z1;
-    y`elt := z1`elt-z2`elt;
-    return y;
+    return x1+(-x2);
 end intrinsic;
 
 ////////////////////
@@ -1116,6 +1136,9 @@ end intrinsic;
 
 intrinsic Reduction(f::RngMPolProlSeqElt,g::RngMPolProlSeqElt,r::RngIntElt)->RngMPolProlSeqElt
 {}
+/*
+Ollivier's Standard Basis paper.
+*/
     LMf:=LeadingMonomial(f);
     LMg:=LeadingMonomial(g);
     if Degree(LMf) gt Degree(LMg) or Weight(LMf) gt Weight(LMg) then
