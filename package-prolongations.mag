@@ -255,7 +255,7 @@ intrinsic JKernel(P::Rng)->KerJ
         incl:=hom<B->P|f:->P!f>;
         delta:=map<B->P|f:->P!0>;
     end if;
-    
+
     return JKernel(incl,delta);
 end intrinsic;
 
@@ -263,7 +263,7 @@ end intrinsic;
 intrinsic 'eq'(k1::KerJ,k2::KerJ)->BoolElt
 //////////////////////
 {Return the morphism of rings in the Johnson kernel.}
-    return ( (map(k1) eq map(k2)) and (derivation(k1) eq derivation(k2)));
+    return ( (map(k1) eq map(k2)) and (Derivation(k1) eq Derivation(k2)));
 end intrinsic;
 
 //////////////////////
@@ -284,7 +284,7 @@ end intrinsic;
 intrinsic Hash(k1::KerJ)->BoolElt
 //////////////////////
 {Return the morphism of rings in the Johnson kernel.}
-    return [Hash(map(k1)),Hash(derivation(k1))];
+    return [Hash(map(k1)),Hash(Derivation(k1))];
 end intrinsic;
 
 //////////////////////
@@ -295,7 +295,7 @@ intrinsic map(my_kernel::KerJ)->Map
 end intrinsic;
 
 //////////////////////
-intrinsic derivation(my_kernel::KerJ)->Map
+intrinsic Derivation(my_kernel::KerJ)->Map
 //////////////////////
 {Return the derivation of the Johnson kernel.}
     return my_kernel`delta;
@@ -344,7 +344,7 @@ end intrinsic;
 intrinsic Hash(k1::KerJ)->BoolElt
 //////////////////////
 {Return the morphism of rings in the Johnson kernel.}
-    return [Hash(map(k1)),Hash(derivation(k1))];
+    return [Hash(map(k1)),Hash(Derivation(k1))];
 end intrinsic;
 
 //////////////////////
@@ -633,7 +633,7 @@ intrinsic map(P::RngMPolProlSeq,m::RngIntElt)->Map
 end intrinsic;
 
 ////////////////////
-intrinsic derivation(P::RngMPolProlSeq,m::RngIntElt)->Map
+intrinsic Derivation(P::RngMPolProlSeq,m::RngIntElt)->Map
 ////////////////////
 {This gives the derivative from Jm to Jm+1}
     require m ge -1: "Must have input bigger than -1. Jet spaces start at -1 which is the base ring.";
@@ -641,7 +641,7 @@ intrinsic derivation(P::RngMPolProlSeq,m::RngIntElt)->Map
         Extend(P,m);
     end if;
     
-    return derivation(first(sequence(P)[m+2]));
+    return Derivation(first(sequence(P)[m+2]));
     
 end intrinsic;
 
@@ -663,8 +663,26 @@ intrinsic match_orders(x1::RngMPolProlSeqElt,x2::RngMPolProlSeqElt)->RngMPolProl
     require P eq Parent(x2): "Elements must be in the same prolongation sequence";
     n1:=x1`order;
     n2:=x2`order;
+    
     if n1 eq n2 then
         return x1,x2;
+        
+    elif x1`elt eq 0 then
+        y1:=New(RngMPolProlSeqElt);
+        y1`parent:=Parent(x2);
+        y1`elt:=Parent(x2`elt)!0;
+        y1`order:=x2`order;
+        require Parent(y1`elt) eq Parent(x2`elt): "elements must have the same have the same parent";
+        return y1,x2;
+    
+    elif x2`elt eq 0 then
+        y2:=New(RngMPolProlSeqElt);
+        y2`parent:=Parent(x1);
+        y2`elt:=Parent(x1`elt)!0;
+        y2`order:=x1`order;
+        require Parent(x1`elt) eq Parent(y2`elt): "elements have the same parent";
+        return x1,y2;
+        
     else
         max:=Maximum([n1,n2]);
         f1:=map(P,n1,max);
@@ -678,6 +696,7 @@ intrinsic match_orders(x1::RngMPolProlSeqElt,x2::RngMPolProlSeqElt)->RngMPolProl
         y1`elt:=f1(x1`elt);
         y2`elt:=f2(x2`elt);
         return y1,y2;
+        
     end if;
 end intrinsic;
     
@@ -780,8 +799,8 @@ intrinsic Diff(f::RngMPolProlSeqElt)->RngMPolProlSeqElt
 {Differentiate and element of a prolongation sequence.}
     P:=Parent(f);
     Df:=New(RngMPolProlSeqElt);
-    r:=f`order;
-    D:=derivation(P,r);
+    r:=Order(f);
+    D:=Derivation(P,r);
     Df`parent:=P;
     Df`elt:=D(f`elt);
     Df`order:=f`order+1;
@@ -903,14 +922,17 @@ intrinsic 'eq'(f1::RngMPolProlSeqElt,f2::RngMPolProlSeqElt)->BoolElt
 {}
     P:=Parent(f1);
     require Parent(f2) eq P: "Elements must have the same parent";
-    r1:=f1`order;
-    r2:=f2`order;
-    max:=Maximum([r1,r2]);
-    map1:=map(P,r1,max);
-    map2:=map(P,r2,max);
-    ff1:=map1(f1`elt);
-    ff2:=map2(f2`elt);
-    return ff1 eq ff2;
+    
+    y1,y2:=match_orders(f1,f2);
+    return y1`elt eq y2`elt;
+    //r1:=f1`order;
+    //r2:=f2`order;
+    //max:=Maximum([r1,r2]);
+    //map1:=map(P,r1,max);
+    //map2:=map(P,r2,max);
+    //ff1:=map1(f1`elt);
+    //ff2:=map2(f2`elt);
+    //return ff1 eq ff2;
 end intrinsic;
 
 ////////////////////
@@ -995,7 +1017,11 @@ intrinsic Coefficients(B::RngMPolProlSeqElt,u::RngMPolProlSeqElt)->RngMPolProlSe
 {}
         B1,u1:=match_orders(B,u);
         P:=Parent(B1);
-        return [P!c: c in Coefficients(B1`elt,u`elt)];
+        if B1`elt in BaseRing(P) then
+            return [B1];
+        else
+            return [P!c: c in Coefficients(B1`elt,u`elt)];
+        end if;
 end intrinsic;
 
 //%%%%%%%%%%%%%%%%%%%%%%%
@@ -1066,13 +1092,17 @@ intrinsic Eltseq(f1::RngMPolProlSeqElt)->Seq
     end function;
     
     f1_elt:=f1`elt;
-    coeffs:=Coefficients(f1`elt);
-    monomials:=[monomial_seq(m) : m in Monomials(f1_elt)];
-    terms:=[<coeffs[i],monomials[i]> : i in [1..#monomials] ];
-    if #coeffs gt #monomials then
-        terms:=terms cat [<coeffs[#coeffs],<[1,0],0>>];
+    if f1_elt in BaseRing(P) then
+        return [<f1_elt,<[1,0],0>>];
+    else
+        coeffs:=Coefficients(f1`elt);
+        monomials:=[monomial_seq(m) : m in Monomials(f1_elt)];
+        terms:=[<coeffs[i],monomials[i]> : i in [1..#monomials] ];
+        if #coeffs gt #monomials then
+            terms:=terms cat [<coeffs[#coeffs],<[1,0],0>>];
+        end if;
+            return terms;
     end if;
-        return terms;
 end intrinsic;
 
 intrinsic Monomials(f::RngMPolProlSeqElt)->SeqEnum
@@ -1087,7 +1117,14 @@ intrinsic Orders(f1::RngMPolProlSeqElt)->SeqEnum
         orders[i]:=0;
     end for;
 
-    for t in Eltseq(f1) do
+    /*
+    When this is called it makes sure that f1`elt is in the same jet ring as its order. 
+    */
+    seq:=Eltseq(f1);
+    //P:=Parent(f1);
+    //f1`elt:=(P!seq)`elt;
+    
+    for t in seq do
         m:=t[2];
         for a in m do
             pair:=a[1];
@@ -1096,7 +1133,7 @@ intrinsic Orders(f1::RngMPolProlSeqElt)->SeqEnum
             end if;
         end for;
     end for;
-
+    
     return [orders[i] : i in [1..Ngens(Parent(f1))]];
 
 end intrinsic;

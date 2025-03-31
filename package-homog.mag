@@ -56,3 +56,28 @@ intrinsic Evaluate(f::RngMPolProlSeqElt,seq::SeqEnum[RngMPolProlSeqElt])->RngMPo
     return P2!Evaluate(ft,exp_seq_tr);
 
 end intrinsic;
+
+
+intrinsic IsHomogeneous(f2::RngMPolProlSeqElt)->BoolElt,RngIntElt
+{Return true and the degree if a prolongation sequence element is homogeneous and return false otherwise.}
+    P2:=Parent(f2);
+    n0:=Ngens(P2);
+    F:=BaseRing(P2);
+    P3:=PolynomialRingProlSeq(F,n0+1);
+    old_gens:=[P2.[i,0] : i in [1..n0]];
+    new_gens:=[P3.[i,0] : i in [1..n0]];
+    lambda:=P3.[n0+1,0];
+    
+    f3_lambda:=Evaluate(f2,[lambda*x : x in new_gens]);
+    f2_new:=Evaluate(f2,[x : x in new_gens]);
+    r0:=Order(f3_lambda);
+    lambda_t:=Jet(f2,r0);
+    f2_t:=Jet(f2_new,r0);
+    f3_t:=Jet(f3_lambda,r0);
+    flag:=(f3_t/f2_t in Parent(f2_t));
+    if flag then
+        return true,Factorization(Parent(f2_t)!(f3_t/f2_t))[1][2];
+    else
+        return false,-1;
+    end if;
+end intrinsic;
