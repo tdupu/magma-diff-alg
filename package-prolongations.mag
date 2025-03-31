@@ -1066,13 +1066,20 @@ intrinsic Eltseq(f1::RngMPolProlSeqElt)->Seq
     end function;
     
     f1_elt:=f1`elt;
-    coeffs:=Coefficients(f1`elt);
-    monomials:=[monomial_seq(m) : m in Monomials(f1_elt)];
-    terms:=[<coeffs[i],monomials[i]> : i in [1..#monomials] ];
-    if #coeffs gt #monomials then
-        terms:=terms cat [<coeffs[#coeffs],<[1,0],0>>];
+    
+    if f1_elt in Jet(P,-1) then
+        t1:=<Jet(P,-1)!f1_elt,[<[1,0],0>]> ;
+        seq:=[t1];
+        return seq;
+    else
+        coeffs:=Coefficients(f1`elt);
+        monomials:=[monomial_seq(m) : m in Monomials(f1_elt)];
+        terms:=[<coeffs[i],monomials[i]> : i in [1..#monomials] ];
+        if #coeffs gt #monomials then
+            terms:=terms cat [<coeffs[#coeffs],<[1,0],0>>];
+        end if;
+            return terms;
     end if;
-        return terms;
 end intrinsic;
 
 intrinsic Monomials(f::RngMPolProlSeqElt)->SeqEnum
