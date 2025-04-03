@@ -560,7 +560,10 @@ end intrinsic;
 ////////////////////
 intrinsic IsCoercible(P::RngMPolProlSeq,x::.)->BoolElt,.
 ////////////////////
-{}
+{
+Returns true and the element of P if x can be coerced.
+Return false otherwise.
+}
     if Type(x) eq RngMPolProlSeqElt then
         if Parent(x) eq P then
             return true, x;
@@ -575,10 +578,10 @@ intrinsic IsCoercible(P::RngMPolProlSeq,x::.)->BoolElt,.
         y`elt:=BaseRing(P)!x;
         y`order:=-1;
         return true,y;
-    elif x in Jet(P,-1) then
+    elif x in UnderlyingRing(Jet(P,-1)) then
         y:=New(RngMPolProlSeqElt);
         y`parent:=P;
-        y`elt:=x;
+        y`elt:=Jet(P,-1)!x;
         y`order:=-1;
         return true, y;
     elif Type(x) eq RngMPolElt then
@@ -978,7 +981,7 @@ intrinsic Leader(f::RngMPolProlSeqElt)->RngMPolProlSeqElt,RngIntElt
 Return the leader of a differential polynomial according to its term order and the degree of f with respect to its leader.
 If f is constant, then it returns the first variable of P with degree being zero.
 }
-    if f`elt in BaseRing(Parent(f)) then
+    if f`elt in UnderlyingRing(BaseRing(Parent(f))) then
         return Parent(f).1,0;
     else
         lm:=LeadingMonomial(f`elt);
