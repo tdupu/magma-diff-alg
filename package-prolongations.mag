@@ -974,17 +974,27 @@ end intrinsic;
 ////////////////////
 intrinsic Leader(f::RngMPolProlSeqElt)->RngMPolProlSeqElt,RngIntElt
 ////////////////////
-{Return the leader of a differential polynomials which is the leading }
-    lm:=LeadingMonomial(f`elt);
-    ld:=LeadingMonomial(&+[ x[1] : x in Factorization(lm)]);
-    d:=Degree(lm,ld);
-    return Parent(f)!ld,d;
+{
+Return the leader of a differential polynomial according to its term order and the degree of f with respect to its leader.
+If f is constant, then it returns the first variable of P with degree being zero.
+}
+    if f`elt in BaseRing(Parent(f)) then
+        return Parent(f).1,0;
+    else
+        lm:=LeadingMonomial(f`elt);
+        ld:=LeadingMonomial(&+[ x[1] : x in Factorization(lm)]);
+        d:=Degree(lm,ld);
+        return Parent(f)!ld,d;
+    end if;
 end intrinsic;
 
 //%%%%%%%%%%%%%%%%%%%%%%%
 intrinsic Coefficients(B::RngMPolProlSeqElt,u::RngMPolProlSeqElt)->RngMPolProlSeqElt
 //%%%%%%%%%%%%%%%%%%%%%%%
-{}
+{
+Return the coefficients of an element B written as polynomial in u.
+Currently there is no testing for this.
+}
         B1,u1:=match_orders(B,u);
         P:=Parent(B1);
         return [P!c: c in Coefficients(B1`elt,u`elt)];
