@@ -325,7 +325,7 @@ Given f:A->B with D:A->B then there is a universal prolongation which is the quo
 intrinsic Print(X::KerJ)
 //////////////////////
 {}
-//    printf "An affine Johnson kernel from %o to %o", domain(X),codomain(X);
+    printf "An affine Johnson kernel from \n \n %o \n \n to \n \n %o", domain(X),codomain(X);
 end intrinsic;
 
 
@@ -365,7 +365,7 @@ end intrinsic;
 intrinsic Print(prol::Prol)
 //////////////////////
 {Printing statement for prolongations}
-//    printf "A prolongation from %o to %o to %o", domain(first(prol)), codomain(first(prol)), codomain(second(prol));
+    printf "A prolongation from \n \n %o \n \n to \n \n %o \n \n to \n \n %o", domain(first(prol)), codomain(first(prol)), codomain(second(prol));
 end intrinsic;
 
 //////////////////////
@@ -519,7 +519,9 @@ intrinsic Extend(P::RngMPolProlSeq)
     all_names:=names0 cat names1;
     AssignNames(~jet1,all_names);
     f1:=hom<jet0->jet1| [jet1.i : i in [1..Ngens(jet0)]]>;
-    delta1:=map<jet0->jet1|g:->&+[f1(Derivative(g,jet0.i))*jet1.(i+Ngens(B)) : i in [1..Ngens(jet0)]]>;
+    //delta1:=map<jet0->jet1|g:->&+[f1(Derivative(g,jet0.i))*jet1.(i+Ngens(B)) : i in [1..Ngens(jet0)]]>;
+    delta1:=map<jet0->jet1|g:->&+[f1(Derivative(g,jet0.i))*jet1.(i+Ngens(B)) : i in [1..Ngens(jet0)]]+f1(&+[Diff(Coefficients(g)[i])*Monomials(g)[i] : i in [1..#Monomials(g)]])>;
+    
     ker1:=JKernel(f1,delta1);
     prol_new:=Prolongation(ker0,ker1);
     Append(~P`sequence,prol_new);
