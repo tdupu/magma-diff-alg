@@ -247,13 +247,14 @@ end intrinsic;
 intrinsic JKernel(P::Rng)->KerJ
 //////////////////////
 {Create the universal Johnson kernel for a ring defined over a differential ring. If the base is not a differential ring, it is given the structure of a differential ring with a trivial derivation.}
-    B:=BaseRing(P);
-    if Type(B) eq RngDiff then
-        delta:=map<B->P|f:->P!Diff(f)>;
+    B0:=BaseRing(P);
+    if Type(B0) eq RngDiff then
+        B:=UnderlyingRing(B0);
+        delta:=map<B->P|f:->P!B!Diff(B0!f)>;
         incl:=hom<B->P|f:->P!f>;
     else
-        incl:=hom<B->P|f:->P!f>;
-        delta:=map<B->P|f:->P!0>;
+        incl:=hom<B0->P|f:->P!f>;
+        delta:=map<B0->P|f:->P!0>;
     end if;
     
     return JKernel(incl,delta);
@@ -540,7 +541,8 @@ end intrinsic;
 intrinsic BaseRing(P::RngMPolProlSeq)->Rng
 ////////////////////
 {Return the "-1" term of the prolongation sequence}
-    return domain(first(sequence(P)[1]));
+    B:=domain(first(sequence(P)[1]));
+    return B;
 end intrinsic;
 
 ////////////////////
@@ -578,7 +580,7 @@ Return false otherwise.
         y`elt:=BaseRing(P)!x;
         y`order:=-1;
         return true,y;
-    elif x in UnderlyingRing(Jet(P,-1)) then
+    elif x in Jet(P,-1) then
         y:=New(RngMPolProlSeqElt);
         y`parent:=P;
         y`elt:=Jet(P,-1)!x;
