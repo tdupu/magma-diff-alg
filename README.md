@@ -62,3 +62,41 @@ f1 eq P!Eltseq(f1);
 ]
 true
 ```
+
+EXAMPLE:
+We can evaluate differential polynomials at other differential polynomials. 
+
+```
+R<t>:=PolynomialRing(Q,1);
+f := map<R->R|f:->Derivative(f,t)>;
+A := DifferentialRing(R, f, Q);
+F<t> := FieldOfFractions(A);
+P<x,y>:=PolynomialRingProlSeq(F,2: term_order:=<"dblocks",[[1,2]]>);
+ff:=t*Diff(x,2)*Diff(y,2);
+P2<u,v,w>:=PolynomialRingProlSeq(F,3);
+f1:=u+t*Diff(v,1)+w;
+f2:=v+Diff(u,1)+w;
+seq:=[f1,f2];
+Evaluate(ff,seq);
+```
+```
+t*Diff(u,2)*Diff(u,3) + t^2*Diff(u,3)*Diff(v,3) + 2*t*Diff(v,2)*Diff(u,3) + t*Diff(w,2)*Diff(u,3) + t*Diff(u,2)*Diff(v,2) + t*Diff(u,2)*Diff(w,2) + t^2*Diff(v,2)*Diff(v,3) + t^2*Diff(w,2)*Diff(v,3) + 2*t*Diff(v,2)^2 + 3*t*Diff(v,2)*Diff(w,2) + t*Diff(w,2)^2
+```
+
+EXAMPLE:
+Given differential polynomials with coefficients in a type where Evaluate makes sense (RngMPol or RngMPolProlSeq) we can specialize the coefficients of differential polynomials. 
+
+```
+R<s,t>:=PolynomialRing(Q,2);
+f := map<R->R|f:->Derivative(f,t)>;
+A<s,t> := DifferentialRing(R, f, Q);
+P<x,y>:=PolynomialRingProlSeq(A,2: term_order:=<"dblocks",[[1,2]]>);
+ff:=(t^2)*Diff(x,1)*Diff(y,1)+Diff(x,4)+s*Diff(x,1)*Diff(y,2)^2+t;
+seq1:=[1,2];
+ff;
+Specialize(ff,seq1);
+```
+```
+Diff(x,4) + s*Diff(x,1)*Diff(y,2)^2 + t^2*Diff(x,1)*Diff(y,1) + t
+Diff(x,4) + Diff(x,1)*Diff(y,2)^2 + 4*Diff(x,1)*Diff(y,1) + 2
+```
