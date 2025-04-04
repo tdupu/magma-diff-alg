@@ -631,8 +631,8 @@ intrinsic map(P::RngMPolProlSeq,m::RngIntElt)->Map
 ////////////////////
 {This gives the morphism from Jm to Jm+1}
     require m ge -1: "Must have input bigger than -1. Jet spaces start at -1 which is the base ring.";
-    if order(P) lt m then
-        Extend(P,m);
+    if order(P) lt m+2 then
+        Extend(P,m+2);
     end if;
     
     return map(first(sequence(P)[m+2]));
