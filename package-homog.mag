@@ -16,43 +16,4 @@ intrinsic Ncols(A::SeqEnum)->RngIntElt
     return #A;
 end intrinsic;
 
-intrinsic Jet(f::RngMPolProlSeqElt, r::RngIntElt)->RngMPolElt
-{Return the corresponding element of the rth jet space.}
-    r0:=Order(f);
-    require r ge r0: "Cannot map to a lower order jet space than the order of the element";
-    P:=Parent(f);
-    elt:=(P!Eltseq(f))`elt;
-    assert( elt in Jet(P,r0));
-    incl:=map(P,r0,r);
-    return incl(elt);
-end intrinsic;
 
-intrinsic Jet(f::RngMPolProlSeqElt)->RngMPolElt
-{Return the corresponding element of the appropriate jet space.}
-    return (Parent(f)!Eltseq(f))`elt;
-end intrinsic;
-
-intrinsic Exp(seq::SeqEnum[RngMPolProlSeqElt],r0::RngIntElt)->SeqEnum[RngMPolProlSeqElt]
-{Given a sequence of prolongation sequence elements, take the derivatives of each of them up to order r0 and concatenate them into their standard sequence.}
-    expseq:=&cat[[ Diff(s,j) : s in seq] : j in [0..r0]];
-    return expseq;
-end intrinsic;
-
-intrinsic Evaluate(f::RngMPolProlSeqElt,seq::SeqEnum[RngMPolProlSeqElt])->RngMPolProlSeqElt
-{Plug in elements of a sequence into the prolongation sequence element.}
-    P1:=Parent(f);
-    n1:=Ngens(P1);
-    r1:=Order(f);
-    ft:=Jet(f,r1);
-    
-    Ps:={Parent(s) : s in seq};
-    require n1 eq #seq: "The sequence must be the number of generators";
-    require #Ps eq 1: "All the elements of the sequence must have the same parent";
-    P2:=[P : P in Ps][1];
-    
-    exp_seq:=Exp(seq,r1);
-    r2:=Maximum([Order(s) : s in exp_seq]);
-    exp_seq_tr:=[Jet(f,r2) : f in exp_seq];
-    return P2!Evaluate(ft,exp_seq_tr);
-
-end intrinsic;

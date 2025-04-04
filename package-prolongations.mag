@@ -1157,28 +1157,3 @@ intrinsic '/'(f2::RngMPolProlSeqElt,f1::RngMPolProlSeqElt)->BoolElt
 end intrinsic;
 
 
-intrinsic Reduction(f::RngMPolProlSeqElt,g::RngMPolProlSeqElt,r::RngIntElt)->RngMPolProlSeqElt
-{}
-/*
-Ollivier's Standard Basis paper.
-*/
-    LMf:=LeadingMonomial(f);
-    LMg:=LeadingMonomial(g);
-    if Degree(LMf) gt Degree(LMg) or Weight(LMf) gt Weight(LMg) then
-        return f;
-    elif Divides(LMg,LMf) then
-        LCf:=LeadingCoefficient(f);
-        LCg:=LeadingCoefficient(g);
-        return Reduction(f-(LCf/LCg)*(LMf/LMg)*g,g,1);
-    else
-        f2:=Reduction(f,Diff(g,1),1);
-        if f2 ne f then
-            return Reduction(f2,g,1);
-        end if;
-    end if;
-end intrinsic;
-
-intrinsic Reduction(f::RngMPolProlSeqElt,g::RngMPolProlSeqElt)->RngMPolProlSeqElt
-{}
-    return Reduction(f,g,1);
-end intrinsic;

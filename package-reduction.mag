@@ -5,8 +5,108 @@
 */
 
 ////////////////////
+intrinsic Jet(f::RngMPolProlSeqElt, r::RngIntElt)->RngMPolElt
+////////////////////
+{Return the corresponding element of the rth jet space.}
+    r0:=Order(f);
+    require r ge r0: "Cannot map to a lower order jet space than the order of the element";
+    P:=Parent(f);
+    elt:=(P!Eltseq(f))`elt;
+    assert( elt in Jet(P,r0));
+    incl:=map(P,r0,r);
+    return incl(elt);
+end intrinsic;
+
+////////////////////
+intrinsic Jet(f::RngMPolProlSeqElt)->RngMPolElt
+////////////////////
+{Return the corresponding element of the appropriate jet space.}
+    return (Parent(f)!Eltseq(f))`elt;
+end intrinsic;
+
+////////////////////
+intrinsic Exp(seq::SeqEnum[RngMPolProlSeqElt],r0::RngIntElt)->SeqEnum[RngMPolProlSeqElt]
+////////////////////
+{Given a sequence of prolongation sequence elements, take the derivatives of each of them up to order r0 and concatenate them into their standard sequence.}
+    expseq:=&cat[[ Diff(s,j) : s in seq] : j in [0..r0]];
+    return expseq;
+end intrinsic;
+
+////////////////////
+intrinsic
+ Evaluate(f::RngMPolProlSeqElt,seq::SeqEnum[RngMPolProlSeqElt])->RngMPolProlSeqElt
+ ////////////////////
+{Plug in elements of a sequence into the prolongation sequence element.}
+    P1:=Parent(f);
+    n1:=Ngens(P1);
+    r1:=Order(f);
+    ft:=Jet(f,r1);
+    
+    Ps:={Parent(s) : s in seq};
+    require n1 eq #seq: "The sequence must be the number of generators";
+    require #Ps eq 1: "All the elements of the sequence must have the same parent";
+    P2:=[P : P in Ps][1];
+    
+    exp_seq:=Exp(seq,r1);
+    r2:=Maximum([Order(s) : s in exp_seq]);
+    exp_seq_tr:=[Jet(f,r2) : f in exp_seq];
+    return P2!Evaluate(ft,exp_seq_tr);
+
+end intrinsic;
+
+////////////////////
 intrinsic Specialize(f::RngMPolProlSeqElt,seq1::SeqEnum)->RngMPolProlSeqElt
 ////////////////////
 {Given a f whose coefficients admit and Evaluate function for the coefficients.}
     return &+[ Parent(f)![<Evaluate(t[1],seq1),t[2]>] : t in Eltseq(f)];
 end intrinsic;
+
+
+
+
+/*
+#########################
+#########################
+Grobner Bases: Ollivier's "Standard Basis" Algorithm
+#########################
+#########################
+*/
+
+////////////////////
+intrinsic Reduction(f::RngMPolProlSeqElt,g::RngMPolProlSeqElt,r::RngIntElt)->RngMPolProlSeqElt
+////////////////////
+{}
+/*
+Ollivier's Standard Basis paper.
+*/
+    LMf:=LeadingMonomial(f);
+    LMg:=LeadingMonomial(g);
+    if Degree(LMf) gt Degree(LMg) or Weight(LMf) gt Weight(LMg) then
+        return f;
+    elif Divides(LMg,LMf) then
+        LCf:=LeadingCoefficient(f);
+        LCg:=LeadingCoefficient(g);
+        return Reduction(f-(LCf/LCg)*(LMf/LMg)*g,g,1);
+    else
+        f2:=Reduction(f,Diff(g,1),1);
+        if f2 ne f then
+            return Reduction(f2,g,1);
+        end if;
+    end if;
+end intrinsic;
+
+////////////////////
+intrinsic Reduction(f::RngMPolProlSeqElt,g::RngMPolProlSeqElt)->RngMPolProlSeqElt
+////////////////////
+{}
+    return Reduction(f,g,1);
+end intrinsic;
+
+
+/*
+#########################
+#########################
+Characteristic Sets: Rosenfeld-Groebner
+#########################
+#########################
+*/
