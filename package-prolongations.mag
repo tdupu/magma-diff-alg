@@ -1096,7 +1096,7 @@ end intrinsic;
 
 intrinsic Terms(f::RngMPolProlSeqElt)->SeqEnum
 {}
-    return [ P![t] : t in Eltseq(ff)];
+    return [ P![t] : t in Eltseq(f)];
 end intrinsic;
     
 intrinsic Orders(f1::RngMPolProlSeqElt)->SeqEnum
