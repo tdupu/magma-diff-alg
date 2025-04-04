@@ -4,6 +4,37 @@
 
 */
 
+
+/*
+#########################
+#########################
+Evaluation and Specialization
+#########################
+#########################
+*/
+
+/*
+To evaluate a differential polynomial f of order r at phi1,...,phin
+we take derivatives of the phi_j up to order r and then plug them into
+f as a polynomial.
+
+If f is a differential polynomial with coefficients in a polynomial ring
+with a constant derivation then we Specialize(f,my_seq) applies
+Evaluate(my_coeff,my_seq) to all of the coefficeints.
+
+The assumption here is the Jet(Parent(f),-1) is a polynomial ring.
+The output will be in a new RngMPolProlSeq.
+
+If f is a differential polynomial with coefficients also differential polynomials
+then we use Specialize(f,my_seq) runs Evaluate(my_coeff,my_set) on each
+of the coefficients.
+
+Note that in the case where the base ring is a differential ring
+not every specialization will be a homomorphism. That is, the specialization
+of a differential expression will not necessarily be the specialization of a
+simplified differential expression.
+*/
+
 ////////////////////
 intrinsic Jet(f::RngMPolProlSeqElt, r::RngIntElt)->RngMPolElt
 ////////////////////
