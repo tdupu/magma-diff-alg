@@ -1094,6 +1094,11 @@ intrinsic Monomials(f::RngMPolProlSeqElt)->SeqEnum
     return [Parent(f)![<1,ss[2]>] : ss in Eltseq(f)];
 end intrinsic;
 
+intrinsic Terms(f::RngMPolProlSeqElt)->SeqEnum
+{}
+    return [ P![t] : t in Eltseq(ff)];
+end intrinsic;
+    
 intrinsic Orders(f1::RngMPolProlSeqElt)->SeqEnum
 {}
     orders:=AssociativeArray();
@@ -1150,6 +1155,7 @@ intrinsic '/'(f2::RngMPolProlSeqElt,f1::RngMPolProlSeqElt)->BoolElt
     h`elt:=g1`elt/g2`elt;
     return h;
 end intrinsic;
+
 
 intrinsic Reduction(f::RngMPolProlSeqElt,g::RngMPolProlSeqElt,r::RngIntElt)->RngMPolProlSeqElt
 {}
