@@ -3,6 +3,7 @@
     taylor.dupuy@gmail.com
 */
 
+declare verbose RittDivision, 6;
 
 /*
 #########################
@@ -98,8 +99,6 @@ Converted from rndiffpol-functions.mag
 #########################
 #########################
 */
-
-
 
 
 /*

@@ -1046,7 +1046,6 @@ intrinsic Separant(B::RngMPolProlSeqElt)->RngMPolProlSeqElt
     return Derivative(B,lB);
 end intrinsic;
 
-
 //%%%%%%%%%%%%%%%%%%%
 intrinsic Support(f::RngMPolProlSeqElt)->SeqEnum
 //%%%%%%%%%%%%%%%%%%%
@@ -1054,7 +1053,7 @@ intrinsic Support(f::RngMPolProlSeqElt)->SeqEnum
 This is the set of collection of pairs [i,j] that appear in the polynomial.
 }
     ngens:=Ngens(Parent(f));
-    return [[ std_to_pair(ngens,x) : x in Support(m)] : m in Monomials(f`elt)];
+    return &cat([[ std_to_pair(ngens,x) : x in Support(m)] : m in Monomials(f`elt)]);
 end intrinsic;
 
 //%%%%%%%%%%%%%%%%%%%
@@ -1155,5 +1154,6 @@ intrinsic '/'(f2::RngMPolProlSeqElt,f1::RngMPolProlSeqElt)->BoolElt
     h`elt:=g1`elt/g2`elt;
     return h;
 end intrinsic;
+
 
 

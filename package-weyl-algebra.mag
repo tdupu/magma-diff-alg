@@ -13,7 +13,7 @@ that r in this ring is really thought of as multiplication by r.
 
 In Magma these are given as a type with element types.
 
-    WeylAlg[WeylAlgElt].
+    AlgWeyl[AlgWeylElt].
 
 
 Created By:
@@ -24,76 +24,7 @@ Created By:
 
 declare verbose Weyl, 6;
 
-//###############################
-//      USAGE
-//###############################
-/*
-    Attach the package. Unlike "load" functions inside are only locally accessible.
-    
-        >Attach("package-weyl-algebra.mag");
 
-    Create a WeylAlgebra object.
-    
-        >Q:=Rationals();
-        >P := PolynomialRing(Q);
-        >f := map<P->P | a:->5*Derivative(a)>;
-        >R := DifferentialRing(P, f,Q);
-        >W := MakeWeylAlg(R);
-        
-    Create some elements to test things with.
-        >x:=P.1;
-        >x:=R!x;
-        >E1 := MakeWeylAlgElt(W, x);
-        >E2 := MakeWeylAlgElt(W, 20);
-        >E1+E2;
-        $.1 + 20 d^0
-        
-    Test the different ways to instantiate Weyl algebra elements and make sure they give the
-    right thing back.
-    
-        >my_array:=AssociativeArray();
-        >my_array[0]:=x;
-        >E1arr:=MakeWeylAlgElt(W,my_array);
-        >E2tup := MakeWeylAlgElt(W, [<20,0>]);
-        >E1tup := MakeWeylAlgElt(W, [<x,0>]);
-        >dW:= MakeWeylAlgElt(W,[<1,1>]);
-        >two:=MakeWeylAlgElt(W,2);
-        >E2tup eq E2;
-        >E1arr eq E1;
-        >2*x*dW+0 eq 2*x*dW;
-        >0+2*dW eq 2*dW;
-        true
-        true
-        true
-        true
-        
-    Test that the operations of addition an multiplication are well-defined.
-
-        >E3 := E1 + E2;
-        >E4 := E1 * E2;
-        >E3+1;
-        $.1 + 21 d^0
-        
-    Test exponentiation and getting the derivation
-    
-        >dW:=GetDerivationElt(W);
-        >dW^2;
-        0 d^1+ 1 d^2
-        
-    There are a couple other functions that aren't show.
-    One can Eltseq() of an element.
-    
-        >Q:=Rationals();
-        >P := PolynomialRing(Q);
-        >f := map<P->P | a:->5*Derivative(a)>;
-        >R := DifferentialRing(P, f,Q);
-        >x:=P.1;
-        >W := MakeWeylAlg(R);
-        >dW:=MakeWeylAlgElt(W,[<x,1>]);
-        >Parent(dW) eq W;
-        true
-
-*/
 //###############################
 //###############################
 //      HEAD
@@ -102,12 +33,11 @@ declare verbose Weyl, 6;
 
 
 // Declare types and attributes
-declare type WeylAlg[WeylAlgElt];
-//declare type WeylAlgElt;
-declare attributes WeylAlg: rngdiff,weyl_action,weyltup_to_weyldict,weyldict_to_weyltup,derivation,weyl_sum,weyl_prod;
-declare attributes WeylAlgElt: parent, array,tup;
+declare type AlgWeyl[AlgWeylElt];
+declare attributes AlgWeyl: rngdiff,weyl_action,weyltup_to_weyldict,weyldict_to_weyltup,derivation,weyl_sum,weyl_prod,der_name;
+declare attributes AlgWeylElt: parent, array,tup;
 
-// Constructor for WeylAlg
+// Constructor for AlgWeyl
 
 //###############################
 //###############################
@@ -250,20 +180,20 @@ end procedure;
 
 //###############################
 //###############################
-//      WeylAlg Type
+//      AlgWeyl Type
 //###############################
 //###############################
 
 
 //############################
-intrinsic MakeWeylAlg(R::RngDiff) -> WeylAlg
+intrinsic WeylAlgebra(R::RngDiff) -> AlgWeyl
 //############################
 {
 
-    Creates a WeylAlg object with attribute rngdiff initialized to R.
+    Creates a AlgWeyl object with attribute rngdiff initialized to R.
     
 }
-    T := New(WeylAlg);
+    T := New(AlgWeyl);
     D:=Derivation(R);
     T`rngdiff:=R;
     T`derivation:=D;
@@ -273,14 +203,14 @@ intrinsic MakeWeylAlg(R::RngDiff) -> WeylAlg
 end intrinsic;
 
 //############################
-intrinsic WeylAlgebra(R::RngDiff) -> WeylAlg
+intrinsic WeylAlgebra(R::RngDiff) -> AlgWeyl
 //############################
 {
 
     Creates a WeylAlg object with attribute rngdiff initialized to R.
     
 }
-    T := New(WeylAlg);
+    T := New(AlgWeyl);
     D:=Derivation(R);
     T`rngdiff:=R;
     T`derivation:=D;
@@ -290,15 +220,15 @@ intrinsic WeylAlgebra(R::RngDiff) -> WeylAlg
 end intrinsic;
 
 //############################
-intrinsic WeylAlgebra(R::RngMPolProlSeq) -> WeylAlg
+intrinsic WeylAlgebra(R::RngMPolProlSeq) -> AlgWeyl
 //############################
 {
 
-    Creates a WeylAlg object with attribute rngdiff initialized to R.
+    Creates a AlgWeyl object with attribute rngdiff initialized to R.
     
 
 }
-    T := New(WeylAlg);
+    T := New(AlgWeyl);
     T`rngdiff:=R;
     T`derivation:=func<f|Diff(f,1)>;
     
@@ -309,16 +239,16 @@ end intrinsic;
 
 
 //#############################
-intrinsic Print(X::WeylAlg)
+intrinsic Print(X::AlgWeyl)
 //#############################
 {Print a Weyl algebra object}
   printf "Weyl Algebra ring for %o ", X`rngdiff;
 end intrinsic;
 
 //################################
-intrinsic Hash(X::WeylAlg) -> RngIntElt
+intrinsic Hash(X::AlgWeyl) -> RngIntElt
 //################################
-{The hash for WeylAlg is just the hash underlying differential ring
+{The hash for AlgWeyl is just the hash underlying differential ring
 because every Weyl algebra is determined by its differential ring.
 }
    // Code: determine a hash value for the given object
@@ -328,21 +258,18 @@ because every Weyl algebra is determined by its differential ring.
 end intrinsic;
 
 //################################
-intrinsic 'eq'(T1::WeylAlg, T2::WeylAlg) -> BoolElt
+intrinsic 'eq'(T1::AlgWeyl, T2::AlgWeyl) -> BoolElt
 //################################
-{Checks if two WeylAlg objects are equal.}
+{Checks if two AlgWeyl objects are equal.}
     return T1`rngdiff eq T2`rngdiff;
 end intrinsic;
 
 //################################
-intrinsic GetDerivationElt(W::WeylAlg) -> WeylAlgElt
+intrinsic GetDerivationElt(W::AlgWeyl) -> AlgWeylElt
 //################################
 {For a Weyl algebra R[d] return the element d.}
-    return MakeWeylAlgElt(W,[<1,1>]);
+    return elt(W,[<1,1>]);
 end intrinsic;
-
-
-
 
 
 //###############################
@@ -352,11 +279,11 @@ end intrinsic;
 //###############################
 
 //############################
-intrinsic MakeWeylAlgElt(T::WeylAlg, x::RngElt) -> WeylAlgElt
+intrinsic elt(T::AlgWeyl, x::RngElt) -> AlgWeylElt
 //############################
-{Creates a WeylAlgElt object with parent T and element x.}
-    vprintf Weyl, 5: "Entering MakeWeylAlgElt for RngElt\n";
-    E := New(WeylAlgElt);
+{Creates a AlgWeylElt object with parent T and element x.}
+    vprintf Weyl, 5: "Entering MakeAlgWeylElt for RngElt\n";
+    E := New(AlgWeylElt);
     R:=T`rngdiff;
     E`parent:=T;
  
@@ -371,13 +298,13 @@ intrinsic MakeWeylAlgElt(T::WeylAlg, x::RngElt) -> WeylAlgElt
 end intrinsic;
 
 //############################
-intrinsic MakeWeylAlgElt(T::WeylAlg, x::RngMPolProlSeqElt) -> WeylAlgElt
+intrinsic elt(T::AlgWeyl, x::RngMPolProlSeqElt) -> AlgWeylElt
 //############################
-{Creates a WeylAlgElt object with parent T and element x.}
-    vprintf Weyl, 5: "Entering MakeWeylAlgElt for RngMPolProSeqElt\n";
+{Creates a AlgWeylElt object with parent T and element x.}
+    vprintf Weyl, 5: "Entering MakeAlgWeylElt for RngMPolProSeqElt\n";
     
     require T`rngdiff eq Parent(x): "x must be in the prolongation sequence associated to T";
-    E := New(WeylAlgElt);
+    E := New(AlgWeylElt);
     E`parent:=T;
     coeffs:=AssociativeArray();
     coeffs[0]:=x;
@@ -387,7 +314,7 @@ intrinsic MakeWeylAlgElt(T::WeylAlg, x::RngMPolProlSeqElt) -> WeylAlgElt
 end intrinsic;
 
 //############################
-intrinsic Hash(x::WeylAlgElt) -> RngIntElt
+intrinsic Hash(x::AlgWeylElt) -> RngIntElt
 //############################
 {
 
@@ -402,14 +329,14 @@ Given that there is no hash for such things we had to make by hashing the equiva
 end intrinsic;
 
 //############################
-intrinsic MakeWeylAlgElt(T::WeylAlg, coeffs::Assoc) -> WeylAlgElt
+intrinsic elt(T::AlgWeyl, coeffs::Assoc) -> AlgWeylElt
 //############################
 {
 
 Construction from a dictionary. This is the primary way we do this.
 
 }
-    E := New(WeylAlgElt);
+    E := New(AlgWeylElt);
     R:=T`rngdiff;
     truthvals:=[ (coeffs[k] in R) : k in Keys(coeffs)];
     flag:=&and[ x : x in truthvals];
@@ -425,7 +352,7 @@ end intrinsic;
 
 
 //############################
-intrinsic MakeWeylAlgElt(T::WeylAlg, x::SeqEnum) -> WeylAlgElt
+intrinsic elt(T::AlgWeyl, x::SeqEnum) -> AlgWeylElt
 //############################
 {
 
@@ -435,7 +362,7 @@ Each pair represents a*d^i in R[d].
 
 }
     weyldict:=weyltup_to_weyldict(x);
-    E:=MakeWeylAlgElt(T,weyldict);
+    E:=elt(T,weyldict);
     
     if not assigned E`tup then
         E`tup:=x;
@@ -447,10 +374,10 @@ end intrinsic;
 
 
 //###############################
-intrinsic 'eq'(x::WeylAlgElt, y::WeylAlgElt) -> BoolElt
+intrinsic 'eq'(x::AlgWeylElt, y::AlgWeylElt) -> BoolElt
 //###############################
 {
-Checks if two WeylAlgElt objects are equal.
+Checks if two AlgWeylElt objects are equal.
 It does so by checking if the parent object are equal and the associated arrays are equal.
 
 }
@@ -458,16 +385,29 @@ It does so by checking if the parent object are equal and the associated arrays 
 end intrinsic;
 
 //###############################
-intrinsic Print(E::WeylAlgElt)
+intrinsic Print(E::AlgWeylElt)
 //###############################
 {
 
-Prints a WeylAlgElt object.
+Prints a AlgWeylElt object.
 
 }
     CheckTuple_weylalgelt(~E);
     myseq:=Eltseq(E);
-    pieces:=[Sprintf( "%o d^%o", pair[1], pair[2]): pair in myseq];
+    W:=Parent(E);
+    if not assigned W`der_name then
+        W`der_name:="d";
+    end if;
+
+    pieces:=[];
+    for pair in myseq do
+        if pair[1] ne 1 then
+            piece:=Sprintf( "%o*%o^%o", pair[1],Parent(E)`der_name,pair[2]);
+        else
+            piece:=Sprintf( "%o^%o", Parent(E)`der_name,pair[2]);
+        end if;
+            Append(~pieces,piece);
+    end for;
     
     //debugging
     //if #pieces eq 0 then
@@ -482,7 +422,7 @@ Prints a WeylAlgElt object.
 end intrinsic;
 
 //############################
-intrinsic '+'(x::WeylAlgElt, y::WeylAlgElt) -> WeylAlgElt
+intrinsic '+'(x::AlgWeylElt, y::AlgWeylElt) -> AlgWeylElt
 //############################
 {
 
@@ -496,12 +436,12 @@ That function is weyl_sum.
     dictx:=x`array;
     dicty:=y`array;
     dictz:=weyl_sum(dictx,dicty);
-    return MakeWeylAlgElt(x`parent, dictz);
+    return elt(x`parent, dictz);
 end intrinsic;
 
 
 //############################
-intrinsic '+'(x::WeylAlgElt, y::RngElt) -> WeylAlgElt
+intrinsic '+'(x::AlgWeylElt, y::RngElt) -> AlgWeylElt
 //############################
 {
 
@@ -512,12 +452,12 @@ That function is weyl_sum.
 }
     W:=x`parent;
     R:=W`rngdiff;
-    Ey:=MakeWeylAlgElt(W,R!y);
+    Ey:=elt(W,R!y);
     return x+Ey;
 end intrinsic;
 
 //############################
-intrinsic '+'(y::RngElt,x::WeylAlgElt) -> WeylAlgElt
+intrinsic '+'(y::RngElt,x::WeylAlgElt) -> AlgWeylElt
 //############################
 {
 
@@ -528,12 +468,12 @@ That function is weyl_sum.
 }
     W:=x`parent;
     R:=W`rngdiff;
-    Ey:=MakeWeylAlgElt(W,y);
+    Ey:=elt(W,y);
     return x+Ey;
 end intrinsic;
 
 //############################
-intrinsic '*'(x::WeylAlgElt, y::WeylAlgElt) -> WeylAlgElt
+intrinsic '*'(x::AlgWeylElt, y::AlgWeylElt) -> AlgWeylElt
 //############################
 {
   The main multiplication function is weyl_prod.
@@ -587,7 +527,7 @@ end intrinsic;
 
 
 //############################
-intrinsic '*'(x::., y::WeylAlgElt) -> WeylAlgElt
+intrinsic '*'(x::., y::AlgWeylElt) -> AlgWeylElt
 //############################
 {
     Given R[d] and x in R and y in R[d] define x*y.
@@ -596,7 +536,7 @@ intrinsic '*'(x::., y::WeylAlgElt) -> WeylAlgElt
     W:=y`parent;
     R:=W`rngdiff;
     require x in R: "Left scalar multiplication on the Weyl algebra needs scalars in the associated differential algebra";
-    Ex:=MakeWeylAlgElt(W,R!x);
+    Ex:=elt(W,R!x);
     return Ex*y;
 
 end intrinsic;
@@ -604,7 +544,7 @@ end intrinsic;
 
 
 //############################
-intrinsic '@'(L::WeylAlgElt, f::RngElt) -> RngDiffElt
+intrinsic '@'(L::AlgWeylElt, f::RngElt) -> RngDiffElt
 //############################
 {
  This is the multiplication that defines the D-module action.
@@ -620,7 +560,7 @@ end intrinsic;
 
 
 //############################
-intrinsic '^'(x::WeylAlgElt, n::RngIntElt) -> WeylAlgElt
+intrinsic '^'(x::AlgWeylElt, n::RngIntElt) -> AlgWeylElt
 //############################
 {
     Given R[d] and x in R and y in R[d] define x*y.
@@ -629,7 +569,7 @@ intrinsic '^'(x::WeylAlgElt, n::RngIntElt) -> WeylAlgElt
     W:=x`parent;
     
     if n eq 0 then
-        return MakeWeylAlgElt(W,1);
+        return elt(W,1);
     elif n eq 1 then
         return x;
     else
@@ -639,7 +579,7 @@ end intrinsic;
 
 
 //###############################
-intrinsic Eltseq(x::WeylAlgElt) -> SeqEnum
+intrinsic Eltseq(x::AlgWeylElt) -> SeqEnum
 //###############################
 {
     checks if the tuple is there then returns it if not.
@@ -656,7 +596,7 @@ intrinsic Eltseq(x::WeylAlgElt) -> SeqEnum
 end intrinsic;
 
 //###############################
-intrinsic GetArray(x::WeylAlgElt) -> Assoc
+intrinsic GetArray(x::AlgWeylElt) -> Assoc
 //###############################
 {
     checks if the tuple is there then returns it if not.
@@ -665,10 +605,10 @@ intrinsic GetArray(x::WeylAlgElt) -> Assoc
 end intrinsic;
 
 //###############################
-intrinsic Parent(x::WeylAlgElt) -> WeylAlg
+intrinsic Parent(x::AlgWeylElt) -> AlgWeyl
 //###############################
 {
-    For a WeylAlgElt, return the WeylAlgebra
+    For a AlgWeylElt, return the AlgWeylebra
 }
     return x`parent;
 end intrinsic;
@@ -677,23 +617,23 @@ end intrinsic;
 
 
 //###############################
-intrinsic IsCoercible(W::WeylAlg, x::.) -> BoolElt, WeylAlgElt
+intrinsic IsCoercible(W::AlgWeyl, x::.) -> BoolElt, AlgWeylElt
 //###############################
 {
-Checks if x can be coerced into WeylAlg and performs the coercion if possible.
+Checks if x can be coerced into AlgWeyl and performs the coercion if possible.
 Currently, only checks if x is in R for W=R[d].
 
 }
     R:=W`rngdiff;
     //printf "Performing a coercion of x=%o into a WeylAlgebra \n, its type is %o \n",x, Type(x);
     
-    if Type(x) eq WeylAlgElt then
+    if Type(x) eq AlgWeylElt then
         //printf "Weyl Algebra Element Coercion";
-        return true, MakeWeylAlgElt(W,Eltseq(x));
+        return true, elt(W,Eltseq(x));
     elif Type(x) eq SeqEnum then
-        return true, MakeWeylAlgElt(W,x);
+        return true, elt(W,x);
     elif x in R then
-        return true, MakeWeylAlgElt(W,[<x,0>]);
+        return true, elt(W,[<x,0>]);
     else
         return false;
     end if;
@@ -702,7 +642,7 @@ end intrinsic;
 
 /*
 //###############################
-intrinsic Eltseq(x::WeylAlgElt) -> SeqEnum
+intrinsic Eltseq(x::AlgWeylElt) -> SeqEnum
 //###############################
 {
     INPUT:
@@ -731,42 +671,128 @@ end intrinsic;
 
 
 //###############################
-intrinsic GetD(WR :: WeylAlg) -> WeylAlgElt
+intrinsic Derivation(WR :: AlgWeyl) -> AlgWeylElt
 //###############################
 {
-    This function returns the derivation element of a WeylAlgebra.
+    This function returns the derivation element of a Weyl Algebra.
 }
-    dW:=MakeWeylAlgElt(WR,<<1,1>>);
+    dW:=elt(WR,[<1,1>]);
     return dW;
 end intrinsic;
 
 //###############################
-intrinsic GetOne(WR :: WeylAlg) -> WeylAlgElt
+intrinsic GetOne(WR :: AlgWeyl) -> AlgWeylElt
 //###############################
 {
 
 This returns the 1 of a Weyl algebra.
 
 }
-    one:=MakeWeylAlgElt(WR,1);
+    one:=elt(WR,1);
     return one;
     
 end intrinsic;
 
 
+////////////////////
+intrinsic AssignNames(~P::AlgWeyl,s::SeqEnum)
+////////////////////
+{}
+    P`der_name:=s[1];
+end intrinsic;
+
+////////////////////
+intrinsic Name(P::AlgWeyl, n::RngIntElt)->AlgWeylElt
+////////////////////
+{Return the ith generator of a Weyl algebra.
+This gives either the derivation elements for n=1 or the constant 1 for n=0}
+    return P.n;
+end intrinsic;
+
+
+
+////////////////////
+intrinsic '.'(WR::AlgWeyl,n::RngIntElt)->AlgWeylElt
+////////////////////
+{Return the generator of the Weyl Algebra}
+    if n eq 0 then
+        return elt(WR,1);
+    elif n eq 1 then
+        return Derivation(WR);
+    else
+        error "The integer n must be 0 or 1.";
+    end if;
+    
+end intrinsic;
 
 
 //###############################
+//      USAGE
 //###############################
-//  NOT TESTED
-//###############################
-//###############################
+/*
+    Attach the package. Unlike "load" functions inside are only locally accessible.
+    
+        >Attach("package-weyl-algebra.mag");
 
+    Create a AlgWeyl object.
+    
+        >Q:=Rationals();
+        >P := PolynomialRing(Q);
+        >f := map<P->P | a:->5*Derivative(a)>;
+        >R := DifferentialRing(P, f,Q);
+        >W := WeylAlgebra(R);
+        
+    Create some elements to test things with.
+        >x:=P.1;
+        >x:=R!x;
+        >E1 := elt(W, x);
+        >E2 := elt(W, 20);
+        >E1+E2;
+        $.1 + 20 d^0
+        
+    Test the different ways to instantiate Weyl algebra elements and make sure they give the
+    right thing back.
+    
+        >my_array:=AssociativeArray();
+        >my_array[0]:=x;
+        >E1arr:=elt(W,my_array);
+        >E2tup := elt(W, [<20,0>]);
+        >E1tup := elt(W, [<x,0>]);
+        >dW:= elt(W,[<1,1>]);
+        >two:=elt(W,2);
+        >E2tup eq E2;
+        >E1arr eq E1;
+        >2*x*dW+0 eq 2*x*dW;
+        >0+2*dW eq 2*dW;
+        true
+        true
+        true
+        true
+        
+    Test that the operations of addition an multiplication are well-defined.
 
+        >E3 := E1 + E2;
+        >E4 := E1 * E2;
+        >E3+1;
+        $.1 + 21 d^0
+        
+    Test exponentiation and getting the derivation
+    
+        >dW:=Derivation(W);
+        >dW^2;
+        0 d^1+ 1 d^2
+        
+    There are a couple other functions that aren't show.
+    One can Eltseq() of an element.
+    
+        >Q:=Rationals();
+        >P := PolynomialRing(Q);
+        >f := map<P->P | a:->5*Derivative(a)>;
+        >R := DifferentialRing(P, f,Q);
+        >x:=P.1;
+        >W := WeylAlgebra(R);
+        >dW:=elt(W,[<x,1>]);
+        >Parent(dW) eq W;
+        true
 
-
-
-
-
-
-
+*/
