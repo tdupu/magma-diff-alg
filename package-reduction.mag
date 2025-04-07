@@ -1,7 +1,6 @@
 /*
     Taylor Dupuy, Spring 2025
     taylor.dupuy@gmail.com
-
 */
 
 
@@ -91,6 +90,14 @@ intrinsic Specialize(f::RngMPolProlSeqElt,seq1::SeqEnum)->RngMPolProlSeqElt
 {Given a f whose coefficients admit and Evaluate function for the coefficients.}
     return &+[ Parent(f)![<Evaluate(t[1],seq1),t[2]>] : t in Eltseq(f)];
 end intrinsic;
+
+/*
+#########################
+#########################
+Converted from rndiffpol-functions.mag
+#########################
+#########################
+*/
 
 
 
