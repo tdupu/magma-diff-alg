@@ -166,6 +166,33 @@ Given f and g and a variable u return quo, rem, and sep such that sep*f-quo*g eq
 end intrinsic;
 
 
+////////////////////
+intrinsic Degree(f::RngMPolProlSeqElt,u::RngMPolProlSeqElt)->RngIntElt
+////////////////////
+{
+Get the degree of f with respect to u.
+}
+    f1,u1:=match_orders(f,u);
+    return Degree(f1`elt,u1`elt);
+end intrinsic;
+
+////////////////////
+intrinsic PseudoDivide(f::RngMPolProlSeqElt,g::RngMPolProlSeqElt,u::RngMPolProlSeqElt)->RngMPolProlSeqElt,RngMPolProlSeqElt,RngMPolProlSeqElt
+////////////////////
+{Given f and g and a variable u return quo, rem, and sep such that sep*f-quo*g eq rem and the degree of the remainder is less than the degree of g.}
+
+    f1,g1:=match_orders(f,g);
+    f1,u1:=match_orders(f1,u);
+    quo_elt,rem_elt,sep_elt:=PseudoDivide(f1`elt,g1`elt,u1`elt);
+    quo:=Parent(f1)!quo_elt;
+    rem:=Parent(f1)!rem_elt;
+    sep:=Parent(f1)!sep_elt;
+    require sep*f-quo*g eq rem: "The test sep*f-quo*g eq rem fails";
+    
+    return quo, rem, sep;
+
+end intrinsic;
+
 /*
 #########################
 #########################

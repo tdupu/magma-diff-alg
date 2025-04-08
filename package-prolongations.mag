@@ -388,7 +388,23 @@ intrinsic Prolongation(B::RngMPol: term_order:=<"dblocks",[]>)->Prol
         jet1:=PolynomialRing(BaseRing(B),2*nvars,TO1[1],TO1[2]);
 
         incl:=hom<B->jet1| [jet1.i : i in [1..Ngens(B)]]>;
-        delta:=map<B->jet1|g:->&+[incl(Derivative(g,B.i))*jet1.(i+Ngens(B)) : i in [1..Ngens(B)]]+incl(&+[Diff(Coefficients(g)[i])*Monomials(g)[i] : i in [1..#Monomials(g)]])>;
+        
+        function der(g)
+            jet0:=B;
+            f1:=incl;
+            part1:=&+[f1(Derivative(g,jet0.i))*jet1.(i+Ngens(B)) : i in [1..Ngens(jet0)]];
+            mons:=Monomials(g);
+            if #mons gt 0 then
+                part2:=f1(&+[Diff(Coefficients(g)[i])*mons[i] : i in [1..#mons]]);
+            else
+                part2:=f1(Diff(g)); //BUGGED
+            end if;
+            return part1+part2;
+        end function;
+        
+        
+        //delta:=map<B->jet1|g:->&+[incl(Derivative(g,B.i))*jet1.(i+Ngens(B)) : i in [1..Ngens(B)]]+incl(&+[Diff(Coefficients(g)[i])*Monomials(g)[i] : i in [1..#Monomials(g)]])>;
+        delta:=map<B->jet1|g:->der(g)>;
         ker2:=JKernel(incl,delta);
         
         my_prol:=Prolongation(ker1,ker2);
@@ -1168,5 +1184,15 @@ intrinsic '/'(f2::RngMPolProlSeqElt,f1::RngMPolProlSeqElt)->BoolElt
     return h;
 end intrinsic;
 
+/*
+////////////////////
+intrinsic Derivation(P::RngMPolProlSeq)->UserProgram
+////////////////////
+{This gives the derivative from Jm to Jm+1}
+   D:=func<x|Diff(x,1)>;
+   return D;
+
+end intrinsic;
+*/
 
 

@@ -46,20 +46,6 @@ declare attributes AlgWeylElt: parent, array,tup;
 //###############################
 
 
-intrinsic Diff(f::RngDiffElt,n::RngIntElt)->RngDiffElt
-{}
-    R:=Parent(f);
-    if n eq 0 then
-        return f;
-    elif n eq 1 then
-        return R!Derivative(f);
-    elif n gt 1 then
-        return R!Diff(Diff(f,1),n-1);
-    end if;
-
-end intrinsic;
-
-
 //######################
 function DictEq(dict1,dict2)
 //######################
@@ -83,8 +69,7 @@ The action of a Weyl algebra element on a differential polynomial.
     OUTPUT:
         --B, an element of R
 */
-    D:=Derivation(Parent(A));
-    B:=&+[(pair[1])*Diff(A,D,pair[2]) : pair in L];
+    B:=&+[(pair[1])*Diff(A,pair[2]) : pair in L];
     return B;
 end function;
 
@@ -96,8 +81,28 @@ intrinsic weyldict_to_weyltup(example::Assoc)->SeqEnum
 end intrinsic;
 
 //%%%%%%%%%%%%%%%%%%%%%%%%%%%
+intrinsic clean_weyldict(example::Assoc)->Assoc
+//%%%%%%%%%%%%%%%%%%%%%%%%%%%
+{}
+    my_keys:=Keys(example);
+    clean_dict:=AssociativeArray();
+    for k in my_keys do
+        if example[k] ne 0 then
+            clean_dict[k]:=example[k];
+        end if;
+    end for;
+    return clean_dict;
+end intrinsic;
+
+
+//%%%%%%%%%%%%%%%%%%%%%%%%%%%
 function weyltup_to_weyldict(my_tuple)
 //%%%%%%%%%%%%%%%%%%%%%%%%%%%
+/*
+The coercion through Eltseqs goes through this function.
+We are careful about not passing tuples corresponding to zero matrices.
+Also, the "tuples" here are actually SeqEnum types.
+*/
     ass_arr:=AssociativeArray();
     for tup in my_tuple do
         n:=tup[2];
@@ -109,7 +114,7 @@ function weyltup_to_weyldict(my_tuple)
         end if;
     end for;
     
-    return ass_arr;
+    return clean_weyldict(ass_arr); //remove excess zeros if there are any
 end function;
 
 //%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -157,25 +162,24 @@ A function for summing dictionaries.
             dict3[k]:=val;
         end if;
     end for;
-    return dict3;
+    return clean_weyldict(dict3); //removed excess zeros
 end function;
 
 
 
 //######################
-procedure CheckTuple_weylalgelt(~E)
+intrinsic CheckTuple(~E::AlgWeylElt)
 //######################
-/*
+{
 If a Weyl algebra element is assigned a tuple, do nothing.
 If it isn't, update it.
-*/
+}
     if not assigned E`tup then
         W:=E`parent;
-        weyldict:=E`array;
-        weyltup:=weyldict_to_weyltup(weyldict);
-        E`tup:=weyltup;
+        E`array:=clean_weyldict(E`array);
+        E`tup:=weyldict_to_weyltup(E`array);
     end if;
-end procedure;
+end intrinsic;
 
 
 //###############################
@@ -363,11 +367,7 @@ Each pair represents a*d^i in R[d].
 }
     weyldict:=weyltup_to_weyldict(x);
     E:=elt(T,weyldict);
-    
-    if not assigned E`tup then
-        E`tup:=x;
-    end if;
-    
+    CheckTuple(~E);
     return E;
 end intrinsic;
 
@@ -392,7 +392,7 @@ intrinsic Print(E::AlgWeylElt)
 Prints a AlgWeylElt object.
 
 }
-    CheckTuple_weylalgelt(~E);
+    CheckTuple(~E);
     myseq:=Eltseq(E);
     W:=Parent(E);
     if not assigned W`der_name then
@@ -545,6 +545,21 @@ end intrinsic;
 
 //############################
 intrinsic '@'(L::AlgWeylElt, f::RngElt) -> RngDiffElt
+//############################
+{
+ This is the multiplication that defines the D-module action.
+}
+    W:=L`parent;
+    R:=W`rngdiff;
+    require f in R: "The element is not in the differential ring defining the Weyl algebra so the module action is not defined";
+    ff:=R!f;
+    Ltup:=Eltseq(L);
+    return R!weyl_action(Ltup,ff);
+
+end intrinsic;
+
+//############################
+intrinsic '@'(L::AlgWeylElt, f::RngMPolProlSeqElt) -> RngMPolProlSeqElt
 //############################
 {
  This is the multiplication that defines the D-module action.
