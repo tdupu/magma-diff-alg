@@ -144,3 +144,32 @@ true
 true
 -1
 ```
+
+EXAMPLE:
+We also have some support for sorting. We have defined `lt`,`le`,`gt`, and `ge`. Since we can't fuck with `Sort` we have defined `Sorted` for our elements. The elements which are minimal, meaning the smaller leading polynomial will appear first. 
+
+```
+R<t>:=PolynomialRing(Q,1);
+f := map<R->R|f:->Derivative(f,t)>;
+A := DifferentialRing(R, f, Q);
+F := FieldOfFractions(A);
+P<x,y>:=PolynomialRingProlSeq(F,2: term_order:=<"dblocks",[[1,2]]>);
+f:=Diff(x,1)+Diff(y,3);
+g:=x^2+Diff(y,2)*Diff(x,1)+t;
+F0:=[f,g];
+Sorted(F0);
+F1:=match_orders(F0);
+Sort([f`elt: f in F1]);
+g lt f;
+```
+```
+[
+Diff(x,1)*Diff(y,2) + x^2 + $.1,
+Diff(y,3) + Diff(x,1)
+]
+[
+Diff(x,1)*Diff(y,2) + x^2 + $.1,
+Diff(y,3) + Diff(x,1)
+]
+true
+```
