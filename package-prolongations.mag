@@ -397,7 +397,7 @@ intrinsic Prolongation(B::RngMPol: term_order:=<"dblocks",[]>)->Prol
             if #mons gt 0 then
                 part2:=f1(&+[Diff(Coefficients(g)[i])*mons[i] : i in [1..#mons]]);
             else
-                part2:=f1(Diff(g)); //BUGGED
+                part2:=f1(Diff(BaseRing(B)!g)); //BUGGED
             end if;
             return part1+part2;
         end function;
@@ -545,7 +545,7 @@ intrinsic Extend(P::RngMPolProlSeq)
         if #mons gt 0 then
             part2:=f1(&+[Diff(Coefficients(g)[i])*mons[i] : i in [1..#mons]]);
         else
-            part2:=f1(Diff(g)); //BUGGED
+            part2:=f1(Diff(BaseRing(Parent(g))!g)); //BUGGED
         end if;
         return part1+part2;
     end function;

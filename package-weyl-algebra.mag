@@ -392,6 +392,7 @@ intrinsic Print(E::AlgWeylElt)
 Prints a AlgWeylElt object.
 
 }
+    vprintf Weyl, 5: "Entering print...";
     CheckTuple(~E);
     myseq:=Eltseq(E);
     W:=Parent(E);
@@ -408,11 +409,6 @@ Prints a AlgWeylElt object.
         end if;
             Append(~pieces,piece);
     end for;
-    
-    //debugging
-    //if #pieces eq 0 then
-    //    myseq;
-    //end if;
     
     mystring:=pieces[1];
     for i in [2..#pieces] do
@@ -514,7 +510,7 @@ The examples are wrong because of a bug.
             tup2:=L2[j];
             a2:=tup2[1];
             n2:=tup2[2];
-            vprintf Weyl, 5: "Type a2, %o \n",Type(a2);
+            //vprintf Weyl, 5: "Type a2, %o \n",Type(a2);
             new_stuff:=[<a1*Binomial(n1,n1-k)*Diff(a2,n1-k),k+n2>:k in [0..n1]];
             L3:=L3 cat new_stuff;
         end for;
