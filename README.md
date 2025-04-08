@@ -115,3 +115,32 @@ sep*f-quo*g eq rem;
 ```
 true
 ```
+
+EXAMPLE: 
+The Ritt reduction algorithm based on polynomial pseudodivision is also implemented. The quotient here is an element of a Weyl algebra. 
+
+Given a basic setup 
+```
+R<t>:=PolynomialRing(Q,1);
+f := map<R->R|f:->Derivative(f,t)>;
+A := DifferentialRing(R, f, Q);
+F := FieldOfFractions(A);
+P<x,y>:=PolynomialRingProlSeq(F,2: term_order:=<"dblocks",[[1,2]]>);
+WP<D>:=WeylAlgebra(P);
+```
+We can divide an element f by g with in a single step of completely reduce it. The call IsRittReduced will return true or false depending on if the leader of g or non-trivial derivative of the leader of g appears in f. In the case it does, it returns the number of derivatives that need to be taken. In the case that it is ritt reduced the number of derivatives that needs to be taken will be returned as -1.
+```
+f:=Diff(x,1)+Diff(y,3);
+g:=x^2+Diff(y,2)*Diff(x,1)+t;
+quo,rem,sep:=RittDivideStep(f,g);
+sep*f - quo@g eq rem;
+quo,rem,sep:=RittDivide(f,g);
+sep*f-quo@g eq rem;
+IsRittReduced(rem,g);
+```
+```
+true
+true
+true
+-1
+```
