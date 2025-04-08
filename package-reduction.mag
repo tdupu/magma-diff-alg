@@ -1,6 +1,13 @@
 /*
     Taylor Dupuy, Spring 2025
     taylor.dupuy@gmail.com
+    
+    Oleg Golubitsky,Marina Kondratieva, Marc Moreno Maza, Alexey Ovchinnikov, Bounds for algorithms in differential algebra https://arxiv.org/pdf/math/0702470
+    
+    Hubert, Factorization-free Decomposition Algorithms in Differential Algebra
+    J. Symbolic Computation (2000) 29, 641–662 doi:10.1006/jsco.1999.0344
+
+    
 */
 
 declare verbose RittDivision, 6;
@@ -95,10 +102,68 @@ end intrinsic;
 /*
 #########################
 #########################
-Converted from rndiffpol-functions.mag
+PseudoDivision
 #########################
 #########################
 */
+
+////////////////////
+intrinsic PseudoDivideStep(f::RngMPolElt,g::RngMPolElt,u::RngMPolElt)->RngMPolElt,RngMPolElt,RngMPolElt
+////////////////////
+{
+Given f and g and a variable u return quo, rem, and sep such that sep*f-quo*g eq rem with the degree of rem lower that the degree of g by one.
+}
+require Parent(f) eq Parent(g): "The two elements must have the same parents";
+require Degree(u) eq 1: "u must be an element of degree one.";
+
+    df:=Degree(f,u);
+    dg:=Degree(g,u);
+
+    if dg gt df then
+        sep:=1;
+        rem:=f;
+        quo:=0;
+        return Parent(f)!quo,Parent(f)!rem,Parent(f)!sep;
+    else
+        n:=df-dg;
+        lcf:=Coefficients(f,u)[df+1];
+        lcg:=Coefficients(g,u)[dg+1];
+        lcm:=LeastCommonMultiple(lcg,lcf);
+        a:=Parent(f)!lcm/lcf;
+        b:=Parent(f)!lcm/lcg;
+        rem:=a*f-b*u^n*g;
+        quo:=b;
+        sep:=a;
+        return Parent(f)!quo,Parent(f)!rem,Parent(f)!sep;
+    end if;
+end intrinsic;
+
+
+////////////////////
+intrinsic PseudoDivide(f::RngMPolElt,g::RngMPolElt,u::RngMPolElt)->RngMPolElt,RngMPolElt,RngMPolElt
+////////////////////
+{
+Given f and g and a variable u return quo, rem, and sep such that sep*f-quo*g eq rem and the degree of the remainder is less than the degree of g.
+}
+
+    f0:=f;
+    g0:=g;
+    
+    quo:=0;
+    rem:=f;
+    sep:=1;
+    
+    while Degree(f0,u) ge Degree(g0,u) do
+        quo0,rem0,sep0:=PseudoDivideStep(f0,g0,u);
+        f0:=rem0;
+        sep:=sep*sep0;
+        quo:=quo+quo0;
+    end while;
+    
+    rem:=rem0;
+    
+    return Parent(f)!quo, Parent(f)!rem, Parent(f)!sep;
+end intrinsic;
 
 
 /*

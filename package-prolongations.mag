@@ -521,7 +521,20 @@ intrinsic Extend(P::RngMPolProlSeq)
     AssignNames(~jet1,all_names);
     f1:=hom<jet0->jet1| [jet1.i : i in [1..Ngens(jet0)]]>;
     //delta1:=map<jet0->jet1|g:->&+[f1(Derivative(g,jet0.i))*jet1.(i+Ngens(B)) : i in [1..Ngens(jet0)]]>;
-    delta1:=map<jet0->jet1|g:->&+[f1(Derivative(g,jet0.i))*jet1.(i+Ngens(B)) : i in [1..Ngens(jet0)]]+f1(&+[Diff(Coefficients(g)[i])*Monomials(g)[i] : i in [1..#Monomials(g)]])>;
+    //delta1:=map<jet0->jet1|g:->&+[f1(Derivative(g,jet0.i))*jet1.(i+Ngens(B)) : i in [1..Ngens(jet0)]]+f1(&+[Diff(Coefficients(g)[i])*Monomials(g)[i] : i in [1..#Monomials(g)]])>;
+    
+    function der(g)
+        part1:=&+[f1(Derivative(g,jet0.i))*jet1.(i+Ngens(B)) : i in [1..Ngens(jet0)]];
+        mons:=Monomials(g);
+        if #mons gt 0 then
+            part2:=f1(&+[Diff(Coefficients(g)[i])*mons[i] : i in [1..#mons]]);
+        else
+            part2:=f1(Diff(g)); //BUGGED
+        end if;
+        return part1+part2;
+    end function;
+    
+    delta1:=map<jet0->jet1|g:->der(g)>;
     
     ker1:=JKernel(f1,delta1);
     prol_new:=Prolongation(ker0,ker1);
