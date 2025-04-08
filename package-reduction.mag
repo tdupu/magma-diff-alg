@@ -196,6 +196,88 @@ end intrinsic;
 /*
 #########################
 #########################
+Ritt's Algorithm for Reduction
+#########################
+#########################
+*/
+
+////////////////////
+intrinsic IsRittReduced(f::RngMPolProlSeqElt,g::RngMPolProlSeqElt)->BoolElt,RngIntElt
+////////////////////
+{Given two differential polynomials determine if f is reduced by g by seeing if the leader of g or any of its derivatives appear in f. If it does, then return the true and the number of derivatives you need to take. If it doesn't return false and -1.}
+    require Parent(f) eq Parent(g): "The parents of f and g must be equal for this question to make sense.";
+    i,r:=Explode(Support(Leader(g))[1]);
+    set_of_ders:={ x[2] : x in Support(f) | x[1] eq i and x[2] ge r};
+    if #set_of_ders eq 0 then
+        return true,-1;
+    else
+        return false,Maximum(set_of_ders)-r;
+    end if;
+end intrinsic;
+
+////////////////////
+intrinsic RittDivideStep(f::RngMPolProlSeqElt,g::RngMPolProlSeqElt)->AlgWeylElt,RngMPolProlSeqElt,RngMPolProlSeqElt
+////////////////////
+{Return quo, rem, and sep such that sep*f-quo@g eq rem.
+The quo will be an element of the associated Weyl algebra.
+The full algorithm is Ritt Divide.
+}
+    P:=Parent(f);
+    W<D>:=WeylAlgebra(P);
+    is_reduced,num_ders:=IsRittReduced(f,g); //testing of the parents of f and g occurs here.
+    if is_reduced then
+        quo:=WeylAlgebra(Parent(f))!0;
+        rem:=f;
+        sep:=Parent(f)!1;
+    else
+        u:=Diff(Leader(g),num_ders);
+        quo0,rem0,sep0:=PseudoDivide(f,Diff(g,num_ders),u);
+        quo:=quo0*D^num_ders;
+        rem:=rem0;
+        sep:=sep0;
+    end if;
+    require sep*f-quo@g eq rem: "The sep*f-quo@g eq rem formula fails";
+    return quo, rem, sep;
+end intrinsic;
+
+////////////////////
+intrinsic RittDivide(f::RngMPolProlSeqElt,g::RngMPolProlSeqElt)->AlgWeylElt,RngMPolProlSeqElt,RngMPolProlSeqElt
+////////////////////
+{Return quo, rem, and sep such that sep*f-quo@g eq rem and such that rem is RittReduced with respect to g.
+The quo will be an element of the associated Weyl algebra.
+Single steps of this algorithms are given by RittDivideStep.
+}
+    P:=Parent(f);
+    W<D>:=WeylAlgebra(P);
+    f0:=f;
+    
+    quo:=W!0;
+    rem:=P!0;
+    sep:=P!1;
+    
+    while not IsRittReduced(f0,g) do
+        quo0,rem0,sep0:=RittDivideStep(f0,g);
+        f0:=rem0;
+        sep:=sep*sep0;
+        quo:=sep0*quo+quo0; //Multiply previous quotient by new separant.
+    end while;
+    
+    rem:=rem0;
+    
+    //this shouldn't be necessary but I've been having trouble with constants.
+    quo:=W!quo;
+    rem:=P!rem;
+    sep:=P!sep;
+    
+    //just to be safe
+    require sep*f-quo@g eq rem: "The sep*f-quo@g eq rem formula fails";
+    
+    return quo,rem,sep;
+end intrinsic;
+
+/*
+#########################
+#########################
 Grobner Bases: Ollivier's "Standard Basis" Algorithm
 #########################
 #########################
