@@ -100,3 +100,18 @@ Specialize(ff,seq1);
 Diff(x,4) + s*Diff(x,1)*Diff(y,2)^2 + t^2*Diff(x,1)*Diff(y,1) + t
 Diff(x,4) + Diff(x,1)*Diff(y,2)^2 + 4*Diff(x,1)*Diff(y,1) + 2
 ```
+
+EXAMPLE:
+Pseudodivision is implemented for polynomial rings (RngMPol)
+```
+Q:=RationalField();
+R<x,y>:=PolynomialRing(Q,2);
+f:=x^2+2*x*y^2+3;
+g:=y^4+y^2+2*y*x^2+2;
+
+quo,rem,sep:=PseudoDivide(f,g,x);
+sep*f-quo*g eq rem;
+```
+```
+true
+```
