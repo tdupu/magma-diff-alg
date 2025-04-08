@@ -314,6 +314,7 @@ intrinsic Reduction(f::RngMPolProlSeqElt,g::RngMPolProlSeqElt)->RngMPolProlSeqEl
 end intrinsic;
 
 
+
 /*
 #########################
 #########################

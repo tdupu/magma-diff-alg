@@ -716,6 +716,23 @@ intrinsic match_orders(x1::RngMPolProlSeqElt,x2::RngMPolProlSeqElt)->RngMPolProl
         return y1,y2;
     end if;
 end intrinsic;
+
+intrinsic match_orders(seq::SeqEnum)->SeqEnum
+{Given a sequence of RngMPolProlSeqElt instances match their orders so that you can work with their associated polynomial ring objects.}
+    P:=Parent(seq[1]);
+    max:=Maximum([x`order : x in seq]);
+    new_seq:=[];
+    for x in seq do
+        f:=map(P,x`order,max);
+        y:=New(RngMPolProlSeqElt);
+        y`parent:=P;
+        y`order:=max;
+        y`elt:=f(x`elt);
+        Append(~new_seq,y);
+    end for;
+    return new_seq;
+end intrinsic;
+
     
 ////////////////////
 intrinsic '+'(x1::RngMPolProlSeqElt,x2::RngMPolProlSeqElt)->RngMPolProlSeqElt
@@ -1195,4 +1212,42 @@ intrinsic Derivation(P::RngMPolProlSeq)->UserProgram
 end intrinsic;
 */
 
+intrinsic 'lt'(f::RngMPolProlSeqElt,g::RngMPolProlSeqElt)->BoolElt
+{}
+    f1,g1:=match_orders(f,g);
+    return f1`elt lt g1`elt;
 
+end intrinsic;
+
+intrinsic 'gt'(f::RngMPolProlSeqElt,g::RngMPolProlSeqElt)->BoolElt
+{}
+    f1,g1:=match_orders(f,g);
+    return f1`elt gt g1`elt;
+
+end intrinsic;
+
+intrinsic 'le'(f::RngMPolProlSeqElt,g::RngMPolProlSeqElt)->BoolElt
+{}
+    f1,g1:=match_orders(f,g);
+    return f1`elt le g1`elt;
+
+end intrinsic;
+
+intrinsic 'ge'(f::RngMPolProlSeqElt,g::RngMPolProlSeqElt)->BoolElt
+{}
+    f1,g1:=match_orders(f,g);
+    return f1`elt ge g1`elt;
+
+end intrinsic;
+
+////////////////////
+intrinsic Sorted(seq::SeqEnum[RngMPolProlSeqElt])->SeqEnum[RngMPolProlSeqElt]
+////////////////////
+{}
+    if #seq le 1 then
+        return seq;
+    else
+        P:=Parent(seq[1]);
+        return [P!g: g in Sort([ f`elt : f in match_orders(seq)])];
+    end if;
+end intrinsic;
