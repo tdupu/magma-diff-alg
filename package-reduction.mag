@@ -216,6 +216,14 @@ intrinsic IsRittReduced(f::RngMPolProlSeqElt,g::RngMPolProlSeqElt)->BoolElt,RngI
 end intrinsic;
 
 ////////////////////
+intrinsic IsRittReduced(f::RngMPolProlSeqElt,G::SeqEnum[RngMPolProlSeqElt])->BoolElt
+////////////////////
+{Checks IsRittReduced over an entire sequence.}
+    return &and[IsRittReduced(f,h) : h in G];
+end intrinsic;
+
+
+////////////////////
 intrinsic RittDivideStep(f::RngMPolProlSeqElt,g::RngMPolProlSeqElt)->AlgWeylElt,RngMPolProlSeqElt,RngMPolProlSeqElt
 ////////////////////
 {Return quo, rem, and sep such that sep*f-quo@g eq rem.
@@ -273,6 +281,137 @@ Single steps of this algorithms are given by RittDivideStep.
     require sep*f-quo@g eq rem: "The sep*f-quo@g eq rem formula fails";
     
     return quo,rem,sep;
+end intrinsic;
+
+/*
+Defn.
+A sequence is *autoreduced* if every in the sequence is Ritt-reduced with respect to every other element.
+
+We always order sequences according to the their leader and degree.
+
+Defn.
+We call this the *rank*.
+
+Defn.
+An autoreduced sequence is *better* than another if
+    
+    1) they have the elements have the same rank up to a point
+    then the next element is better than the previous
+ or
+    2) they are completely matching in terms of rank but
+    one is just longer than the other.
+
+Claim.
+Given an ordered sequence of differential polynomials we can find one with is maximal
+in the sense that there will not exist a better subsequence.
+
+Let S_n be the full set of elements.
+Let S_{n-1} be the set which omits the last, S_{n-2} omit the last two, etc.
+We will let M_n denote a choice of best autoreduced subsequence of S_{n-1} that is comparable to M_{n-1}.
+(It will have the )
+
+Procedure: M_n = (M_{n-1} + last one or not).
+
+The elements of M_n are automatically Ritt-reduced with respect to the last element of S_n.
+Hence, we only need to check if the last element is Ritt-reduced S_n with respect to the elements of M_{m-1}.
+If it is we add it. If not, we don't.
+
+Claim.
+There can't be anything better than this comparable to M_n.
+
+Proof.
+If there was, we could consider M_n' cap S_{n-1}.
+This means either they are equal up to a point and then M_n' cap S_{n-1} would be better than M_{n-1}, or that M_n' cap S_{n-1} is just longer than M_{n-1}.
+Both of these violate the optimality of M_{n-1}.
+Hence the only way that M_n' could be better would be to add a new element.
+This is exactly our construction.
+*/
+
+////////////////////
+intrinsic BestAutoreducedSub(S::SeqEnum[RngMPolProlSeqElt])->SeqEnum[RngMPolProlSeqElt]
+////////////////////
+{Given a sequence of differential polynomials, find a subsequence which is autoreduced starting from the bottom.
+See Hubert, Decomposition Algorithms in Differential Algebra, J. Symbolic Computation, 2000
+This is used in Algorithm 5.1 of loc. cit.
+}
+    n:=#S;
+    if n eq 0 then
+        return [];
+    elif n eq 1 then
+        return [S[n]];
+    else
+        Ss:=Sorted(S);
+
+        M0:=BestAutoreducedSub(Ss[1..n-1]);
+        if IsRittReduced(Ss[n],M0) then
+            return M0 cat [ Ss[n] ];
+        else
+            return M0;
+        end if;
+    end if;
+end intrinsic;
+
+////////////////////
+intrinsic IsAutoreducedSorted(Gs::SeqEnum[RngMPolProlSeqElt])->BoolElt
+////////////////////
+{Supposing that Gs is sorted, determine if it is an autoreduced sequence.}
+    if #Gs eq 1 then
+        return true;
+    else
+        G0:=Gs[1..#Gs-1];
+        if not IsAutoreducedSorted(G0) then
+            return false;
+        else
+            gn:=Gs[#Gs];
+            return IsRittReduced(gn,G0);
+        end if;
+    end if;
+end intrinsic;
+
+////////////////////
+intrinsic IsAutoreduced(G::SeqEnum[RngMPolProlSeqElt])->BoolElt
+////////////////////
+{
+Determine if a sequence of polynomial elements is autoreduced.
+This in particular implies that it is sorted.
+IsAutoreducedSorted is doing the work for this function.
+}
+    Gs:=Sorted(G);
+    return IsAutoreducedSorted(Gs) and G eq Gs;
+end intrinsic;
+
+
+
+////////////////////
+intrinsic RittDivide(f::RngMPolProlSeqElt,G::SeqEnum[RngMPolProlSeqElt])->SeqEnum[AlgWeylElt],RngMPolSeqElt,RngMPolSeqElt
+////////////////////
+{Given an autoreduced sequence perform Ritt's division algorithm with respect to that element.
+In the case of Ritt's ordering this is on page 5 of Ritt's Differential Algebra.
+Note that division proceeds with the largest element of G for which f is not RittReduced.
+}
+    require IsAutoreduced(G): "Must RittDivide by an autoreduced sequence. The SeqEnum G is not autoreduced.";
+    require #G gt 0: "Must RittDivide by a nonempty autoreduced sequence.";
+    if #G eq 1 then
+        quo0,rem0,sep0:=RittDivide(f,G[1]);
+        return [quo0],rem0,sep0;
+    else
+        G0:=G[2..#G]; //start with the largest element
+        quo0,rem0,sep0:=RittDivide(f,G0);
+        quo1,rem1,sep1:=RittDivide(rem0,G[1]);
+        Quo:=[quo1] cat [sep1*q: q in quo0];
+        Rem:=rem1;
+        Sep:=sep0*sep1;
+        
+        /*
+        If you are Ritt-reduced with respect to some Gi,
+        you should be Ritt-reduced with respect to Gj
+        for all j>i in the sequence. See loc. cit.
+        */
+        require IsRittReduced(rem1,G0): "rem1 is not Ritt-reduced with respect to the first elements.";
+        require (Sep*f - &+[Quo[i]@G[i]: i in [1..#G]] eq Rem): "Failure of sep*f-quo*G eq rem";
+        
+        return Quo,Rem,Sep;
+    end if;
 end intrinsic;
 
 /*

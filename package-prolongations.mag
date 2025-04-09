@@ -1191,13 +1191,21 @@ intrinsic Divides(f1::RngMPolProlSeqElt,f2::RngMPolProlSeqElt)->BoolElt
     return Divides(g1`elt,g2`elt);
 end intrinsic;
 
-intrinsic '/'(f2::RngMPolProlSeqElt,f1::RngMPolProlSeqElt)->BoolElt
-{}
+intrinsic '/'(f1::RngMPolProlSeqElt,f2::RngMPolProlSeqElt)->BoolElt
+{Take the quotient of two differential polynomials.
+This was designed for Syzygies so it will test if the quotient is integral and return that.
+It apparently works more generally.
+}
     g1,g2:=match_orders(f1,f2);
     h:=New(RngMPolProlSeqElt);
     h`parent:=Parent(f2);
     h`order:=g1`order;
-    h`elt:=g1`elt/g2`elt;
+    h_elt:=(g1`elt/g2`elt);
+    if h_elt in Parent(g1`elt) then
+        h`elt:=Parent(g1`elt)!h_elt;
+    else
+        h`elt:=h_elt;
+    end if;
     return h;
 end intrinsic;
 
