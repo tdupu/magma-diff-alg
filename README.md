@@ -17,13 +17,45 @@ Q:=RationalField();
 R<t>:=PolynomialRing(Q,1);
 f := map<R->R|f:->Derivative(f,t)>;
 A := DifferentialRing(R, f, Q);
-F := FieldOfFractions(A);
+F<t> := FieldOfFractions(A);
 P<x,y>:=PolynomialRingProlSeq(F,2: term_order:=<"dblocks",[[1,2]]>);
 f1:=x^2+Diff(y,2)*Diff(x,1)+t;
 f2:=Diff(x,1)+Diff(y,3);
 ```
 
-
+EXAMPLE:
+All of this runs through Magma's RngMPol types so naturally there is a way to take the rth jet ring of a prolongation sequence and take the image of a differential polynomial in a polynomial ring. 
+```
+f:=x^3+t*Diff(x,1)^3+t^2*Diff(x,2)^3;
+Type(f);
+Type(Parent(f));
+```
+```
+RngMPolProlSeqElt
+RngMPolProlSeq
+```
+We convert to multivariate polynomial ring elements and multivariate polynomial rings using the command `Jet` with `Jet(P,-1)` being the base ring.
+```
+trace3:=Jet(f,3);
+J3:=Jet(P,3);
+trace3 in J3;
+Parent(trace3) eq J3;
+Type(trace3);
+Type(J3);
+```
+```
+true
+true
+RngMPolElt
+RngMPol
+```
+There is also built in coercion for getting these elements back into RngMPol.
+```
+P!trace3 eq f;
+```
+```
+true
+```
 EXAMPLE:
 There is some support for leading monomials, element sequences. We can also take the P.[i,j] to take the jth derivative of the ith variable. It also handles the product rule for coefficients. 
 ```
