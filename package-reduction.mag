@@ -202,26 +202,36 @@ Ritt's Algorithm for Reduction
 */
 
 ////////////////////
-intrinsic IsRittReduced(f::RngMPolProlSeqElt,g::RngMPolProlSeqElt)->BoolElt,RngIntElt
+intrinsic IsRittReduced(f::RngMPolProlSeqElt,g::RngMPolProlSeqElt :partial:=false)->BoolElt,RngIntElt
 ////////////////////
-{Given two differential polynomials determine if f is reduced by g by seeing if the leader of g or any of its derivatives appear in f. If it does, then return the true and the number of derivatives you need to take. If it doesn't return false and -1.}
+{Given two differential polynomials determine if f is reduced by g by seeing if the leader of g or any of its derivatives appear in f. If it does, then return the true and the number of derivatives you need to take. If it doesn't return false and -1.
+
+There is an option `partial` which when set to `true` determines if any non-zero derivative of the leader of of g appears in f.
+}
     require Parent(f) eq Parent(g): "The parents of f and g must be equal for this question to make sense.";
     i,r:=Explode(Support(Leader(g))[1]);
     set_of_ders:={ x[2] : x in Support(f) | x[1] eq i and x[2] ge r};
+    
     if #set_of_ders eq 0 then
         return true,-1;
     else
-        return false,Maximum(set_of_ders)-r;
+        difference:=Maximum(set_of_ders)-r;
+        if partial and difference eq 0 then
+            return true, difference;
+        else
+            return false,difference;
+        end if;
     end if;
 end intrinsic;
 
 ////////////////////
-intrinsic IsRittReduced(f::RngMPolProlSeqElt,G::SeqEnum[RngMPolProlSeqElt])->BoolElt
+intrinsic IsRittReduced(f::RngMPolProlSeqElt,G::SeqEnum[RngMPolProlSeqElt] :partial:=false)->BoolElt
 ////////////////////
-{Checks IsRittReduced over an entire sequence.}
-    return &and[IsRittReduced(f,h) : h in G];
+{Checks IsRittReduced over an entire sequence.
+There is an option for partially reducing as well.
+}
+    return &and[IsRittReduced(f,h :partial:=partial) : h in G];
 end intrinsic;
-
 
 ////////////////////
 intrinsic RittDivideStep(f::RngMPolProlSeqElt,g::RngMPolProlSeqElt)->AlgWeylElt,RngMPolProlSeqElt,RngMPolProlSeqElt
@@ -249,11 +259,14 @@ The full algorithm is Ritt Divide.
 end intrinsic;
 
 ////////////////////
-intrinsic RittDivide(f::RngMPolProlSeqElt,g::RngMPolProlSeqElt)->AlgWeylElt,RngMPolProlSeqElt,RngMPolProlSeqElt
+intrinsic RittDivide(f::RngMPolProlSeqElt,g::RngMPolProlSeqElt : partial:=false)->AlgWeylElt,RngMPolProlSeqElt,RngMPolProlSeqElt
 ////////////////////
 {Return quo, rem, and sep such that sep*f-quo@g eq rem and such that rem is RittReduced with respect to g.
 The quo will be an element of the associated Weyl algebra.
 Single steps of this algorithms are given by RittDivideStep.
+
+The option `partial` being true, will only divide so that nth derivatives of the leader of g appear in f for n>0.
+The default of `partial` is false.
 }
     P:=Parent(f);
     W<D>:=WeylAlgebra(P);
@@ -263,13 +276,13 @@ Single steps of this algorithms are given by RittDivideStep.
     rem:=P!0;
     sep:=P!1;
     
-    while not IsRittReduced(f0,g) do
+    while not IsRittReduced(f0,g : partial:=partial) do
         quo0,rem0,sep0:=RittDivideStep(f0,g);
         f0:=rem0;
         sep:=sep*sep0;
         quo:=sep0*quo+quo0; //Multiply previous quotient by new separant.
     end while;
-    
+        
     rem:=rem0;
     
     //this shouldn't be necessary but I've been having trouble with constants.
@@ -282,6 +295,8 @@ Single steps of this algorithms are given by RittDivideStep.
     
     return quo,rem,sep;
 end intrinsic;
+
+
 
 /*
 Defn.
@@ -383,7 +398,7 @@ end intrinsic;
 
 
 ////////////////////
-intrinsic RittDivide(f::RngMPolProlSeqElt,G::SeqEnum[RngMPolProlSeqElt])->SeqEnum[AlgWeylElt],RngMPolSeqElt,RngMPolSeqElt
+intrinsic RittDivide(f::RngMPolProlSeqElt,G::SeqEnum[RngMPolProlSeqElt] : partial:=false)->SeqEnum[AlgWeylElt],RngMPolSeqElt,RngMPolSeqElt
 ////////////////////
 {Given an autoreduced sequence perform Ritt's division algorithm with respect to that element.
 In the case of Ritt's ordering this is on page 5 of Ritt's Differential Algebra.
@@ -396,8 +411,8 @@ Note that division proceeds with the largest element of G for which f is not Rit
         return [quo0],rem0,sep0;
     else
         G0:=G[2..#G]; //start with the largest element
-        quo0,rem0,sep0:=RittDivide(f,G0);
-        quo1,rem1,sep1:=RittDivide(rem0,G[1]);
+        quo0,rem0,sep0:=RittDivide(f,G0 : partial:=partial);
+        quo1,rem1,sep1:=RittDivide(rem0,G[1] : partial:=partial);
         Quo:=[quo1] cat [sep1*q: q in quo0];
         Rem:=rem1;
         Sep:=sep0*sep1;
@@ -407,11 +422,20 @@ Note that division proceeds with the largest element of G for which f is not Rit
         you should be Ritt-reduced with respect to Gj
         for all j>i in the sequence. See loc. cit.
         */
-        require IsRittReduced(rem1,G0): "rem1 is not Ritt-reduced with respect to the first elements.";
+        require IsRittReduced(rem1,G0: partial:=partial): "rem1 is not Ritt-reduced with respect to the first elements.";
         require (Sep*f - &+[Quo[i]@G[i]: i in [1..#G]] eq Rem): "Failure of sep*f-quo*G eq rem";
         
         return Quo,Rem,Sep;
     end if;
+end intrinsic;
+
+////////////////////
+intrinsic RittRemainder(f::RngMPolProlSeqElt,G::SeqEnum[RngMPolProlSeqElt])->SeqEnumRngMPolSeqElt
+////////////////////
+{Given an autoreduced sequence G perform Ritt's division algorithm with respect to G on f.
+}
+    Quo,Rem,Sep:=RittDivide(f,G);
+    return Rem;
 end intrinsic;
 
 /*
