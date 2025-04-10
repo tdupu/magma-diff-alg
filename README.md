@@ -1,12 +1,15 @@
-ABOUT:
+### About magma-diffalg
+
+(NOTE: This file can be edited with Typora or the github editor) 
+
 There are two implementations of differential polynomials in the package. There is one that uses differential monomials (`RngDiffPol`) and one based on pronlongations sequences which are essentially collections of polynomial rings with inclusion and derivations between them (`RngMPolProlSeq`). 
 
 Each of these two types has a corresponding element tupe with an `Elt` appended to the end. Currently, `RngDiffPol` is only implemented with a constant base but `RngMPolProlSeq` can have a base which is a differential ring. 
 
 Also term order associated with block rankings are implemented in the prolongation sequences version. 
 
+###### Example: Instatiating Basic Objects
 
-EXAMPLE:
 Here is how you instantiate the basic objects. 
 
 ```
@@ -23,8 +26,10 @@ f1:=x^2+Diff(y,2)*Diff(x,1)+t;
 f2:=Diff(x,1)+Diff(y,3);
 ```
 
-EXAMPLE:
+###### Example: Truncating to Polynomial Rings of Finite Order
+
 All of this runs through Magma's RngMPol types so naturally there is a way to take the rth jet ring of a prolongation sequence and take the image of a differential polynomial in a polynomial ring. 
+
 ```
 f:=x^3+t*Diff(x,1)^3+t^2*Diff(x,2)^3;
 Type(f);
@@ -56,8 +61,12 @@ P!trace3 eq f;
 ```
 true
 ```
-EXAMPLE:
-There is some support for leading monomials, element sequences. We can also take the P.[i,j] to take the jth derivative of the ith variable. It also handles the product rule for coefficients. 
+
+
+###### Example: Leading Monomials, Leaders, Separants, Initials, TopCoeff
+
+There is some support for leading monomials, element sequences. We can also take the `P.[i,j]` to take the jth derivative of the ith variable. It also handles the product rule for coefficients. `Leader`,`Separant`,`Initial`, `LeadingTerm` are also implemented.
+
 ```
 LeadingMonomial(f1);
 P.[1,2];
@@ -71,10 +80,11 @@ true
 t^3*Diff(x,1) + 3*t^2*x
 ```
 
+###### Example: Eltseq and Coercion
 
-EXAMPLE:
 We can take Eltseqs of element to get sequences corresponding to elements.
 We can also coerce those sequences to get back our elements. 
+
 ```
 Eltseq(f1);
 f1 eq P!Eltseq(f1);
@@ -95,7 +105,10 @@ f1 eq P!Eltseq(f1);
 true
 ```
 
-EXAMPLE:
+
+
+###### Example: Evaluation of Differential Polynomials
+
 We can evaluate differential polynomials at other differential polynomials. 
 
 ```
@@ -115,7 +128,8 @@ Evaluate(ff,seq);
 t*Diff(u,2)*Diff(u,3) + t^2*Diff(u,3)*Diff(v,3) + 2*t*Diff(v,2)*Diff(u,3) + t*Diff(w,2)*Diff(u,3) + t*Diff(u,2)*Diff(v,2) + t*Diff(u,2)*Diff(w,2) + t^2*Diff(v,2)*Diff(v,3) + t^2*Diff(w,2)*Diff(v,3) + 2*t*Diff(v,2)^2 + 3*t*Diff(v,2)*Diff(w,2) + t*Diff(w,2)^2
 ```
 
-EXAMPLE:
+###### Example: Specialization of Coefficients of Differential Polynomials
+
 Given differential polynomials with coefficients in a type where Evaluate makes sense (RngMPol or RngMPolProlSeq) we can specialize the coefficients of differential polynomials. 
 
 ```
@@ -133,8 +147,10 @@ Diff(x,4) + s*Diff(x,1)*Diff(y,2)^2 + t^2*Diff(x,1)*Diff(y,1) + t
 Diff(x,4) + Diff(x,1)*Diff(y,2)^2 + 4*Diff(x,1)*Diff(y,1) + 2
 ```
 
-EXAMPLE:
+Example: Polynomial Pseudodivision
+
 Pseudodivision is implemented for polynomial rings (RngMPol)
+
 ```
 Q:=RationalField();
 R<x,y>:=PolynomialRing(Q,2);
@@ -148,7 +164,8 @@ sep*f-quo*g eq rem;
 true
 ```
 
-EXAMPLE: 
+###### Example: Ritt's Division Algorithm
+
 The Ritt reduction algorithm based on polynomial pseudodivision is also implemented. The quotient here is an element of a Weyl algebra. 
 
 Given a basic setup 
@@ -176,8 +193,11 @@ true
 true
 -1
 ```
+`RittDivide` is also implemented for autoreduced sets.  
 
-EXAMPLE:
+
+###### Example: Element Comparison and Sorting
+
 We also have some support for sorting. We have defined `lt`,`le`,`gt`, and `ge`. Since we can't fuck with `Sort` we have defined `Sorted` for our elements. The elements which are minimal, meaning the smaller leading polynomial will appear first. 
 
 ```
