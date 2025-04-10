@@ -8,6 +8,10 @@ Each of these two types has a corresponding element tupe with an `Elt` appended 
 
 Also term order associated with block rankings are implemented in the prolongation sequences version. 
 
+TODO: Add links to each of the topics with a title
+https://github.com/tdupu/magma-diff-alg/blob/master/README.md#example-specialization-of-coefficients-of-differential-polynomials
+
+
 ###### Example: Instatiating Basic Objects
 
 Here is how you instantiate the basic objects. 
@@ -147,7 +151,7 @@ Diff(x,4) + s*Diff(x,1)*Diff(y,2)^2 + t^2*Diff(x,1)*Diff(y,1) + t
 Diff(x,4) + Diff(x,1)*Diff(y,2)^2 + 4*Diff(x,1)*Diff(y,1) + 2
 ```
 
-Example: Polynomial Pseudodivision
+###### Example: Polynomial Pseudodivision
 
 Pseudodivision is implemented for polynomial rings (RngMPol)
 
