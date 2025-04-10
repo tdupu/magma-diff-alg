@@ -8,6 +8,10 @@ Each of these two types has a corresponding element tupe with an `Elt` appended 
 
 Also term order associated with block rankings are implemented in the prolongation sequences version. 
 
+TODO: Add links to each of the topics with a title
+https://github.com/tdupu/magma-diff-alg/blob/master/README.md#example-specialization-of-coefficients-of-differential-polynomials
+
+
 ###### Example: Instatiating Basic Objects
 
 Here is how you instantiate the basic objects. 
