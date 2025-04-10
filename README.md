@@ -151,7 +151,7 @@ Diff(x,4) + s*Diff(x,1)*Diff(y,2)^2 + t^2*Diff(x,1)*Diff(y,1) + t
 Diff(x,4) + Diff(x,1)*Diff(y,2)^2 + 4*Diff(x,1)*Diff(y,1) + 2
 ```
 
-Example: Polynomial Pseudodivision
+###### Example: Polynomial Pseudodivision
 
 Pseudodivision is implemented for polynomial rings (RngMPol)
 
