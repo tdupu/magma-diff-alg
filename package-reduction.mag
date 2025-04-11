@@ -1,11 +1,29 @@
 /*
     Taylor Dupuy, Spring 2025
     taylor.dupuy@gmail.com
+
+    Our algorithm is modeled after:
+
+    François Boulier, Daniel Lazard, François Ollivier, Michel Petitot. Representation for the radical of a finitely generated differential ideal. international symposium on Symbolic and algebraic computation 1995, Jul 1995, France. pp.158-166, 10.1145/220346.220367 . hal-00138020v2
+    https://hal.science/hal-00138020/document
+    Page 162.
     
-    Oleg Golubitsky,Marina Kondratieva, Marc Moreno Maza, Alexey Ovchinnikov, Bounds for algorithms in differential algebra https://arxiv.org/pdf/math/0702470
+    This paper has many great theoretical results as well as a great implementation. Some of them are more spelled out in the Humbert paper below.
     
     Hubert, Factorization-free Decomposition Algorithms in Differential Algebra
     J. Symbolic Computation (2000) 29, 641–662 doi:10.1006/jsco.1999.0344
+
+    There is a worse presentation in a new paper here.s
+
+    Boulier,Lazard,Ollivier,Petitot
+    Computing representations for radicals of finitely generated differential ideals
+    AAECC (2009) 20:73–121
+    FIGURE 1, page 96
+    
+    Oleg Golubitsky,Marina Kondratieva, Marc Moreno Maza, Alexey Ovchinnikov, Bounds for algorithms in differential algebra https://arxiv.org/pdf/math/0702470
+    Algorithm 1.
+    
+    
 
     
 */
@@ -223,6 +241,28 @@ There is an option `partial` which when set to `true` determines if any non-zero
         end if;
     end if;
 end intrinsic;
+
+
+/*
+Macaulay2's original characteristic series code was based off of Singular's which was written by a guy called Messollen:
+https://macaulay2.com/doc/Macaulay2/share/doc/Macaulay2/Macaulay2Doc/html/_irreducible__Characteristic__Series.html
+https://github.com/Macaulay2/M2/blob/master/M2/Macaulay2/m2/factor.m2
+https://www.singular.uni-kl.de/Manual/4-0-3/sing_903.htm#SEC959
+
+There they called them triangular sets, which is actually a nicer name. Singular even gives a nice example I'm going to use to check.
+
+ ring R= 0,(x,y,z,u),dp;
+  ideal i=-3zu+y2-2x+2,
+          -3x2u-4yz-6xz+2y2+3xy,
+          -3z2u-xu+y2z+y;
+  print(char_series(i));
+==> _[1,1],3x2z-y2+2yz,3x2u-3xy-2y2+2yu,
+==> x,     -y+2z,      -2y2+3yu-4
+
+I looked up the singular code. That is what I'm going to follow. That is listed here:
+D. Wang, Characteristic Sets and Zero Structure of Polynomial Sets (Lecture Notes). Preprint, RISC-Linz, Johannes Kepler University, November 1989 - June 1995.
+
+*/
 
 ////////////////////
 intrinsic IsRittReduced(f::RngMPolProlSeqElt,G::SeqEnum[RngMPolProlSeqElt] :partial:=false)->BoolElt
@@ -484,4 +524,13 @@ end intrinsic;
 Characteristic Sets: Rosenfeld-Groebner
 #########################
 #########################
+*/
+
+/*
+
+There is an implementation here. This is a good first one to read. It is not recurrsive and I don't like it.
+Boulier,Lazard,Ollivier,Petitot
+Computing representations for radicals of finitely generated differential ideals
+AAECC (2009) 20:73–121
+FIGURE 1, page 96
 */
