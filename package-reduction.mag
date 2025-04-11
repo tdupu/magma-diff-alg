@@ -150,7 +150,7 @@ require Degree(u) eq 1: "u must be an element of degree one.";
         a:=Parent(f)!lcm/lcf;
         b:=Parent(f)!lcm/lcg;
         rem:=a*f-b*u^n*g;
-        quo:=b;
+        quo:=b*u^n;
         sep:=a;
         return Parent(f)!quo,Parent(f)!rem,Parent(f)!sep;
     end if;
@@ -164,24 +164,242 @@ intrinsic PseudoDivide(f::RngMPolElt,g::RngMPolElt,u::RngMPolElt)->RngMPolElt,Rn
 Given f and g and a variable u return quo, rem, and sep such that sep*f-quo*g eq rem and the degree of the remainder is less than the degree of g.
 }
 
-    f0:=f;
-    g0:=g;
-    
     quo:=0;
-    rem:=f;
+    rem0:=f;
     sep:=1;
     
-    while Degree(f0,u) ge Degree(g0,u) do
-        quo0,rem0,sep0:=PseudoDivideStep(f0,g0,u);
-        f0:=rem0;
+    while Degree(rem0,u) ge Degree(g,u) do
+        quo0,rem0,sep0:=PseudoDivideStep(rem0,g,u);
         sep:=sep*sep0;
-        quo:=quo+quo0;
+        quo:=sep0*quo+quo0;
     end while;
     
     rem:=rem0;
     
-    return Parent(f)!quo, Parent(f)!rem, Parent(f)!sep;
+    Quo:=Parent(f)!quo;
+    Rem:=Parent(f)!rem;
+    Sep:=Parent(f)!sep;
+    
+    assert Sep*f eq Quo*g+Rem;
+    
+    return Quo,Rem,Sep;
 end intrinsic;
+
+////////////////////
+intrinsic Leader(f::RngMPolElt)->RngMPolElt,RngIntElt
+////////////////////
+{For a polynomial f in a ring R with a lexicographic order, in the leading monomial, take the variable u that is higher and the term order and its degree.}
+    require MonomialOrder(Parent(f))[1] eq "lex": "The Parent of g must have a lexicographic order in order to define a leader."; //this can maybe be relaxed
+    u:=LeadingMonomial(&+[m[1] : m in Factorization(LeadingMonomial(f))]);
+    return u,Degree(f,u);
+end intrinsic;
+
+////////////////////
+intrinsic TopCoeff(F::RngMPolElt,u::RngMPolElt)->RngMPolElt
+////////////////////
+{The is the top coefficient of F when written as a polynmial in u}
+    coeffs:=Coefficients(F,u);
+    return coeffs[#coeffs];
+end intrinsic;
+
+////////////////////
+intrinsic Initial(F::RngMPolElt)->RngMPolElt
+////////////////////
+{The top coefficient of F when written in a polynomial in the leader.}
+    return TopCoeff(F,Leader(F));
+end intrinsic;
+
+////////////////////
+intrinsic IsPseudoReduced(f::RngMPolElt,g::RngMPolElt,u::RngMPolElt)->BoolElt
+////////////////////
+{
+Determine if deg(f,u)>deg(g,u);
+}
+    return Degree(f,u) lt Degree(g,u);
+end intrinsic;
+
+////////////////////
+intrinsic IsPseudoReduced(f::RngMPolElt,g::RngMPolElt)->BoolElt
+////////////////////
+{
+Determine if deg(f,u)>deg(g,u) where u is the leader of g.
+}
+    return IsPseudoReduced(f,g,Leader(g));
+end intrinsic;
+
+////////////////////
+intrinsic IsPseudoReduced(f::RngMPolElt,G::SeqEnum[RngMPolElt])->BoolElt
+////////////////////
+{
+Determine if deg(f,u)>deg(g,u) where u is the leader of g for all g in G.
+}
+    return &and[IsPseudoReduced(f,g) : g in G];
+end intrinsic;
+
+////////////////////
+intrinsic IsTriangularNoSort(G::SeqEnum[RngMPolElt])->BoolElt
+////////////////////
+{
+Determine if a set of element is triangular.
+}
+    require #G gt 0: "Must have a non-negative number of elements"; //this can be relaxed.
+    
+    if #G eq 1 then
+        return true;
+    elif #G eq 2 then
+        return IsPseudoReduced(G[2],G[1]);
+    else
+        return &and[IsPseudoReduced(g,G[1]) : g in G[2..#G]] and IsTriangularNoSort(G[2..#G]);
+    end if;
+end intrinsic;
+
+////////////////////
+intrinsic IsTriangular(G::SeqEnum[RngMPolElt])->BoolElt
+////////////////////
+{
+Determine if a set of polynomials in a ring with lexicographic order is triangular.
+}
+    G0:=Sort([g : g in G]);
+    return IsTriangularNoSort(G0);
+end intrinsic;
+
+
+////////////////////
+intrinsic PseudoDivide(f::RngMPolElt,g::RngMPolElt)->RngMPolElt,RngMPolElt,RngMPolElt
+////////////////////
+{
+Given f and g and a variable u return quo, rem, and sep such that sep*f-quo*g eq rem and the degree of the remainder is less than the degree of g.
+}
+    return PseudoDivide(f,g,Leader(g));
+end intrinsic;
+
+////////////////////
+intrinsic PseudoDivide(f::RngMPolElt,G::SeqEnum[RngMPolElt])->SeqEnum[RngMPolElt],RngMPolElt,RngMPolElt
+////////////////////
+{Perform Pseudodivision with respect to a triangular set. This is done recurrsively starting from the bottom part of the triangular set.}
+    require IsTriangularNoSort(G): "Must pseudodivide with respect to a sorted triangular sequence.";
+    assert #G gt 0;
+    if #G eq 1 then
+        quo0,rem0,sep0:=PseudoDivide(f,G[1]);
+        Quo:=[quo0];
+        Rem:=rem0;
+        Sep:=sep0;
+    else
+        G0:=G[2..#G]; //start with the largest element
+        quo0,rem0,sep0:=PseudoDivide(f,G0);
+        assert sep0*f eq &+[quo0[i]*G0[i] : i in [1..#G0]]+rem0;
+        quo1,rem1,sep1:=PseudoDivide(rem0,G[1]);
+        assert sep1*rem0 eq quo1*G[1]+rem1;
+        
+        Quo:=[quo1] cat [sep1*q: q in quo0];
+        Rem:=rem1;
+        Sep:=sep0*sep1;
+    end if;
+    
+    require IsPseudoReduced(Rem,G): "The output is not pseudoreduced with respect to G";
+    //require (Sep*f eq  &+[Quo[i]*G[i]: i in [1..#G]] + Rem): "Sep*f eq \sum Quo[i] G[i] + Rem failed.";
+    return Quo,Rem,Sep;
+    
+end intrinsic;
+
+////////////////////
+intrinsic PseudoRemainder(f::RngMPolElt,G::SeqEnum[RngMPolElt])->RngMPolElt
+////////////////////
+{Perform Pseudodivision with respect to a triangular set then take the remainder.}
+    require IsTriangularNoSort(G): "Must pseudodivide with respect to a sorted triangular sequence.";
+    Quo,Rem,Sep:=PseudoDivide(f,G);
+    return Rem;
+end intrinsic;
+
+////////////////////
+intrinsic BasicTriangularSet(S0::SeqEnum[RngMPolElt])->SeqEnum[RngMPolElt]
+////////////////////
+{
+Find a singular best triangular set inside polynomials.
+Compare this to BestAutoreducedSet.
+}
+    S:={s : s in S0};
+    QS:={s : s in S};
+    BS:={};
+
+    while #QS gt 0 do
+        b:=Sort([s : s in QS])[1];
+        BS:=BS join {b};
+        if b in BaseRing(Parent(b)) then
+            QS := {};
+        else
+            QS:= {q : q in QS | q ne b and IsPseudoReduced(q,b)};
+        end if;
+    end while;
+
+    return Sort([x : x in BS]);
+end intrinsic;
+
+
+////////////////////
+intrinsic CharacteristicSet(S::SeqEnum[RngMPolElt])->SeqEnum[RngMPol]
+////////////////////
+{
+Given a sequence of polynomials, produce a characteristic set for a minimal prime ideal containing the ideal generated by S.
+}
+    QS:=S;
+    RS:=QS;
+    while #RS gt 0 do
+        CS:=BasicTriangularSet(QS);
+        if &or[ f in BaseRing(Parent(f)) : f in CS] then
+            RS:=[];
+        else
+            RS:=[x : x in [PseudoRemainder(q,CS): q in QS | not q in CS ]| x ne 0];
+            QS:=QS cat RS;
+        end if;
+        
+    end while;
+    
+    return Sort(CS);
+end intrinsic;
+
+////////////////////
+intrinsic CharacteristicSeries(S::SeqEnum[RngMPolElt])->SeqEnum[SeqEnum[RngMPol]]
+////////////////////
+{This is just below Wang's Theorem 4.1.
+
+Lemma 4.2 of Wang's Notes.
+Wang, D.: Characteristic Sets and Zero Structure of Polynomial Sets. Lecture Notes, RISC Linz, 1989
+
+I found this is the bowels of singular.
+https://www.singular.uni-kl.de/Manual/4-4/sing_1017.htm#SEC1096
+
+Then found a webpage which contained the actual notes.
+http://wang.cc4cm.org/manu.html
+
+Lemma (Wu 1984, Ritt 1932)
+b eq Red(b,B) then [b] cat B lower than B.
+}
+    S0:={@ s : s in S@};
+    Phi:={@S0@};
+    Psi:={@@};
+    while #Phi gt 0 do
+        QS:=Phi[1];
+        Phi:={@x : x in Phi | x ne QS@};
+        CS:={@ y : y in CharacteristicSet([x: x in QS]) @};
+        if not &or[ f in BaseRing(Parent(f)) : f in CS] then
+            //print "Found a characteristic set... %o \n", CS;
+            Psi:=Psi join {@ CS @};
+            Phi:=Phi join {@ QS join CS join {@Initial(f)@} : f in CS | not f in BaseRing(Parent(f))@};
+        end if;
+    end while;
+    
+    return [[x : x in phi] : phi in Psi]; //BUGGED!
+end intrinsic;
+
+
+/*
+#########################
+#########################
+Ritt's Reduction Algorithms
+#########################
+#########################
+*/
 
 
 ////////////////////
@@ -193,6 +411,9 @@ Get the degree of f with respect to u.
     f1,u1:=match_orders(f,u);
     return Degree(f1`elt,u1`elt);
 end intrinsic;
+
+
+
 
 ////////////////////
 intrinsic PseudoDivide(f::RngMPolProlSeqElt,g::RngMPolProlSeqElt,u::RngMPolProlSeqElt)->RngMPolProlSeqElt,RngMPolProlSeqElt,RngMPolProlSeqElt
