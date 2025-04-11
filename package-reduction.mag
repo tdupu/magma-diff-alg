@@ -311,6 +311,27 @@ intrinsic PseudoRemainder(f::RngMPolElt,G::SeqEnum[RngMPolElt])->RngMPolElt
     return Rem;
 end intrinsic;
 
+/*
+Macaulay2's original characteristic series code was based off of Singular's which was written by a guy called Messollen:
+https://macaulay2.com/doc/Macaulay2/share/doc/Macaulay2/Macaulay2Doc/html/_irreducible__Characteristic__Series.html
+https://github.com/Macaulay2/M2/blob/master/M2/Macaulay2/m2/factor.m2
+https://www.singular.uni-kl.de/Manual/4-0-3/sing_903.htm#SEC959
+
+There they called them triangular sets, which is actually a nicer name. Singular even gives a nice example I'm going to use to check.
+
+ ring R= 0,(x,y,z,u),dp;
+  ideal i=-3zu+y2-2x+2,
+          -3x2u-4yz-6xz+2y2+3xy,
+          -3z2u-xu+y2z+y;
+  print(char_series(i));
+==> _[1,1],3x2z-y2+2yz,3x2u-3xy-2y2+2yu,
+==> x,     -y+2z,      -2y2+3yu-4
+
+I looked up the singular code. That is what I'm going to follow. That is listed here:
+D. Wang, Characteristic Sets and Zero Structure of Polynomial Sets (Lecture Notes). Preprint, RISC-Linz, Johannes Kepler University, November 1989 - June 1995.
+
+*/
+
 ////////////////////
 intrinsic BasicTriangularSet(S0::SeqEnum[RngMPolElt])->SeqEnum[RngMPolElt]
 ////////////////////
@@ -462,28 +483,6 @@ There is an option `partial` which when set to `true` determines if any non-zero
         end if;
     end if;
 end intrinsic;
-
-
-/*
-Macaulay2's original characteristic series code was based off of Singular's which was written by a guy called Messollen:
-https://macaulay2.com/doc/Macaulay2/share/doc/Macaulay2/Macaulay2Doc/html/_irreducible__Characteristic__Series.html
-https://github.com/Macaulay2/M2/blob/master/M2/Macaulay2/m2/factor.m2
-https://www.singular.uni-kl.de/Manual/4-0-3/sing_903.htm#SEC959
-
-There they called them triangular sets, which is actually a nicer name. Singular even gives a nice example I'm going to use to check.
-
- ring R= 0,(x,y,z,u),dp;
-  ideal i=-3zu+y2-2x+2,
-          -3x2u-4yz-6xz+2y2+3xy,
-          -3z2u-xu+y2z+y;
-  print(char_series(i));
-==> _[1,1],3x2z-y2+2yz,3x2u-3xy-2y2+2yu,
-==> x,     -y+2z,      -2y2+3yu-4
-
-I looked up the singular code. That is what I'm going to follow. That is listed here:
-D. Wang, Characteristic Sets and Zero Structure of Polynomial Sets (Lecture Notes). Preprint, RISC-Linz, Johannes Kepler University, November 1989 - June 1995.
-
-*/
 
 ////////////////////
 intrinsic IsRittReduced(f::RngMPolProlSeqElt,G::SeqEnum[RngMPolProlSeqElt] :partial:=false)->BoolElt
