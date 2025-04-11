@@ -229,3 +229,70 @@ Diff(y,3) + Diff(x,1)
 ]
 true
 ```
+
+###### Example: Characteristic Sets and Pseudodivision for Polynomial Rings
+
+We have implemented some ancient algorithms by digging into the bowels of singular (which Macaulay2 is based off of). There are some references in the source code. 
+
+```
+AttachSpec("diffalg.spec");
+Z:=Integers();
+Q:=RationalField();
+```
+
+```
+R<x1,x2,x3,x4>:=PolynomialRing(Q,4);
+F1:=x4^4+x1*x4^2-x2*x4-x1*x2*x4-x1*x2+3*x2;
+F2:=x1*x4+x3-x1*x2;
+F3:=x3*x4-2*x2^2-x1*x2-1;
+q,r,s:=PseudoDivide(F1,F2,Leader(F2));
+q0,r0,s0:=PseudoDivide(F1,F2);
+q0 eq q and r0 eq r and s0 eq s;
+s*F1 eq q*F2+r;
+IsPseudoReduced(r,F2);
+Degree(r,Leader(F2));
+Degree(F2,Leader(F2));
+```
+```
+true
+true
+true
+0
+1
+```
+I had to debug pseudodivision a little so I'm going to add one of the things that was giving me trouble.
+```
+f:=2*x2^3 - 2*x2^2*x4 - x2*x3*x4 + x2*x3 + x2 + x3*x4^2 - x4;
+g:=1/2*x2^2*x4 + 3/2*x2^2 - 1/2*x2*x3*x4 - 1/2*x2*x3 + 1/2*x2*x4^4 - 1/2*x3*x4^2 + 1/2*x4;
+u:=x2;
+quo,rem,sep:=PseudoDivideStep(f,g,u);
+sep*f eq quo*g+rem;
+```
+```
+true
+```
+
+A triangular set is one which has distinct leaders. This is an old-school way of finding prime ideals. This is comparible to the the function `BestAutoreducedSet` on `RngMPol`.
+```
+S:=[F1,F2,F3];
+BasicTriangularSet(S);
+```
+
+```
+[
+-x1*x2 - 2*x2^2 + x3*x4 - 1
+]
+```
+
+We have a method for producing very basic characteristic sets. In this particular example there are three elements of the characteristic set. 
+```
+C:=CharacteristicSet(S);
+#C eq #{Leader(c) : c in C}; //leaders are distinct
+IsTriangular(C);
+IsTriangularNoSort(C);
+```
+```
+true
+true
+true
+```
