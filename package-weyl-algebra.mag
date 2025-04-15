@@ -90,11 +90,19 @@ intrinsic clean_weyldict(example::Assoc)->Assoc
 {}
     my_keys:=Keys(example);
     clean_dict:=AssociativeArray();
+    
+    //remove all the zero entries
     for k in my_keys do
         if example[k] ne 0 then
             clean_dict[k]:=example[k];
         end if;
     end for;
+    
+    //this was a corner case that needed to be added later
+    if #Keys(clean_dict) eq 0 then
+        clean_dict[0]:=0;
+    end if;
+    
     return clean_dict;
 end intrinsic;
 
@@ -396,9 +404,12 @@ intrinsic Print(E::AlgWeylElt)
 Prints a AlgWeylElt object.
 
 }
-    vprintf Weyl, 5: "Entering print...";
+    vprintf Weyl, 5: "Entering print... \n";
     CheckTuple(~E);
     myseq:=Eltseq(E);
+    
+    vprintf Weyl, 5: "myseq = %o \n ", myseq;
+    
     W:=Parent(E);
     if not assigned W`der_name then
         W`der_name:="d";
@@ -808,3 +819,4 @@ end intrinsic;
         true
 
 */
+

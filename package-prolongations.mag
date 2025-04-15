@@ -830,9 +830,14 @@ intrinsic '^'(f1::RngMPolProlSeqElt,n::RngIntElt)->BoolElt
     f2:=New(RngMPolProlSeqElt);
     f2`parent:=Parent(f1);
     f2`order:=f1`order;
-    f2`elt:=(f1`elt)^n;
+    if n ge 0 then
+        f2`elt:=(f1`elt)^n;
+    else
+        f2`elt:=(1/f1`elt)^AbsoluteValue(n);
+    end if;
     return f2;
 end intrinsic;
+
 
 //////////////////////
 intrinsic Diff(f::RngMPolProlSeqElt)->RngMPolProlSeqElt
