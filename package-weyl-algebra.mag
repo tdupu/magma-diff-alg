@@ -69,8 +69,12 @@ The action of a Weyl algebra element on a differential polynomial.
     OUTPUT:
         --B, an element of R
 */
-    B:=&+[(pair[1])*Diff(A,pair[2]) : pair in L];
-    return B;
+    if #L eq 0 or A eq 0 then
+        return 0;
+    else
+        B:=&+[(pair[1])*Diff(A,pair[2]) : pair in L];
+        return B;
+    end if;
 end function;
 
 //%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -600,7 +604,6 @@ intrinsic Eltseq(x::AlgWeylElt) -> SeqEnum
         weyldict:=x`array;
         weyltup:=weyldict_to_weyltup(weyldict);
         x`tup:=weyltup;
-        x`tup;
     end if;
     
     return x`tup;
@@ -636,10 +639,8 @@ Currently, only checks if x is in R for W=R[d].
 
 }
     R:=W`rngdiff;
-    //printf "Performing a coercion of x=%o into a WeylAlgebra \n, its type is %o \n",x, Type(x);
     
     if Type(x) eq AlgWeylElt then
-        //printf "Weyl Algebra Element Coercion";
         return true, elt(W,Eltseq(x));
     elif Type(x) eq SeqEnum then
         return true, elt(W,x);

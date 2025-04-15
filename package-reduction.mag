@@ -168,6 +168,13 @@ Given f and g and a variable u return quo, rem, and sep such that sep*f-quo*g eq
     rem0:=f;
     sep:=1;
     
+    //had to add this corner case
+    if IsUnit(f) then
+        return Parent(f)!quo,Parent(f)!rem0,Parent(f)!sep;
+    elif IsUnit(g) then
+        return f*g^(-1),Parent(f)!0,Parent(f)!1;
+    end if;
+    
     while Degree(rem0,u) ge Degree(g,u) do
         quo0,rem0,sep0:=PseudoDivideStep(rem0,g,u);
         sep:=sep*sep0;
@@ -189,7 +196,9 @@ end intrinsic;
 intrinsic Leader(f::RngMPolElt)->RngMPolElt,RngIntElt
 ////////////////////
 {For a polynomial f in a ring R with a lexicographic order, in the leading monomial, take the variable u that is higher and the term order and its degree.}
-    require MonomialOrder(Parent(f))[1] eq "lex": "The Parent of g must have a lexicographic order in order to define a leader."; //this can maybe be relaxed
+    if MonomialOrder(Parent(f))[1] ne "lex" then
+        print "WARNING: taking a leader in a term order that is not clearly lexicographic. \n";
+    end if;
     u:=LeadingMonomial(&+[m[1] : m in Factorization(LeadingMonomial(f))]);
     return u,Degree(f,u);
 end intrinsic;
@@ -461,6 +470,34 @@ Ritt's Algorithm for Reduction
 #########################
 */
 
+
+intrinsic IsRittReducedPartial(f::RngMPolProlSeqElt,g::RngMPolProlSeqElt)->BoolElt,RngIntElt
+{Determine if a proper derivative of the leader of g appears in f.}
+    require Parent(f) eq Parent(g): "The parents of f and g must be equal for this question to make sense.";
+    
+    //corner case first
+    if f eq 0 then
+        return true, -1;
+        
+    //real shit
+    else
+        i,r:=Explode(Support(Leader(g))[1]);
+        set_of_ders:={ x[2] : x in Support(f) | x[1] eq i and x[2] ge r};
+        
+        if #set_of_ders eq 0 then
+            return true,-1;
+        else
+            difference:=Maximum(set_of_ders)-r;
+            if difference eq 0 then
+                return true,difference;
+            else
+                return false,difference;
+            end if;
+        end if;
+    end if;
+end intrinsic;
+
+
 ////////////////////
 intrinsic IsRittReduced(f::RngMPolProlSeqElt,g::RngMPolProlSeqElt :partial:=false)->BoolElt,RngIntElt
 ////////////////////
@@ -468,19 +505,29 @@ intrinsic IsRittReduced(f::RngMPolProlSeqElt,g::RngMPolProlSeqElt :partial:=fals
 
 There is an option `partial` which when set to `true` determines if any non-zero derivative of the leader of of g appears in f.
 }
-    require Parent(f) eq Parent(g): "The parents of f and g must be equal for this question to make sense.";
-    i,r:=Explode(Support(Leader(g))[1]);
-    set_of_ders:={ x[2] : x in Support(f) | x[1] eq i and x[2] ge r};
-    
-    if #set_of_ders eq 0 then
+    //corner case first
+    if f eq 0 then
         return true,-1;
+    
+    //real shit
     else
-        difference:=Maximum(set_of_ders)-r;
-        if partial and difference eq 0 then
-            return true, difference;
+        ritt_reduced_partial,r:=IsRittReducedPartial(f,g);
+        if partial eq true then
+            return ritt_reduced_partial,r;
         else
-            return false,difference;
+            if not ritt_reduced_partial then
+                return ritt_reduced_partial,r;
+            else
+                lg,dg:=Leader(g);
+                df:=Degree(f,lg);
+                if df ge dg then
+                    return false, 0;
+                else
+                    return true, -1;
+                end if;
+            end if;
         end if;
+        
     end if;
 end intrinsic;
 
@@ -533,7 +580,7 @@ The default of `partial` is false.
     f0:=f;
     
     quo:=W!0;
-    rem:=P!0;
+    rem0:=P!0; //the naming kinda sucks
     sep:=P!1;
     
     while not IsRittReduced(f0,g : partial:=partial) do
@@ -603,7 +650,7 @@ This is exactly our construction.
 */
 
 ////////////////////
-intrinsic BestAutoreducedSub(S::SeqEnum[RngMPolProlSeqElt])->SeqEnum[RngMPolProlSeqElt]
+intrinsic BasicTriangularSet(S::SeqEnum[RngMPolProlSeqElt])->SeqEnum[RngMPolProlSeqElt]
 ////////////////////
 {Given a sequence of differential polynomials, find a subsequence which is autoreduced starting from the bottom.
 See Hubert, Decomposition Algorithms in Differential Algebra, J. Symbolic Computation, 2000
@@ -617,7 +664,7 @@ This is used in Algorithm 5.1 of loc. cit.
     else
         Ss:=Sorted(S);
 
-        M0:=BestAutoreducedSub(Ss[1..n-1]);
+        M0:=BasicTriangularSet(Ss[1..n-1]);
         if IsRittReduced(Ss[n],M0) then
             return M0 cat [ Ss[n] ];
         else
@@ -673,7 +720,8 @@ Note that division proceeds with the largest element of G for which f is not Rit
         G0:=G[2..#G]; //start with the largest element
         quo0,rem0,sep0:=RittDivide(f,G0 : partial:=partial);
         quo1,rem1,sep1:=RittDivide(rem0,G[1] : partial:=partial);
-        Quo:=[quo1] cat [sep1*q: q in quo0];
+        WR:=WeylAlgebra(Parent(f));
+        Quo:=[WR!quo1] cat [WR!sep1*q: q in quo0];
         Rem:=rem1;
         Sep:=sep0*sep1;
         
@@ -690,11 +738,11 @@ Note that division proceeds with the largest element of G for which f is not Rit
 end intrinsic;
 
 ////////////////////
-intrinsic RittRemainder(f::RngMPolProlSeqElt,G::SeqEnum[RngMPolProlSeqElt])->SeqEnumRngMPolSeqElt
+intrinsic RittRemainder(f::RngMPolProlSeqElt,G::SeqEnum[RngMPolProlSeqElt] :partial:=false)->SeqEnumRngMPolSeqElt
 ////////////////////
 {Given an autoreduced sequence G perform Ritt's division algorithm with respect to G on f.
 }
-    Quo,Rem,Sep:=RittDivide(f,G);
+    Quo,Rem,Sep:=RittDivide(f,G :partial:=partial);
     return Rem;
 end intrinsic;
 

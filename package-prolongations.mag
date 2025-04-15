@@ -817,6 +817,13 @@ intrinsic '-'(x1::RngMPolProlSeqElt,x2::RngMPolProlSeqElt)->RngMPolProlSeqElt
 end intrinsic;
 
 ////////////////////
+intrinsic '-'(x1::RngMPolProlSeqElt,x2::RngIntElt)->RngMPolProlSeqElt
+////////////////////
+{}
+    return x1+(-x2);
+end intrinsic;
+
+////////////////////
 intrinsic '^'(f1::RngMPolProlSeqElt,n::RngIntElt)->BoolElt
 ////////////////////
 {}
@@ -1258,4 +1265,10 @@ intrinsic Sorted(seq::SeqEnum[RngMPolProlSeqElt])->SeqEnum[RngMPolProlSeqElt]
         P:=Parent(seq[1]);
         return [P!g: g in Sort([ f`elt : f in match_orders(seq)])];
     end if;
+end intrinsic;
+
+
+intrinsic IsUnit(f::RngMPolProlSeqElt)->BoolElt
+{Determines if f is invertible under multiplication.}
+    return IsUnit(f`elt);
 end intrinsic;
