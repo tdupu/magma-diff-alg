@@ -1111,8 +1111,16 @@ intrinsic Support(f::RngMPolProlSeqElt)->SeqEnum
 This is the set of collection of pairs [i,j] that appear in the polynomial.
 }
     ngens:=Ngens(Parent(f));
-    return &cat([[ std_to_pair(ngens,x) : x in Support(m)] : m in Monomials(f`elt)]);
+    
+    if f`elt in BaseRing(P) then
+        return [];
+    else
+        return &cat([[ std_to_pair(ngens,x) : x in Support(m)] : m in Monomials(f`elt)]);
+    end if;
 end intrinsic;
+
+
+
 
 //%%%%%%%%%%%%%%%%%%%
 intrinsic Eltseq(f1::RngMPolProlSeqElt)->Seq

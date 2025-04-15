@@ -600,7 +600,7 @@ The default of `partial` is false.
     
     //just to be safe
     
-    vprintf RittDivision,2: "f = %o \n g = %o \n quo = %o \n rem = %o \n sep = %o \n", f,g,quo,rem,sep;
+    vprintf RittDivision,5: "f = %o \n g = %o \n quo = %o \n rem = %o \n sep = %o \n", f,g,quo,rem,sep;
     
     require sep*f-quo@g eq rem: "The sep*f-quo@g eq rem formula fails";
     
