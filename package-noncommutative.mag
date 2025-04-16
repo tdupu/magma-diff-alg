@@ -1,1 +1,12 @@
+////////////////////
+intrinsic Evaluate(f::AlgFrElt,seq::SeqEnum[AlgWeylElt])->AlgWeylElt
+////////////////////
+{Evaluate an element of an free associative algebra at a Weyl algebra element.}
+    F:=Parent(f);
+    assert Ngens(F) eq #seq;
+    
+    coeffs:=Coefficients(f);
+    monomials:=[ &*[seq[i] : i in Eltseq(mon)] : mon in Monomials(f)];
+    return &+[coeffs[i]*monomials[i] : i in [1..#coeffs]];
 
+end intrinsic;

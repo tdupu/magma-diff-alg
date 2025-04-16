@@ -383,8 +383,6 @@ Each pair represents a*d^i in R[d].
     return E;
 end intrinsic;
 
-
-
 //###############################
 intrinsic 'eq'(x::AlgWeylElt, y::AlgWeylElt) -> BoolElt
 //###############################
@@ -394,6 +392,25 @@ It does so by checking if the parent object are equal and the associated arrays 
 
 }
     return x`parent eq y`parent and DictEq(x`array,y`array);
+end intrinsic;
+
+//###############################
+intrinsic 'eq'(x::AlgWeylElt, y::.) -> BoolElt
+//###############################
+{
+Coerces y into the Weyl algebra and compares using WeylAlgElt 'eq' function
+}
+    WR:=Parent(x);
+    return x eq WR!y;
+end intrinsic;
+
+//###############################
+intrinsic 'eq'(x::., y::AlgWeylElt) -> BoolElt
+//###############################
+{
+Refers to 'eq'(x::AlgWeylElt, y::.) -> BoolElt
+}
+    return y eq x;
 end intrinsic;
 
 //###############################
