@@ -429,3 +429,44 @@ char_series;
 ]
 ```
 
+###### Example: Ollivier's Division Algorithm
+
+There is support for Ollivier's Reduction Algorithm from Standard Bases of Differential Ideals. The intrinsic `OllivierDivide` uses `OllivierDivideStep` and is his reduction algorithm. It is an important ingredient of his Groebner basis algorithm. The setup is the usual one.
+```
+R<t>:=PolynomialRing(Q,1);
+ff := map<R->R|f:->Derivative(f,t)>;
+A := DifferentialRing(R, ff, Q);
+F<t> := FieldOfFractions(A);
+P<x,y>:=PolynomialRingProlSeq(F,2: term_order:=<"dblocks",[[2,1]]>);
+WP<D>:=WeylAlgebra(P);
+```
+
+Here is an example call of `OllivierDivide` where we divide f by g. The output will be a Weyl algebra element and a differential polynomial which is the remainder.
+```
+g:=Diff(x,1)^2+y;
+f:=Diff(g,1)*Diff(g,2)^2+Diff(g,1)*g^2+2;
+Quo,Rem:=OllivierDivide(f,g);
+f eq Quo@g+Rem;
+Quo;
+```
+```
+true
+4*Diff(x,1)^2*Diff(x,3)^2 + 8*Diff(x,1)*Diff(x,2)^2*Diff(x,3) + 4*Diff(x,1)*Diff(y,2)*Diff(x,3) + 4*Diff(x,2)^4 + 4*Diff(x,2)^2*Diff(y,2) + Diff(y,2)^2 + Diff(x,1)^4 + 2*y*Diff(x,1)^2 + y^2*D^1
+```
+
+We can check that this complicated quotient is related to a more simple looking expression that we used to cook up the division.
+```
+Quo2:=(Diff(g,2)^2+g^2)*D;
+Rem eq f-Quo2@g;
+```
+```
+true
+```
+
+We can in fact check that these two elements of the Weyl algebra are equal.
+```
+Quo eq Quo2;
+```
+```
+true
+````
