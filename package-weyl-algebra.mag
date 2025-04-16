@@ -468,7 +468,7 @@ That function is weyl_sum.
 end intrinsic;
 
 //############################
-intrinsic '+'(y::RngElt,x::WeylAlgElt) -> AlgWeylElt
+intrinsic '+'(y::RngElt,x::AlgWeylElt) -> AlgWeylElt
 //############################
 {
 
@@ -482,6 +482,26 @@ That function is weyl_sum.
     Ey:=elt(W,y);
     return x+Ey;
 end intrinsic;
+
+//############################
+intrinsic '-'(x::AlgWeylElt) -> AlgWeylElt
+//############################
+{
+Negate a Weyl algbera element.
+}
+    return (-1)*x;
+end intrinsic;
+
+//############################
+intrinsic '-'(x::AlgWeylElt, y::AlgWeylElt) -> AlgWeylElt
+//############################
+{
+  Subtract Weyl algebra elements.
+}
+    return x+(-y);
+    
+end intrinsic;
+
 
 //############################
 intrinsic '*'(x::AlgWeylElt, y::AlgWeylElt) -> AlgWeylElt

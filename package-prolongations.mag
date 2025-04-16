@@ -414,7 +414,9 @@ intrinsic Prolongation(B::RngMPol: term_order:=<"dblocks",[]>)->Prol
     end if;
 end intrinsic;
 
+////////////////////
 intrinsic 'eq'(prol1::Prol,prol2::Prol)->BoolElt
+////////////////////
 {}
     return (first(prol1) eq first(prol2)) and (second(prol1) eq second(prol2));
 
@@ -693,7 +695,9 @@ intrinsic map(P::RngMPolProlSeq,m::RngIntElt,n::RngIntElt)->Map
     end if;
 end intrinsic;
 
+////////////////////
 intrinsic match_orders(x1::RngMPolProlSeqElt,x2::RngMPolProlSeqElt)->RngMPolProlSeqElt,RngMPolProlSeqElt
+////////////////////
 {Given two elements bump them up to the same jet ring.}
     P:=Parent(x1);
     require P eq Parent(x2): "Elements must be in the same prolongation sequence";
@@ -717,7 +721,9 @@ intrinsic match_orders(x1::RngMPolProlSeqElt,x2::RngMPolProlSeqElt)->RngMPolProl
     end if;
 end intrinsic;
 
+////////////////////
 intrinsic match_orders(seq::SeqEnum)->SeqEnum
+////////////////////
 {Given a sequence of RngMPolProlSeqElt instances match their orders so that you can work with their associated polynomial ring objects.}
     P:=Parent(seq[1]);
     max:=Maximum([x`order : x in seq]);
@@ -909,7 +915,9 @@ intrinsic PolynomialRingProlSeq(F::.,num_vars::RngIntElt: term_order:=<"dblocks"
     
 end intrinsic;
 
+////////////////////
 intrinsic MonomialOrder(P::RngMPolProlSeq)->Tup
+////////////////////
 {}
     return P`term_order;
 end intrinsic;
@@ -1012,26 +1020,42 @@ intrinsic LeadingTerm(f::RngMPolProlSeqElt)->RngMPolProlSeqElt
     return y;
 end intrinsic;
 
+////////////////////
 intrinsic LeadingMonomial(f::RngMPolProlSeqElt)->RngMPolProlSeqElt
-{Return the leading term of an element of a prolongation sequence.}
-    lm:=LeadingMonomial(f`elt);
-    y:=New(RngMPolProlSeqElt);
+////////////////////
+{Return the leading term of an element of a prolongation sequence with respect to its term ordering.}
     P:=Parent(f);
-    y`parent:=P;
-    y`order:=f`order;
-    y`elt:=lm;
-    return y;
+    //corner case for constants
+    if f`elt in BaseRing(Parent(f)) then
+        return P!1;
+    //important part
+    else
+        lm:=LeadingMonomial(f`elt);
+        y:=New(RngMPolProlSeqElt);
+        y`parent:=P;
+        y`order:=f`order;
+        y`elt:=lm;
+        return y;
+    end if;
 end intrinsic;
 
+////////////////////
 intrinsic LeadingCoefficient(f::RngMPolProlSeqElt)->RngElt
+////////////////////
 {Return the leading coefficient of an element of a prolongation sequence.}
     lc:=LeadingCoefficient(f`elt);
     return lc;
 end intrinsic;
 
+////////////////////
 intrinsic Degree(f::RngMPolProlSeqElt)->RngElt
+////////////////////
 {Return the degree element of a prolongation sequence.}
-    return Degree(f`elt);
+    if f`elt in BaseRing(Parent(f)) then
+        return 0;
+    else
+        return Degree(f`elt);
+    end if;
 end intrinsic;
 
 ////////////////////
@@ -1070,7 +1094,7 @@ intrinsic TopCoeff(B::RngMPolProlSeqElt,u::RngMPolProlSeqElt)->RngMPolProlSeqElt
         coeffs:=Coefficients(B,u);
         degB:=#coeffs-1;
         IB:=coeffs[#coeffs];
-        return IB,degB;
+        return Parent(B)!IB,degB;
 end intrinsic;
 
 //%%%%%%%%%%%%%%%%%%%%%%
@@ -1284,4 +1308,23 @@ end intrinsic;
 intrinsic IsUnit(f::RngMPolProlSeqElt)->BoolElt
 {Determines if f is invertible under multiplication.}
     return IsUnit(f`elt);
+end intrinsic;
+
+intrinsic IsDivisibleBy(f::RngMPolProlSeqElt,g::RngMPolProlSeqElt)->BoolElt,RngMPolProlSeqElt
+{This is a wrapper for the function IsDivisibleBy for RngMPolElt's}
+    f1,g1:=match_orders(f,g);
+    
+    is_divisible,h_elt:=IsDivisibleBy(f1`elt,g1`elt);
+    
+    
+    if is_divisible then
+        h:=New(RngMPolProlSeqElt);
+        h`parent:=Parent(f1);
+        h`order:=f1`order;
+        h`elt:=h_elt;
+        return is_divisible,h;
+    else
+        return is_divisible;
+    end if;
+
 end intrinsic;
