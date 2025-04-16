@@ -1112,7 +1112,7 @@ This is the set of collection of pairs [i,j] that appear in the polynomial.
 }
     ngens:=Ngens(Parent(f));
     
-    if f`elt in BaseRing(P) then
+    if f`elt in BaseRing(Parent(f)) then
         return [];
     else
         return &cat([[ std_to_pair(ngens,x) : x in Support(m)] : m in Monomials(f`elt)]);
