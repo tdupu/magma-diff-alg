@@ -470,3 +470,34 @@ Quo eq Quo2;
 ```
 true
 ````
+
+###### Example: Evaluation of Free Algebra Elements into Weyl Algebras
+
+```
+R<t>:=PolynomialRing(Q,1);
+ff := map<R->R|f:->Derivative(f,t)>;
+A := DifferentialRing(R, ff, Q);
+F<t> := FieldOfFractions(A);
+P<x,y>:=PolynomialRingProlSeq(F,2: term_order:=<"dblocks",[[2,1]]>);
+WP<D>:=WeylAlgebra(P);
+```
+
+I define a little function for commutators for this example.
+```
+function comm(a,b)
+    return a*b - b*a;
+end function;
+```
+
+We can check that when we evaluate a free algebra element to the the Weyl algebra commutators map to derivatives.
+Some comparison functions had to be written to do this type of comparison.
+```
+F<du,xu,yu> := FreeAlgebra(Q, 3);
+g :=comm(du,comm(du,xu))*comm(du,yu);
+seq:=[D,WP!x,WP!y];
+
+Evaluate(g,seq) eq Diff(x,2)*Diff(y,1);
+```
+```
+true
+```
