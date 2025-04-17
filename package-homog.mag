@@ -52,31 +52,31 @@ end intrinsic;
 
 
 ////////////////////
-intrinsic StrictSeqs(l::RngIntElt,n::RngIntElt)->SeqEnum[SeqEnum[RngIntElt]]
+intrinsic StrictSeqs(l::RngIntElt,bound::RngIntElt : lower:=0)->SeqEnum[SeqEnum[RngIntElt]]
 ////////////////////
 {
-All of the sequences of a_i in [1..n] of length l with
+All of the sequences of a_i in [1..bound] of length l with
 a_1<...<a_l.
 }
 require l ge 0: "Sequence must be of non-negative length.";
-require n ge l: "There do not exists strictly increasing sequences of with a bound of n of length larger than n";
+require bound ge l: "There do not exists strictly increasing sequences of with a bound of n of length larger than n";
 
     if l eq 0 then
         return [[]];
     elif l eq 1 then
-        return [[i] : i in [0..n]];
-    elif l eq n+1 then
-        return [ i : i in [0..n]];
+        return [[i] : i in [lower..bound]];
+    elif l eq bound+1-lower then
+        return [ i : i in [lower..bound]];
     else
         /*
         new sequence = (old sequence) + (larger number)
         */
-        seqs_prev:=StrictSeqs(l-1,n);
+        seqs_prev:=StrictSeqs(l-1,bound:lower:=lower);
         seqs:=[];
         for seq0 in seqs_prev do
             last:=seq0[l-1];
-            //if last lt n
-            for i in [last+1..n] do
+            //if last lt bound
+            for i in [last+1..bound] do
                 seq:=seq0 cat [i];
                 Append(~seqs,seq);
             end for;
@@ -104,19 +104,38 @@ end intrinsic;
 
 
 ////////////////////
-intrinsic WeakSeqs(l::RngIntElt,n::RngIntElt)->SeqEnum[SeqEnum[RngIntElt]]
+intrinsic WeakSeqs(l::RngIntElt,n::RngIntElt : lower:=0)->SeqEnum[SeqEnum[RngIntElt]]
 ////////////////////
 {
 All of the sequences of a_i in [1..n] of length l with
 a_1<=...<=a_l
 }
-    strict_seqs:=StrictSeqs(l,n);
+    strict_seqs:=StrictSeqs(l,n:lower:=0);
     seqs:=[];
     for seq0 in strict_seqs do
         Append(~seqs,StrictToWeak(seq0));
     end for;
     return seqs;
 end intrinsic;
+
+
+
+////////////////////
+intrinsic WeakSeqs(l::RngIntElt,n::RngIntElt, weight::RngIntElt :lower:=0)->SeqEnum[SeqEnum[RngIntElt]]
+////////////////////
+{
+All of the sequences of a_i in [1..n] of length l with
+a_1<=...<=a_l specified weight.
+}
+    return [ x : x in WeakSeqs(l,n :lower:=lower) | WeightWeak(x) eq weight];
+end intrinsic;
+
+/*
+There is a potentially much faster way of enumerating weak sequences of a specified weight by considering the enumerating WeakSeqs(len,bound,last,weight), but there are all sorts of restrictions. The key here is to reduce the empty set when there should be none. Also the observation is that WeakSeqs(len,bound,last,weight) can be obtained from WeakSeqs(len,bound,last0,weight-last) by appending [last] and running over all possible last0 le last. Then WeakSeqs(len,bound,weight)=union WeakSeqs(len,bound,last,weight) for last le minimum of weight and bound.
+
+I fucked this up when I implemented it and then accidentally deleted it, but if this becomes a weird bottleneck we should do it.
+*/
+
 
 
 
@@ -184,3 +203,79 @@ intrinsic WeakSeqs(mon::RngMPolProlSeqElt)->SeqEnum[SeqEnum[RngIntElt]]
     
     return weak_seqs;
 end intrinsic;
+
+//##############################
+//##############################
+// WRONSKIANS
+//##############################
+//##############################
+
+
+function WronskPieceSeq(alpha,x)
+    ord:=Maximum(alpha);
+    n:=#alpha;
+    A:=[WronskCol(f,alpha[i],n) : i in [1..n]];
+    return A;
+end function;
+
+function WronskPiece(alpha,x)
+    ord:=Maximum(alpha);
+    n:=#alpha;
+    A:=Matrix([ [Jet(y,ord) : y in z] : z in WronskPieceSeq(alpha,x)]);
+    return Transpose(A);
+end function;
+
+function StrictSeqss(lengths,bound)
+
+    function lower_bound(i)
+        if i eq N then
+            return 0;
+        else
+            return &+lengths[N-i+1..N];
+        end if;
+    end function;
+
+    alphas:=AssociativeArray();
+    for i in [1..N] do
+        alphas[i]:=StrictSeqs(lengths[i],bound:lower:=lower_bound(i));
+    end for;
+    
+    prod:=CartesianProduct(<alphas[k] : k in [1..N]>);
+    return [ [y : y in x] : x in prod];
+end function;
+
+function ReinhartWronskian(alphas,variables)
+/*
+    assert IsStrictSeqss(alphas);
+
+*/
+
+/*
+We are going to get a matrix which is LxL where L:=&+lengths.
+Take alphas in seqss[1];
+There are going to be #lengths+1 blocks.
+We need to make blocks WronskPiece(alphas[i],variables[i]); variablei = xi.
+In Chen-Merker they start at N and then work down N,N-1,N-2,...,1, then get to the special one.
+The special block:
+s1:=&+lengths;
+M := Maximum(&cat(alphas));
+Then we take one more block which is the transpose of [WronskCol(i,x0) i in [s1...M]]
+*/
+
+    assert #alphas eq #variables-1;
+    lengths:=[#alpha : alpha in alphas];
+    L:=&+lengths;
+    
+    //do the standard blocks
+    wronsk:=&cat WronskPieceSeq(alphas[i],variables[i]);
+    
+    //add the special block
+    s1:=&+lengths;
+    ord := M;
+    
+    //make into a matrix;
+    n:=#alpha;
+    wronsk:=wronsk cat [WronskCol(i,variables[n+1]) : i in [s1..M]];
+    A:=[ [Jet(y,M) : y in wronsk] : i in [1..L]];
+    return Transpose(Matrix(A));
+end function;
