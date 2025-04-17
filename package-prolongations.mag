@@ -243,10 +243,30 @@ intrinsic JKernel(f::Map,delta::Map)->KerJ
     return my_kernel;
 end intrinsic;
 
+/*
 //////////////////////
 intrinsic JKernel(P::Rng)->KerJ
 //////////////////////
 {Create the universal Johnson kernel for a ring defined over a differential ring. If the base is not a differential ring, it is given the structure of a differential ring with a trivial derivation.}
+    B0:=BaseRing(P);
+    if Type(B0) eq RngDiff then
+        B:=UnderlyingRing(B0);
+        delta:=map<B->P|f:->P!B!Diff(B0!f)>;
+        incl:=hom<B->P|f:->P!f>;
+    else
+        incl:=hom<B0->P|f:->P!f>;
+        delta:=map<B0->P|f:->P!0>;
+    end if;
+    
+    return JKernel(incl,delta);
+end intrinsic;
+*/
+
+
+//////////////////////
+intrinsic JKernel(P::RngMPol)->KerJ
+//////////////////////
+{Create the universal Johnson kernel for a polynmomial ring. If the base is not a differential ring, it is given the structure of a differential ring with a trivial derivation.}
     B0:=BaseRing(P);
     if Type(B0) eq RngDiff then
         B:=UnderlyingRing(B0);

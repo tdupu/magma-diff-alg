@@ -6,14 +6,181 @@ This is a package about differentially homogeneous polynomials.
 */
 
 
-intrinsic Nrows(A::SeqEnum)->RngIntElt
+////////////////////
+intrinsic Nrows(A::SeqEnum[SeqEnum])->RngIntElt
+////////////////////
 {Return the number of rows of a sequence of elements.}
     return #A[1];
 end intrinsic;
 
-intrinsic Ncols(A::SeqEnum)->RngIntElt
+////////////////////
+intrinsic Ncols(A::SeqEnum[SeqEnum])->RngIntElt
+////////////////////
 {Return the number of columns of a sequence of elements.}
     return #A;
 end intrinsic;
 
+////////////////////
+intrinsic IsStrictSeq(seq::SeqEnum[RngIntElt])->BoolElt
+////////////////////
+{Determines if seq is of the form a_0<a_1<...<a_n}
+    return &and[seq[i] lt seq[i+1] : i in [1..#seq-1]];
+end intrinsic;
 
+////////////////////
+intrinsic IsWeakSeq(seq::SeqEnum[RngIntElt])->BoolElt
+////////////////////
+{Determines if seq is of the form a_0 <= a_1 <= ... <= a_n}
+    return &and[seq[i] le seq[i+1] : i in [1..#seq-1]];
+end intrinsic;
+
+////////////////////
+intrinsic WeakToStrict(seq0::SeqEnum[RngIntElt])->SeqEnum[RngIntElt]
+////////////////////
+{Converts a weakly increasing sequence b_0 <= b_1 <= ... <= b_n to a strictly increasing sequence a_0<a_1<...<a_n}
+    require IsWeakSeq(seq0): "input is not weakly increasing.";
+    return &+[ seq0[i]+i-1 : i in [1..#seq0] ];
+end intrinsic;
+
+////////////////////
+intrinsic StrictToWeak(seq0::SeqEnum[RngIntElt])->SeqEnum[RngIntElt]
+////////////////////
+{Converts a strictly increasing sequence a_0<a_1<...<a_n to a weakly increasing sequence b_0 <= b_1 <= ... <= b_n}
+    require IsStrictSeq(seq0): "input is not strictly increasing.";
+    return &+[ seq0[i]-i+1 : i in [1..#seq0] ];
+end intrinsic;
+
+
+////////////////////
+intrinsic StrictSeqs(l::RngIntElt,n::RngIntElt)->SeqEnum[SeqEnum[RngIntElt]]
+////////////////////
+{
+All of the sequences of a_i in [1..n] of length l with
+a_1<...<a_l.
+}
+require l ge 0: "Sequence must be of non-negative length.";
+require n ge l: "There do not exists strictly increasing sequences of with a bound of n of length larger than n";
+
+    if l eq 0 then
+        return [[]];
+    elif l eq 1 then
+        return [[i] : i in [0..n]];
+    elif l eq n+1 then
+        return [ i : i in [0..n]];
+    else
+        /*
+        new sequence = (old sequence) + (larger number)
+        */
+        seqs_prev:=StrictSeqs(l-1,n);
+        seqs:=[];
+        for seq0 in seqs_prev do
+            last:=seq0[l-1];
+            //if last lt n
+            for i in [last+1..n] do
+                seq:=seq0 cat [i];
+                Append(~seqs,seq);
+            end for;
+        end for;
+        return seqs;
+    end if;
+
+end intrinsic;
+
+////////////////////
+intrinsic WeakToStrict(seq0::SeqEnum[RngIntElt])->SeqEnum[RngIntElt]
+////////////////////
+{Converts a strictly increasing sequence of integers to a weakly increasing sequence of integers. }
+    
+    return [ seq0[i]+i-1 : i in [1..#seq0] ];
+end intrinsic;
+
+
+////////////////////
+intrinsic StrictToWeak(seq0::SeqEnum[RngIntElt])->SeqEnum[RngIntElt]
+////////////////////
+{Converts a weakly increasing sequence of integers to a strictly increasing sequence of integers.}
+    return [ seq0[i]-i+1 : i in [1..#seq0] ];
+end intrinsic;
+
+
+////////////////////
+intrinsic WeakSeqs(l::RngIntElt,n::RngIntElt)->SeqEnum[SeqEnum[RngIntElt]]
+////////////////////
+{
+All of the sequences of a_i in [1..n] of length l with
+a_1<=...<=a_l
+}
+    strict_seqs:=StrictSeqs(l,n);
+    seqs:=[];
+    for seq0 in strict_seqs do
+        Append(~seqs,StrictToWeak(seq0));
+    end for;
+    return seqs;
+end intrinsic;
+
+
+
+////////////////////
+intrinsic WeightWeak(alpha::SeqEnum[RngIntElt])->RngIntElt
+////////////////////
+{returns the sum of the elements}
+    require IsWeakSeq(alpha):"input is not weakly increasing.";
+    return &+alpha;
+end intrinsic;
+
+////////////////////
+intrinsic WeightStrict(alpha::SeqEnum[RngIntElt])->RngIntElt
+////////////////////
+{returns the weight of the corresponding weakly increasing sequence.}
+    require IsStrictSeq(alpha):"input is not strictly increasing.";
+    return WeightWeak(StrictToWeak(alpha));
+end intrinsic;
+
+//##############################
+//##############################
+// monomials
+//##############################
+//##############################
+
+intrinsic '^'(x::RngMPolProlSeqElt,seq::SeqEnum[RngIntElt])->RngMPolProlSeqElt
+{Given a weakly increasing sequence a_0<=a_1<=...<=a_n return the product of Diff(x,a_j).
+}
+    require IsWeakSeq(seq):"seq is not weakly increasing";
+    
+    if #seq eq 0 then
+        return Parent(x)!1;
+    else
+        return &*[Diff(x,i) : i in seq];
+    end if;
+end intrinsic;
+
+intrinsic WeakSeqs(mon::RngMPolProlSeqElt)->SeqEnum[SeqEnum[RngIntElt]]
+{}
+    P:=Parent(mon);
+    eltseq:=Eltseq(mon);
+    require #eltseq eq 1: "mon not a term";
+
+    seq:=Eltseq(mon)[1][2];
+    n:=Ngens(P);
+    dict:=AssociativeArray();
+    for s in seq do
+        pair:=s[1];
+        len:=s[2];
+        if pair[1] in Keys(dict) then
+            dict[pair[1]]:=dict[pair[1]] cat [pair[2] : i in [1..len]];
+        else
+            dict[pair[1]]:=[pair[2] : i in [1..len]];
+        end if;
+    end for;
+
+    weak_seqs:=[];
+    for k in [1..n] do
+        if k in Keys(dict) then
+            Append(~weak_seqs,Sort(dict[k]));
+        else
+            Append(~weak_seqs,[]);
+        end if;
+    end for;
+    
+    return weak_seqs;
+end intrinsic;
