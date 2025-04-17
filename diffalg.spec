@@ -4,3 +4,5 @@ package-weyl-algebra.mag
 package-homog.mag
 package-reduction.mag
 package-noncommutative.mag
+package-magma-fixes.mag
+package-dimension.mag
