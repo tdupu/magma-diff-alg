@@ -1,0 +1,41 @@
+//############################
+function OrderMatrix(U)
+//############################
+//AlgMatElt
+//SeqEnum
+    return Matrix([Orders(u) : u in U]);
+end function;
+
+//############################
+function TropicalDet(A)
+//############################
+//AlgMatElt
+//SeqEnum
+    n:=Nrows(A);
+    assert n eq Ncols(A);
+    G := SymmetricGroup(n);
+    J,freq:=Max([&+[A[i,i^sigma] : i in [1..n]] : sigma in G]);
+    return J,freq;
+end function;
+
+//%%%%%%%%%%%%%%%%%%%
+function JacobiBound(U:is_square:=false)
+//%%%%%%%%%%%%%%%%%%%
+//AlgMatElt
+//SeqEnum
+    P:=Parent(U[1]);
+    num_vars:=Ngens(P);
+    A:=OrderMatrix(U);
+    nrows:=Nrows(A);
+    ncols:=Ncols(A);
+    if nrows lt ncols then
+        U0 := [f : f in U] join [P!0 : i in [1..ncols - nrows]];
+    else
+        U0 := U;
+    end if;
+    A0:=OrderMatrix(U0);
+    rowchoices:=Subsets({x:x in [1..nrows]},num_vars);
+    rows:=RowSequence(A0);
+    minors:=[Matrix([rows[i] : i in rowchoice]) : rowchoice in rowchoices];
+    return Max([TropicalDet(minor) : minor in minors]);
+end function;
