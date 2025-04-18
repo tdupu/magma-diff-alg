@@ -504,10 +504,22 @@ true
 
 ###### Example: LaTeX
 
+Differential polynomial ring elements 
 ```
 g:=Diff(x,1)*Diff(y,2) + x^2 + t;
 Latex(g);
 ```
 ```
 \partial(x)\partial^2(y)+\partial(x)\partial^2(y)+x^{2}+t
+```
+
+Weyl algebra elements where D is the named variable (which can be retrieved as a sequence of length one from Names)
+```
+opr:=x*D+Diff(y,1)*D^0;
+opr;
+latex_weyl(opr);
+```
+```
+Diff(y,1)*D^0+ x*D^1
+\partial(y)+xD^1
 ```
