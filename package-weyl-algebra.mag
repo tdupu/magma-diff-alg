@@ -762,6 +762,13 @@ intrinsic AssignNames(~P::AlgWeyl,s::SeqEnum)
 end intrinsic;
 
 ////////////////////
+intrinsic Names(P::AlgWeyl)->SeqEnum[MonStrElt]
+////////////////////
+{Return the name of the derivation as a sequence of length one.}
+    return [P`der_name];
+end intrinsic;
+
+////////////////////
 intrinsic Name(P::AlgWeyl, n::RngIntElt)->AlgWeylElt
 ////////////////////
 {Return the ith generator of a Weyl algebra.
