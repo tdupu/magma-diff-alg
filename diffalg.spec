@@ -6,3 +6,4 @@ package-reduction.mag
 package-noncommutative.mag
 package-magma-fixes.mag
 package-dimension.mag
+package-latex.mag

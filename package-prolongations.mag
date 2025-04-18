@@ -32,7 +32,7 @@ Sequences of Prolongations
 */
 
 declare type RngMPolProlSeq[RngMPolProlSeqElt];
-declare attributes RngMPolProlSeq: sequence,term_order,rngdiffpol;
+declare attributes RngMPolProlSeq: sequence,term_order,rngdiffpol,names;
 declare attributes RngMPolProlSeqElt: parent,elt,order;
 
 /*
@@ -903,6 +903,7 @@ intrinsic AssignNames(~P::RngMPolProlSeq,s::SeqEnum)
 {}
     B:=Jet(P,0);
     AssignNames(~B,s);
+    P`names:=s;
     original_names:=s;
     all_names:=s;
     R:=order(P);
@@ -912,6 +913,11 @@ intrinsic AssignNames(~P::RngMPolProlSeq,s::SeqEnum)
         all_names:=all_names cat new_names;
         AssignNames(~jet1,all_names);
     end for;
+end intrinsic;
+
+intrinsic Names(P::RngMPolProlSeq)->SeqEnum[MonStrElt]
+{Return the names of the variables}
+    return P`names;
 end intrinsic;
 
 ////////////////////
