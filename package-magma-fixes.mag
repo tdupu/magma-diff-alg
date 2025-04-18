@@ -1,0 +1,43 @@
+
+/*
+This is for a Magma bug that was reported April 3, 2025
+
+R<t,s>:=PolynomialRing(Q,2);
+f := map<R->R|f:->Derivative(f,t)>;
+A<t,s> := DifferentialRing(R, f, Q);
+B:=PolynomialRing(A,2);
+B.1 in A;
+
+*/
+
+////////////////////
+intrinsic 'in'(x::.,R::RngDiff)->BoolElt
+////////////////////
+{}
+    return x in UnderlyingRing(R);
+end intrinsic;
+
+
+/*
+This is for a Magma bug that was reported April 18, 2025
+
+R<x,y>:=PolynomialRing(Q,2);
+F<x,y>:=FieldOfFractions(R);
+P<z,w>:=PolynomialRing(F,2);
+z in F;
+
+*/
+
+////////////////////
+intrinsic 'in'(x::RngMPolElt,K::FldFunRat)->BoolElt
+////////////////////
+{}
+    P:=Parent(x);
+    FP:=FieldOfFractions(P);
+    if K eq FP then
+    //It would be nice for IsSubfield(K,FP) to catch more stuff here
+        return true,FP!x;
+    else
+        return false;
+    end if;
+end intrinsic;
