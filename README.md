@@ -501,3 +501,13 @@ Evaluate(g,seq) eq Diff(x,2)*Diff(y,1);
 ```
 true
 ```
+
+###### Example: LaTeX
+
+```
+g:=Diff(x,1)*Diff(y,2) + x^2 + t;
+Latex(g);
+```
+```
+\partial(x)\partial^2(y)+\partial(x)\partial^2(y)+x^{2}+t
+```
