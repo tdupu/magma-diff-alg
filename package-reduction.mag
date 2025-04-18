@@ -716,7 +716,7 @@ end intrinsic;
 
 
 ////////////////////
-intrinsic RittDivide(f::RngMPolProlSeqElt,G::SeqEnum[RngMPolProlSeqElt] : partial:=false)->SeqEnum[AlgWeylElt],RngMPolSeqElt,RngMPolSeqElt
+intrinsic RittDivide(f::RngMPolProlSeqElt,G::SeqEnum[RngMPolProlSeqElt] : partial:=false)->SeqEnum[AlgWeylElt],RngMPolProlSeqElt,RngMPolProlSeqElt
 ////////////////////
 {Given an autoreduced sequence perform Ritt's division algorithm with respect to that element.
 In the case of Ritt's ordering this is on page 5 of Ritt's Differential Algebra.
@@ -725,7 +725,7 @@ Note that division proceeds with the largest element of G for which f is not Rit
     require IsAutoreduced(G): "Must RittDivide by an autoreduced sequence. The SeqEnum G is not autoreduced.";
     require #G gt 0: "Must RittDivide by a nonempty autoreduced sequence.";
     if #G eq 1 then
-        quo0,rem0,sep0:=RittDivide(f,G[1]);
+        quo0,rem0,sep0:=RittDivide(f,G[1] : partial:=partial);
         return [quo0],rem0,sep0;
     else
         G0:=G[2..#G]; //start with the largest element
@@ -741,6 +741,8 @@ Note that division proceeds with the largest element of G for which f is not Rit
         you should be Ritt-reduced with respect to Gj
         for all j>i in the sequence. See loc. cit.
         */
+        
+        vprintf RittDivision, 4: "rem1 = %o\n G0 = %o\n ", rem1, G0;
         require IsRittReduced(rem1,G0: partial:=partial): "rem1 is not Ritt-reduced with respect to the first elements.";
         require (Sep*f - &+[Quo[i]@G[i]: i in [1..#G]] eq Rem): "Failure of sep*f-quo*G eq rem";
         
@@ -753,6 +755,7 @@ intrinsic RittRemainder(f::RngMPolProlSeqElt,G::SeqEnum[RngMPolProlSeqElt] :part
 ////////////////////
 {Given an autoreduced sequence G perform Ritt's division algorithm with respect to G on f.
 }
+    vprintf RittDivision, 4: "f = %o\n G = %o\n ", f, G;
     Quo,Rem,Sep:=RittDivide(f,G :partial:=partial);
     return Rem;
 end intrinsic;
