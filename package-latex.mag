@@ -1,0 +1,68 @@
+function latex_power(tup,names)
+    if tup[2] eq 0 then
+        
+        return "";
+
+    elif tup[2] eq 1 then
+        
+        if tup[1][2] eq 1 then
+        
+            return Sprintf("\\partial(%o)",names[tup[1][1]]);
+        
+        elif tup[1][2] eq 0 then
+        
+            return Sprintf("%o",names[tup[1][1]]);
+        
+        else
+        
+            return Sprintf("\\partial^%o(%o)",tup[1][2],names[tup[1][1]]);
+        
+        end if;
+    
+    else
+    
+        if tup[1][2] eq 1 then
+        
+            return Sprintf("\\partial(%o)^{%o}",names[tup[1][1]],tup[2]);
+        
+        elif tup[1][2] eq 0 then
+        
+            return Sprintf("%o^{%o}",names[tup[1][1]],tup[2]);
+        
+        else
+        
+            return Sprintf("\\partial^%o(%o)^{%o}",tup[1][2],names[tup[1][1]],tup[2]);
+        
+        end if;
+    
+    end if;
+
+end function;
+
+function latex_term(term,names)
+    coeff:=term[1];
+    mon:=term[2];
+    mon_s:=&cat[latex_power(tup,names):tup in mon];
+    if coeff ne 1 and coeff ne -1 then
+        coeff_s:=Sprintf("%o",coeff);
+    elif coeff eq -1 then
+        coeff_s:="-";
+    else
+        coeff_s:="";
+    end if;
+        
+    term_s:=coeff_s cat mon_s;
+    return term_s;
+end function;
+
+intrinsic Latex(dpoly::RngMPolProlSeqElt)->MonStrElt
+{Returns a latex expression for a differential polynomial.}
+    names:=Names(Parent(dpoly));
+    eltseq:=Eltseq(dpoly);
+    terms_s:=[latex_term(term,names) : term in eltseq];
+    output:=terms_s[1];
+    for term_s in terms_s do
+        output:=output cat "+" cat term_s;
+    end for;
+    return output;
+end intrinsic;
