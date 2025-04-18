@@ -776,8 +776,6 @@ This gives either the derivation elements for n=1 or the constant 1 for n=0}
     return P.n;
 end intrinsic;
 
-
-
 ////////////////////
 intrinsic '.'(WR::AlgWeyl,n::RngIntElt)->AlgWeylElt
 ////////////////////

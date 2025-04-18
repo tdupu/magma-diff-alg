@@ -1,3 +1,11 @@
+
+//####################
+//####################
+// Differential Polynomials
+//####################
+//####################
+
+
 function latex_power(tup,names)
     if tup[2] eq 0 then
         
@@ -61,9 +69,49 @@ intrinsic Latex(dpoly::RngMPolProlSeqElt)->MonStrElt
     eltseq:=Eltseq(dpoly);
     terms_s:=[latex_term(term,names) : term in eltseq];
     output:=terms_s[1];
-    for term_s in terms_s do
-        output:=output cat "+" cat term_s;
-    end for;
-    return output;
+    if #terms_s eq 1 then
+        return output;
+    else
+        for term_s in terms_s[2..#terms_s] do
+            output:=output cat "+" cat term_s;
+        end for;
+        return output;
+    end if;
 end intrinsic;
 
+//####################
+//####################
+// Weyl Algebras
+//####################
+//####################
+
+
+function latex_weyl_term(term,names)
+    if term[2] eq 0 then
+        return Latex(term[1]);
+    else
+        coeff:=Latex(term[1]);
+        if #Split(coeff,"+") gt 1 then
+            return "(" cat Latex(term[1]) cat ")" cat Sprintf("%o^%o",names[1],term[2]);
+        else
+            return Latex(term[1]) cat Sprintf("%o^%o",names[1],term[2]);
+        end if;
+    end if;
+end function;
+
+intrinsic Latex(opr::AlgWeylElt)->MonStrElt
+{Prints a latex form of the Weyl algebra element.}
+    names:=Names(Parent(opr));
+    eltseq:=Eltseq(opr);
+    terms_s:=[latex_weyl_term(term,names) : term in eltseq];
+    output:=terms_s[1];
+    
+    if #terms_s eq 1 then
+        return output;
+    else
+        for term_s in terms_s[2..#terms_s] do
+            output:=output cat "+" cat term_s;
+        end for;
+        return output;
+    end if;
+end intrinsic;

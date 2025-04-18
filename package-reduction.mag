@@ -760,6 +760,48 @@ intrinsic RittRemainder(f::RngMPolProlSeqElt,G::SeqEnum[RngMPolProlSeqElt] :part
     return Rem;
 end intrinsic;
 
+
+////////////////////
+intrinsic RittDividePartial(f::RngMPolProlSeqElt,G::SeqEnum[RngMPolProlSeqElt])->SeqEnum[AlgWeylElt],RngMPolProlSeqElt,RngMPolProlSeqElt
+////////////////////
+{Reduces f with respect to an autoreduced set only to the point where you don't need to take any more derivatives of elements of G. The result will be in the smallest finite order jet ring which contains all of the elements of G.}
+    require IsAutoreduced(G): "must divide by an autoreduced set";//maybe can be relaxed.
+    WP:=WeylAlgebra(Parent(f));
+    n:=#G;
+    
+    //initialize
+    Rem1:=f;
+    Quo1:=[WP!0 : i in [1..n]];
+    Quo:=[WP!0 : i in [1..n]];
+    Sep1:=P!1;
+    
+    
+    for i in [0..n-1] do
+        Quo,Rem1,Sep:=RittDivide(Rem1,G[n-i]:partial:=true);
+        for j in [k : k in [1..n]|k ne n-i] do
+            Quo1[j]:=Sep*Quo1[j];
+        end for;
+        Quo1[n-i]:=Sep*Quo1[n-i]+Quo;
+        Sep1:=Sep*Sep1;
+    end for;
+
+    if IsRittReduced(Rem1,G:partial:=true) then
+        Quo:=Quo1;
+        Rem:=Rem1;
+        Sep:=Sep1;
+    else
+        Quo2,Rem2,Sep2:=ritt_divide_partial(Rem1,G);
+        Sep:=Sep2*Sep1;
+        for i in [1..n] do
+            Quo[i]:=Sep2*Quo1[i]+Quo2[i];
+        end for;
+        Rem:=Rem2;
+    end if;
+    
+    assert Sep*f eq &+[Quo[i]@G[i] : i in [1..n]]+Rem;
+    return Quo,Rem,Sep;
+end intrinsic;
+
 /*
 #########################
 #########################
