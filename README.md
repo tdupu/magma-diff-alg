@@ -197,8 +197,25 @@ true
 true
 -1
 ```
-`RittDivide` is also implemented for autoreduced sets.  
+`RittDivide` is also implemented for autoreduced sets. The following is such an example. In earlier versions we didn't run through the reduction process multiple times (which surprisingly runs most of the time) which led to bugs. Also, some authors (not Ritt) like to stage the reduction process by first reducing to the point where the remainder is in the same minimal jet ring containing all the elements of the autoreduced sequence we are dividing by. Once this happens one can use pseudoreduction of standard Groebner algorithms to determine membership.
 
+I haven't implemented the Groebner version, but that seems like the "right" thing to do so perhaps I will add a Groebner option later for `RittDivideStaged`.
+```
+f := Diff(y,3) + Diff(x,1);
+G :=[Diff(x,1)*Diff(y,2) + x^2 + t,-1*x^2*Diff(x,2) -t*Diff(x,2) -1*Diff(x,1)^3 + 2*x*Diff(x,1)^2 + Diff(x,1)];
+Quo0,Rem0,Sep0:=RittDivide(f,G :partial:=true);
+Quo1,Rem1,Sep1:=RittDivide(Rem0,G);
+Quo2,Rem2,Sep2:=RittDivideStaged(f,G);
+Rem2 eq Rem1;
+
+Quo3,Rem3,Sep3:=RittDivide(f,G);
+Rem3 eq Rem2;
+```
+
+```
+true
+true
+```
 
 ###### Example: Element Comparison and Sorting
 
@@ -523,3 +540,5 @@ latex_weyl(opr);
 Diff(y,1)*D^0+ x*D^1
 \partial(y)+xD^1
 ```
+
+
