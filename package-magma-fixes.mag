@@ -41,3 +41,121 @@ intrinsic 'in'(x::RngMPolElt,K::FldFunRat)->BoolElt
         return false;
     end if;
 end intrinsic;
+
+//####################
+//####################
+// QUOTIENTS
+//####################
+//####################
+
+/*
+
+//magma complains about taking dual numbers of basic rings.
+B<aa,bb>:=PolynomialRing(Q,2);
+I:=ideal<B|aa^2+bb^2-1>;
+A:=quo<B|I>;
+
+A1<t>:=PolynomialRing(A,1);
+quo<A1|t^2>;
+
+//magma also complains about taking quotients of polynomial rings
+B1<xx>:=PolynomialRing(Q,2);
+P1<tt>:=PolynomialRing(B1,2);
+A2:=quo<P1|tt^2>;
+
+*/
+
+/*
+All of the versions of quo should have map with its output.
+(c.f. quo for GrpFP.)
+
+Currently only the one that takes in a list does.
+https://magma.maths.usyd.edu.au/magma/handbook/text/1301#14684
+quo< P | a1, ..., ar > : RngMPol, RngMPolElt, ..., RngMPolElt -> RngMPolRes, Map
+*/
+
+intrinsic FlattenPolynomialRing(P1::RngMPol)->RngMPol
+{
+Turn a polynomial ring over a polynomial ring (possibly iterated).
+Into a polynomial ring over a base that isn't a polynomial ring.
+}
+    B1:=BaseRing(P1);
+    
+    if Type(B1) ne RngMPol then
+        return P1, Id(P1);
+    end if;
+    
+    r1:=Rank(B1);
+    r2:=Rank(P1);
+    assert Type(B1) eq RngMPol;
+    
+    B0:=BaseRing(B1);
+    P2:=PolynomialRing(B0,r1+r2);
+    //
+    // map from P1->P2
+    //
+    function mymap(f)
+        coeffs:=[Evaluate(c,[P2.i : i in [1..r1]]) : c in Coefficients(f)];
+        mons:=[Evaluate(mon,[P2.i : i in [r1+1..r1+r2]]) : mon in Monomials(f)];
+        return &+[coeffs[i]*mons[i] : i in [1..#mons]];
+    end function;
+    map2:=hom<P1->P2|f:->mymap(f)>;
+    
+    if Type(B0) ne RngMPol then
+        return P2,map2;
+    else
+        P3,map3:=FlattenPolynomialRing(P2);
+        return P3,map2*map3;
+    end if;
+end intrinsic;
+
+intrinsic Quot(P1::RngMPol,seq::SeqEnum[RngMPolElt])->RngMPolRes,Map,Map
+{
+Quotients of polynomial rings over polynomial rings.
+}
+    P2,map2:=FlattenPolynomialRing(P1);
+    seq_new:=[map2(s) : s in seq];
+    Quo,quo_map:=quo<P2|seq_new>;
+    return Quo,map2*quo_map,map2;
+end intrinsic;
+
+intrinsic Quot0(PA::RngMPol,seq::SeqEnum[RngMPolElt])->RngMPolRes,Map,UserProgram
+{
+quotients for polynomial rings over RngMPolRes.
+
+There is an easy fix:
+
+(P/I)[x1,...,xn]/J:=P[x1,..,xn]/(I+Jtilde)
+
+where Jtilde is just lifts of representatives.
+}
+    rPA:=Rank(PA);
+    A0:=BaseRing(PA);
+    P0:=PreimageRing(A0);
+    I0:=DivisorIdeal(A0);
+    A1,map1:=quo<P0|Generators(I0)>;
+    assert A1 eq A0;
+
+    /*
+    We take P1=P0[number of gens of PA];
+    We lift seq to P1;
+    We mod out P1 by this;
+    */
+
+    P1:=PolynomialRing(P0,rPA);
+
+    function mymap(f)
+        coeffs:=[c @@ map1 : c in Coefficients(f)];
+        mons:=[Evaluate(mon,[P1.i : i in [1..rPA]]) : mon in Monomials(f)];
+        return &+[coeffs[i]*mons[i] : i in [1..#mons]];
+    end function;
+    
+    //UserProgram
+    
+    //now we lift the sequence
+    new_seq:=[mymap(f) : f in seq];
+
+    Quo,quo_map:=Quot(P1,new_seq);
+
+    return Quo,quo_map,mymap;
+end intrinsic;
