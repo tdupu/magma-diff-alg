@@ -512,6 +512,36 @@ That function is weyl_sum.
 end intrinsic;
 
 //############################
+intrinsic '+'(y::RngMPolProlSeqElt,x::AlgWeylElt) -> AlgWeylElt
+//############################
+{
+
+To add to Weyl algebra elements we wrote a function that adds two associative arrays together.
+This does a little inclusion/exclusion on the keys and then handles the cases.
+That function is weyl_sum.
+
+}
+    WR:=Parent(x);
+    return WR!y + x;
+    
+end intrinsic;
+
+//############################
+intrinsic '+'(x::AlgWeylElt,y::RngMPolProlSeqElt) -> AlgWeylElt
+//############################
+{
+
+To add to Weyl algebra elements we wrote a function that adds two associative arrays together.
+This does a little inclusion/exclusion on the keys and then handles the cases.
+That function is weyl_sum.
+
+}
+
+    return y+x;
+    
+end intrinsic;
+
+//############################
 intrinsic '-'(x::AlgWeylElt) -> AlgWeylElt
 //############################
 {
