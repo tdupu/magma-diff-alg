@@ -551,5 +551,56 @@ latex_weyl(opr);
 Diff(y,1)*D^0+ x*D^1
 \partial(y)+xD^1
 ```
+###### Example: Magma Enhancement, Quotients of Quotients 
 
+This little bit addressed some deficiencies in Magma's RngMPol implementation. Magma complains about taking dual numbers of basic rings, which is something we need to do. 
+```
+B<aa,bb>:=PolynomialRing(Q,2);
+I:=ideal<B|aa^2+bb^2-1>;
+A:=quo<B|I>;
+
+A1<t>:=PolynomialRing(A,1);
+quo<A1|t^2>;
+```
+
+Magma also complains about taking quotients of polynomial rings
+```
+B1<xx>:=PolynomialRing(Q,2);
+P1<tt>:=PolynomialRing(B1,2);
+A2:=quo<P1|tt^2>;
+```
+
+Next, I will go through the functions `Quot`,`Quot0`,and `FlattenPolynomialRing` which can help with these tasks. It isn't pretty but it works. It's all basically the isomorphism theorems from Dummit and Foote.
+
+```
+B1<xx,yy>:=PolynomialRing(Q,2);
+P1<tt,ss>:=PolynomialRing(B1,2);
+B2<uu,vv,ww>:=PolynomialRing(P1,3);
+Pflat,map_flat:=FlattenPolynomialRing(B2);
+assert Type(Pflat) eq RngMPol;
+assert Rank(Pflat) eq Rank(B1)+Rank(P1)+Rank(B2);
+```
+Support for quotients of polynomial rings over polynomial rings.
+
+```
+B1<xx,yy>:=PolynomialRing(Q,2);
+P1<tt,ss>:=PolynomialRing(B1,2);
+seq:=[tt^2];
+
+A,map_to_A:=Quot(P1,seq);
+f:=tt^2+xx*ss+yy;
+assert f in P1;
+assert map_to_A(f) in A;
+```
+Support for quotients of polynomial rings over general rings. 
+
+```
+B<aa,bb>:=PolynomialRing(Q,2);
+I:=ideal<B|aa^2+bb^2-1>;
+A<abar,bbar>:=quo<B|I>;
+PA<tt>:=PolynomialRing(A,1);
+seq:=[(abar)*tt^2];
+PA_quo<abar1,bbar1,tt1>:=Quot0(PA,seq);
+assert abar1*tt1^2 eq 0;
+```
 
