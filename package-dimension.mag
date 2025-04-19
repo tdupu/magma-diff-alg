@@ -1,14 +1,16 @@
 //############################
-function OrderMatrix(U)
+intrinsic OrderMatrix(U::SeqEnum[RngMPolProlSeqElt])->AlgMatElt
 //############################
+{ Give the order matrix of a system of differential polynomials. }
 //AlgMatElt
 //SeqEnum
     return Matrix([Orders(u) : u in U]);
-end function;
+end intrinsic;
 
 //############################
-function TropicalDet(A)
+intrinsic TropicalDet(A::AlgMatElt)->RngIntElt
 //############################
+{Give the tropical determinant of a matrix with integer entries using max,+}
 //AlgMatElt
 //SeqEnum
     n:=Nrows(A);
@@ -16,11 +18,12 @@ function TropicalDet(A)
     G := SymmetricGroup(n);
     J,freq:=Max([&+[A[i,i^sigma] : i in [1..n]] : sigma in G]);
     return J,freq;
-end function;
+end intrinsic;
 
 //%%%%%%%%%%%%%%%%%%%
-function JacobiBound(U:is_square:=false)
+intrinsic JacobiBound(U::SeqEnum[RngMPolProlSeqElt]:is_square:=false)->RngIntElt,RngIntElt
 //%%%%%%%%%%%%%%%%%%%
+{Return the Jacobi bound of a system of differential polynomials.}
 //AlgMatElt
 //SeqEnum
     P:=Parent(U[1]);
@@ -38,4 +41,4 @@ function JacobiBound(U:is_square:=false)
     rows:=RowSequence(A0);
     minors:=[Matrix([rows[i] : i in rowchoice]) : rowchoice in rowchoices];
     return Max([TropicalDet(minor) : minor in minors]);
-end function;
+end intrinsic;
