@@ -454,9 +454,6 @@ Get the degree of f with respect to u.
     return Degree(f1`elt,u1`elt);
 end intrinsic;
 
-
-
-
 ////////////////////
 intrinsic PseudoDivide(f::RngMPolProlSeqElt,g::RngMPolProlSeqElt,u::RngMPolProlSeqElt)->RngMPolProlSeqElt,RngMPolProlSeqElt,RngMPolProlSeqElt
 ////////////////////
@@ -1101,7 +1098,7 @@ http://arxiv.org/abs/math/0702470v1
         C:=CharacteristicSet(F);
         rems:=[ RittRemainder(f,C): f in F | not f in C];
         Fbar:=Sorted([ f : f in rems | f ne 0]);
-        S_C:={@ s : s in {@ Initial(h) : h in C @} join {@ Separant(h) : h in C @} | not IsUnit(s)@};
+        S_C:={@ s : s in {@ Initial(h) : h in C | Degree(h) gt 0 and Degree(Initial(h)) gt 0 @} join {@ Separant(h) : h in C | Degree(h) gt 0 and Degree(Separant(h)) gt 0 @} | not IsUnit(s) @};
         Hbar0:= S_C join {@ RittRemainder(h,C) : h in H @}; //add initial, separants, remainders;
         Hbar1:={@ h: h in Hbar0 | not IsUnit(h) @}; //remove the units
         Hbar:=Sorted([h : h in Hbar1]); //make sure it is sorted

@@ -645,27 +645,19 @@ Return false otherwise.
             end if;
         end while;
         return false;
-    elif Type(x) eq RngDiffElt or Type(x) eq FldFunRat then
-        if x in Jet(P,-1) then
+    elif IsCoercible(Jet(P,-1),x) then
             y:=New(RngMPolProlSeqElt);
             y`parent:=P;
             y`elt:=Jet(P,-1)!x;
             y`order:=-1;
             return true, y;
-        else
-            return false;
-        end if;
     elif Type(Parent(x)) eq AlgWeyl then
         WP:=Parent(x);
         eltseq:=Eltseq(x);
         if #eltseq eq 1 then
             if eltseq[1][2] eq 0 then
-                f:=eltseq[1][1];
-                if Parent(f) eq P then
-                    return true, f;
-                else
-                    return false;
-                end if;
+                return true, P!eltseq[1][1]; //dangerous recursion -- could cause segmentation fault later
+                //if this breaks, more testing about the relationship between P and the UnderlyingRing(WP) needed.
             else
                 return false;
             end if;
@@ -1115,14 +1107,12 @@ intrinsic Leader(f::RngMPolProlSeqElt)->RngMPolProlSeqElt,RngIntElt
 Return the leader of a differential polynomial according to its term order and the degree of f with respect to its leader.
 If f is constant, then it returns the first variable of P with degree being zero.
 }
-    if f`elt in BaseRing(Parent(f)) then
-        return Parent(f).1,0;
-    else
-        lm:=LeadingMonomial(f`elt);
-        ld:=LeadingMonomial(&+[ x[1] : x in Factorization(lm)]);
-        d:=Degree(lm,ld);
-        return Parent(f)!ld,d;
-    end if;
+    require Degree(f) ne 0: "f must have degree greater than zero.";
+    lm:=LeadingMonomial(f`elt);
+    ld:=LeadingMonomial(&+[ x[1] : x in Factorization(lm)]);
+    d:=Degree(lm,ld);
+    return Parent(f)!ld,d;
+    
 end intrinsic;
 
 //%%%%%%%%%%%%%%%%%%%%%%%
@@ -1151,6 +1141,7 @@ end intrinsic;
 intrinsic Initial(B::RngMPolProlSeqElt)->RngMPolProlSeqElt
 //%%%%%%%%%%%%%%%%%%%%%%
 {}
+    require Degree(B) ne 0: "f must have degree greater than zero.";
     lB,degB:=Leader(B);
     return TopCoeff(B,lB),degB;
 end intrinsic;

@@ -311,7 +311,7 @@ intrinsic elt(T::AlgWeyl, x::RngElt) -> AlgWeylElt
 {Creates a AlgWeylElt object with parent T and element x.}
     vprintf Weyl, 5: "Entering MakeAlgWeylElt for RngElt\n";
     E := New(AlgWeylElt);
-    R:=T`rngdiff;
+    R:=UnderlyingRing(T);
     E`parent:=T;
  
     require x in R: "%o is not an element of %o", x, R;
@@ -658,14 +658,16 @@ intrinsic Eltseq(x::AlgWeylElt) -> SeqEnum
 {
     checks if the tuple is there then returns it if not.
 }
+    W:=x`parent;
+    R:=UnderlyingRing(W);
+    
     if not assigned x`tup then
-        W:=x`parent;
         weyldict:=x`array;
         weyltup:=weyldict_to_weyltup(weyldict);
         x`tup:=weyltup;
     end if;
     
-    return x`tup;
+    return [<R!t[1],t[2]> : t in x`tup];
 end intrinsic;
 
 //###############################
@@ -759,7 +761,8 @@ intrinsic GetOne(WR :: AlgWeyl) -> AlgWeylElt
 This returns the 1 of a Weyl algebra.
 
 }
-    one:=elt(WR,1);
+    R:=UnderlyingRing(WR);
+    one:=elt(WR,R!1);
     return one;
     
 end intrinsic;
