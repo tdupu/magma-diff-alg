@@ -488,6 +488,17 @@ Quo eq Quo2;
 true
 ````
 
+Here was an example that is technically difficult for various reasons. In the process of doing the computation RittDivision requires multiple iterations. Also, some extra code to handle "leading monomials","leaders", and "initials" of differential polynomials of degree zero.  
+
+```
+f:=Diff(x,1)+Diff(y,3);
+g:=x^2+Diff(y,2)*Diff(x,1)+t;
+#CharacteristicSeries([f,g]);
+```
+```
+1
+```
+
 ###### Example: Evaluation of Free Algebra Elements into Weyl Algebras
 
 ```
