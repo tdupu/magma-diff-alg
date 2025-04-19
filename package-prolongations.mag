@@ -631,12 +631,6 @@ Return false otherwise.
         y`elt:=BaseRing(P)!x;
         y`order:=-1;
         return true,y;
-    elif x in Jet(P,-1) then
-        y:=New(RngMPolProlSeqElt);
-        y`parent:=P;
-        y`elt:=Jet(P,-1)!x;
-        y`order:=-1;
-        return true, y;
     elif Type(x) eq RngMPolElt then
         r:=0;
         while r lt order(P) do
@@ -651,6 +645,33 @@ Return false otherwise.
             end if;
         end while;
         return false;
+    elif Type(x) eq RngDiffElt or Type(x) eq FldFunRat then
+        if x in Jet(P,-1) then
+            y:=New(RngMPolProlSeqElt);
+            y`parent:=P;
+            y`elt:=Jet(P,-1)!x;
+            y`order:=-1;
+            return true, y;
+        else
+            return false;
+        end if;
+    elif Type(Parent(x)) eq AlgWeyl then
+        WP:=Parent(x);
+        eltseq:=Eltseq(x);
+        if #eltseq eq 1 then
+            if eltseq[1][2] eq 0 then
+                f:=eltseq[1][1];
+                if Parent(f) eq P then
+                    return true, f;
+                else
+                    return false;
+                end if;
+            else
+                return false;
+            end if;
+        else
+            return false;
+        end if;
     else
         return false;
     end if;
@@ -1053,8 +1074,11 @@ intrinsic LeadingMonomial(f::RngMPolProlSeqElt)->RngMPolProlSeqElt
     P:=Parent(f);
     //corner case for constants
     if f`elt in BaseRing(Parent(f)) then
-        return P!1;
-    //important part
+        if f`elt ne 0 then
+            return P!1;
+        else
+            error "f is not non-zero";
+        end if;
     else
         lm:=LeadingMonomial(f`elt);
         y:=New(RngMPolProlSeqElt);

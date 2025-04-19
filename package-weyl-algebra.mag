@@ -218,6 +218,17 @@ intrinsic WeylAlgebra(R::RngDiff) -> AlgWeyl
     
 end intrinsic;
 
+
+//############################
+intrinsic UnderlyingRing(WR::AlgWeyl) -> .
+//############################
+{
+Returns the RngDiff or RngMPolProlSeq underlying the Weyl algebra.
+}
+    return WR`rngdiff;
+
+end intrinsic;
+
 //############################
 intrinsic WeylAlgebra(R::RngDiff) -> AlgWeyl
 //############################

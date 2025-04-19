@@ -140,6 +140,7 @@ Given f and g and a variable u return quo, rem, and sep such that sep*f-quo*g eq
 }
 require Parent(f) eq Parent(g): "The two elements must have the same parents";
 require Degree(u) eq 1: "u must be an element of degree one.";
+require g ne 0: "g must be a non-zero element";
 
     df:=Degree(f,u);
     dg:=Degree(g,u);
@@ -170,16 +171,20 @@ intrinsic PseudoDivide(f::RngMPolElt,g::RngMPolElt,u::RngMPolElt)->RngMPolElt,Rn
 {
 Given f and g and a variable u return quo, rem, and sep such that sep*f-quo*g eq rem and the degree of the remainder is less than the degree of g.
 }
+    require g ne 0: "g must be non-zero";
 
     quo:=0;
     rem0:=f;
     sep:=1;
     
     //had to add this corner case
-    if IsUnit(f) then
-        return Parent(f)!quo,Parent(f)!rem0,Parent(f)!sep;
-    elif IsUnit(g) then
-        return f/g,Parent(f)!0,Parent(f)!1;
+    is_unit_f:=IsUnit(f);
+    is_unit_g:=IsUnit(g);
+    
+    if is_unit_f and not is_unit_g then
+        return Parent(f)!0,Parent(f)!f,Parent(f)!1;
+    elif is_unit_g then
+        return Parent(f)!(f/g),Parent(f)!0,Parent(f)!1;
     end if;
     
     while Degree(rem0,u) ge Degree(g,u) do
@@ -554,6 +559,8 @@ intrinsic RittDivideStep(f::RngMPolProlSeqElt,g::RngMPolProlSeqElt)->AlgWeylElt,
 The quo will be an element of the associated Weyl algebra.
 The full algorithm is Ritt Divide.
 }
+    require g ne 0: "must divide by a non-zero element";
+    
     P:=Parent(f);
     W<D>:=WeylAlgebra(P);
     is_reduced,num_ders:=IsRittReduced(f,g); //testing of the parents of f and g occurs here.
@@ -583,6 +590,7 @@ Single steps of this algorithms are given by RittDivideStep.
 The option `partial` being true, will only divide so that nth derivatives of the leader of g appear in f for n>0.
 The default of `partial` is false.
 }
+    require g ne 0: "must divide by a non-zero element";
     P:=Parent(f);
     W<D>:=WeylAlgebra(P);
     f0:=f;
@@ -590,6 +598,17 @@ The default of `partial` is false.
     quo:=W!0;
     rem0:=P!f; //the naming kinda sucks
     sep:=P!1;
+    
+    //had to add this corner case
+    //this is duplicate code from pseudodivide
+    is_unit_f:=IsUnit(f);
+    is_unit_g:=IsUnit(g);
+    
+    if is_unit_f and not is_unit_g then
+        return Parent(f)!0,Parent(f)!f,Parent(f)!1;
+    elif is_unit_g then
+        return Parent(f)!(f/g),Parent(f)!0,Parent(f)!1;
+    end if;
     
     while not IsRittReduced(f0,g : partial:=partial) do
         quo0,rem0,sep0:=RittDivideStep(f0,g);
@@ -769,7 +788,7 @@ end intrinsic;
 
 
 ////////////////////
-intrinsic RittDivide(f::RngMPolProlSeqElt,G::SeqEnum[RngMPolProlSeqElt] :partial)->SeqEnum[AlgWeylElt],RngMPolProlSeqElt,RngMPolProlSeqElt
+intrinsic RittDivide(f::RngMPolProlSeqElt,G::SeqEnum[RngMPolProlSeqElt] :partial:=false)->SeqEnum[AlgWeylElt],RngMPolProlSeqElt,RngMPolProlSeqElt
 ////////////////////
 {Reduces f with respect to an autoreduced set only to the point where you don't need to take any more derivatives of elements of G. The result will be in the smallest finite order jet ring which contains all of the elements of G.}
     require IsAutoreduced(G): "must divide by an autoreduced set";//maybe can be relaxed.
@@ -780,7 +799,6 @@ intrinsic RittDivide(f::RngMPolProlSeqElt,G::SeqEnum[RngMPolProlSeqElt] :partial
     //initialize
     Rem1:=f;
     Quo1:=[WP!0 : i in [1..n]];
-    Quo:=[WP!0 : i in [1..n]];
     Sep1:=P!1;
     
     
@@ -800,9 +818,12 @@ intrinsic RittDivide(f::RngMPolProlSeqElt,G::SeqEnum[RngMPolProlSeqElt] :partial
     else
         Quo2,Rem2,Sep2:=RittDivide(Rem1,G :partial:=partial);
         Sep:=Sep2*Sep1;
+        
+        Quo:=[WP!0 : i in [1..n]];
         for i in [1..n] do
             Quo[i]:=Sep2*Quo1[i]+Quo2[i];
         end for;
+        
         Rem:=Rem2;
     end if;
     
@@ -812,7 +833,7 @@ end intrinsic;
 
 
 ////////////////////
-intrinsic RittDivideStaged(f::RngMPolProlSeqElt,G::SeqEnum[RngMPolProlSeqElt] :partial)->SeqEnum[AlgWeylElt],RngMPolProlSeqElt,RngMPolProlSeqElt
+intrinsic RittDivideStaged(f::RngMPolProlSeqElt,G::SeqEnum[RngMPolProlSeqElt] )->SeqEnum[AlgWeylElt],RngMPolProlSeqElt,RngMPolProlSeqElt
 ////////////////////
 {Reduces f with respect to an autoreduced set only to the point where you don't need to take any more derivatives of elements of G. The result will be in the smallest finite order jet ring which contains all of the elements of G.}
     require IsAutoreduced(G): "must divide by an autoreduced set";//maybe can be relaxed.
