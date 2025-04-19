@@ -120,8 +120,15 @@ end intrinsic;
 ////////////////////
 intrinsic Specialize(f::RngMPolProlSeqElt,seq1::SeqEnum)->RngMPolProlSeqElt
 ////////////////////
-{Given a f whose coefficients admit and Evaluate function for the coefficients.}
+{Given a f whose coefficients admit an Evaluate function where seq1 is a valid input, return the differential polynomial obtained by plugging those valued into the coefficients.}
     return &+[ Parent(f)![<Evaluate(t[1],seq1),t[2]>] : t in Eltseq(f)];
+end intrinsic;
+
+////////////////////
+intrinsic Specialize(seq::SeqEnum[RngMPolProlSeqElt],seq1::SeqEnum)->SeqEnum[RngMPolProlSeqElt]
+////////////////////
+{Given a seq whose entries have coefficients which admit an Evaluate function for the coefficients, return the sequence of differential polynomial where the coefficients have been evaluated at those points.}
+    return [Specialize(f,seq1): f in seq];
 end intrinsic;
 
 /*

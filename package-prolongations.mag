@@ -621,7 +621,7 @@ Return false otherwise.
         if Parent(x) eq P then
             return true, x;
         else
-            return false;
+            return true,P![<BaseRing(P)!term[1],term[2]> : term in Eltseq(x)]; //self referential! This is dangerous. Could cause "segmentation fault". 
         end if;
     elif Type(x) eq SeqEnum then
         return true,&+[term[1]*&*[(P.t[1])^t[2]: t in term[2]] : term in x];
