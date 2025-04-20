@@ -1,3 +1,6 @@
+Z:=Integers();
+Q:=RationalField();
+
 //############################
 intrinsic OrderMatrix(U::SeqEnum[RngMPolProlSeqElt])->AlgMatElt
 //############################
@@ -41,4 +44,52 @@ intrinsic JacobiBound(U::SeqEnum[RngMPolProlSeqElt]:is_square:=false)->RngIntElt
     rows:=RowSequence(A0);
     minors:=[Matrix([rows[i] : i in rowchoice]) : rowchoice in rowchoices];
     return Max([TropicalDet(minor) : minor in minors]);
+end intrinsic;
+
+
+////////////////////
+intrinsic JetIdeal(eqns::SeqEnum[RngMPolProlSeqElt],ineqns::SeqEnum[RngMPolProlSeqElt])->RngMPol
+////////////////////
+{Given a system of equations and inequations consisting of differential polynomial elements return the ideal Sat_ineqns([eqns]) in a finite order jet space.
+}
+    r:=Order(eqns cat ineqns);
+    Jr:=Jet(Parent(eqns[2]),r);
+    return Saturate(ideal<Jr|Jet(eqns,r)>,Jet(ineqns,r));
+end intrinsic;
+
+////////////////////
+intrinsic DifferentialRing(eqns::SeqEnum[RngMPolProlSeqElt],ineqns::SeqEnum[RngMPolProlSeqElt])->RngDiff,Map
+////////////////////
+{Given a differential ideal defined by differential polynomials defining equations and inequations return the differential ring.
+It returns the differential ring, and the derivation on the jet space that lifts it.}
+/*
+Assumes that everything is over QQ.
+*/
+    pp:=JetIdeal(eqns,ineqns);
+    r:=Order(eqns cat ineqns);
+    P:=Parent(eqns[1]);
+    num_vars:=Ngens(P);
+    
+    Jr := Parent(pp.1);
+    assert Parent(pp.1) eq Jet(P,r);
+    assert IsPrime(pp); //this is not necessary
+
+    function delta_map(f)
+        return Jet(RittRemainder(Diff(P!f),eqns),r);
+    end function;
+    delta:=map<Jr->Jr|f:->delta_map(f)>;
+    
+    /*
+    We can check explicitly that I is a differential ideal with our
+    derivation.
+    This is done by checking that derivatives of the generators explicitly.
+    */
+    require &and[delta(g) in pp : g in Generators(pp)]: "The ideal is not a differential ideal"; //This could be made into its own intrinsic maybe.
+    
+    /*
+    We lift to the jet ring and come back to perform the derivation.
+    */
+    A_pp,quo_map:=Jr/pp;
+    delta_2:=map<A_pp->A_pp|f:->quo_map(delta_map(f @@ quo_map))>;
+    return DifferentialRing(A_pp,delta_2,Q),delta;
 end intrinsic;

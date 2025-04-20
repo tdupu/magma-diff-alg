@@ -88,6 +88,14 @@ intrinsic Jet(F::SeqEnum[RngMPolProlSeqElt],r::RngIntElt)->SeqEnum[RngMPolElt]
 end intrinsic;
 
 ////////////////////
+intrinsic Jet(F::SeqEnum[RngMPolProlSeqElt])->SeqEnum[RngMPolElt]
+////////////////////
+{Return the corresponding elements of the appropriate jet space.}
+    r:=Maximum([Order(f): f in F]);
+    return Jet(F,r);
+end intrinsic;
+
+////////////////////
 intrinsic Exp(seq::SeqEnum[RngMPolProlSeqElt],r0::RngIntElt)->SeqEnum[RngMPolProlSeqElt]
 ////////////////////
 {Given a sequence of prolongation sequence elements, take the derivatives of each of them up to order r0 and concatenate them into their standard sequence.}
