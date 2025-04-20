@@ -604,3 +604,71 @@ PA_quo<abar1,bbar1,tt1>:=Quot0(PA,seq);
 assert abar1*tt1^2 eq 0;
 ```
 
+#### Differential Rings of Differential Prime Ideals
+```
+R<t>:=PolynomialRing(Q,1);
+ff := map<R->R|f:->Derivative(f,t)>;
+A := DifferentialRing(R, ff, Q);
+F<t> := FieldOfFractions(A);
+P<x,y>:=PolynomialRingProlSeq(F,2: term_order:=<"dblocks",[[1,2]]>);
+```
+
+```
+f:=Diff(x,1)+Diff(y,3);
+g:=x^2+Diff(y,2)*Diff(x,1)+t;
+Cs,Is:=CharacteristicSeries([f,g]);
+sys:=Cs[1];
+eqns:=sys[1];
+ineqns:=sys[2];
+pp:=JetIdeal(eqns,ineqns);
+assert IsPrime(pp);
+assert Dimension(pp) le JacobiBound([f,g]);
+```
+The above passes and there is no interesting output. 
+
+We can compute the dimension
+```
+A:=DifferentialRing(eqns,ineqns); //Give a quotient of J2
+Dimension(pp);
+```
+```
+4 [ 2, 4, 5, 6 ]
+```
+
+
+We can compare it to the Jacobi bound of our original equations.
+
+```
+JacobiBound([f,g]);
+```
+```
+4 1
+```
+
+We can form the JetIdeal directly. 
+```
+sys:=Cs[1];
+I:=JetIdeal(sys[1],sys[2]);
+A<x0,y0,x1,y1,x2,y2>,delta:=DifferentialRing(sys[1],sys[2]);
+Diff(x1+x2^2+y2);
+```
+```
+-6*x1^10 + 28*x0*x1^9 + -44*x0^2*x1^8 + (-4*t + 12)*x1^8 + 24*x0^3*x1^7 + (8*t - 32)*x0*x1^7 + 20*x0^2*x1^6 + (4*t - 6)*x1^6 + -1*x0^4*x1^5 + -2*t*x0^2*x1^5 + 4*x0*x1^5 + -t^2*x1^5 + 2*x0^5*x1^4 + 4*t*x0^3*x1^4 + 2*t^2*x0*x1^4 + -1*x0^6*x1^3 + (-3*t + 1)*x0^4*x1^3 + (-3*t^2 + 2*t)*x0^2*x1^3 + (-t^3 + t^2)*x1^3
+```
+
+We can check explicitly that I is a differential ideal with our
+derivation.
+This is done by checking that derivatives of the generators explicitly.
+You can also see that our generators vanish. (Note that to evaluate at f directly one would need to take a derivative of x2 )
+```
+assert &and[delta(g) in I : g in Generators(I)];
+A!Jet(g,2);
+```
+```
+0
+```
+
+You can also take the field of fractions to get the residue field which is a differential field. 
+```
+kappa_pp:=FieldOfFractions(A);
+```
