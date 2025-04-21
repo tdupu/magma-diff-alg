@@ -1230,6 +1230,18 @@ intrinsic Terms(f::RngMPolProlSeqElt)->SeqEnum
 {}
     return [ Parent(f)![t] : t in Eltseq(f)];
 end intrinsic;
+
+intrinsic Coefficients(g::RngMPolProlSeqElt)->SeqEnum
+{Get the coefficients of g as elements of Jet(Parent(g),-1).}
+/*
+This function was added much later than the others.
+It uses division for example.
+There is still some imprecision about the type of Jet(P,-1) it changes from implementation to implementation.
+*/
+    P:=Parent(g);
+    coeffs:=[Terms(g)[i]/Monomials(g)[i] : i in [1..#Monomials(g)]];
+    return [Jet(P,-1)!Eltseq(c)[1][1] : c in coeffs];
+end intrinsic;
     
 intrinsic Orders(f1::RngMPolProlSeqElt)->SeqEnum
 {}
