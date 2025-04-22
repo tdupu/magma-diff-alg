@@ -159,3 +159,34 @@ where Jtilde is just lifts of representatives.
 
     return Quo,quo_map,mymap;
 end intrinsic;
+
+/*
+Q:=RationalField();
+B:=PolynomialRing(Q,2);
+I0:=ideal<B|[B.2]>;
+QB:=quo<B|I0>;
+FQB:=FieldOfFractions(QB);
+//Both of these don't run
+//QB.1 in FQB;
+//FQB!QB.1;
+*/
+
+/*
+//Magma doesn't allow you to add these
+
+intrinsic 'in'(f::RngMPolResElt,F::RngFunFrac)->BoolElt
+{}
+    return F!(f/1) in F;
+end intrinsic;
+
+intrinsic IsCoercible(F::RngFunFrac,f::RngMPolResElt)->BoolElt,.
+{}
+    return IsCoercible(F,F!(f/1));
+end intrinsic;
+*/
+
+
+/*
+UnderlyingRing(F1) eq FieldOfFractions(UnderlyingRing(A1));
+
+*/

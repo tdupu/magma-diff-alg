@@ -121,3 +121,38 @@ Assumes that everything is over QQ.
     delta_2:=map<A_pp->A_pp|f:->quo_map(delta_map(f @@ quo_map))>;
     return DifferentialRing(A_pp,delta_2,Q),delta;
 end intrinsic;
+
+intrinsic Linearize(eqns0::SeqEnum[RngMPolProlSeqElt],eqns1::SeqEnum[RngMPolProlSeqElt],ineqns1::SeqEnum[RngMPolProlSeqElt])->SeqEnum[RngMPolProlSeqElt]
+{Given an autoreduced set with specified set of inequations defining a prime differential ideal linearize the differential polynomials in eqns0 at the generic point of that prime differential ideal.}
+    sys:=[eqns1,ineqns1];
+    assert #eqns0 gt 0; //must linearize a nonzero set of eqns
+    assert IsAutoreduced(sys[1]); //must linearize at an autoreduced set
+    
+    P:=Parent(eqns0[1]);
+    r:=Order(sys[1]);
+    
+    A1,quo:=DifferentialRing(sys[1],sys[2]);
+    assert IsDomain(A1);
+    
+    F1,map1:=FieldOfFractions(A1);
+    
+    //create new differential polynomial ring over F1
+    new_names:=[ x cat "1" : x in Names(P)];
+    P1:=PolynomialRingProlSeq(F1,2: term_order:=<"dblocks",[[1,2]]>);
+    AssignNames(~P1,new_names);
+    
+    //linearize the equations
+    eqns:=Jet(eqns0);
+    rows:=Rows(JacobianMatrix(eqns));
+    
+    //make sure to divide out by the remainder to get into A1
+    rows_sp:=[
+    [map1(A1!Jet(RittRemainder(P!f,sys[1]),r)) : f in Eltseq(row)]
+    : row in rows];
+    vars:=&cat[[Diff(P1.i,j) : i in [1..Ngens(P)]] : j in [0..r]];
+    
+    //linear eqns are the dot product of the two
+    new_eqns:=[&+[row[i]*vars[i] : i in [1..#vars]] : row in rows_sp];
+    
+    return new_eqns;
+end intrinsic;
