@@ -672,3 +672,30 @@ You can also take the field of fractions to get the residue field which is a dif
 ```
 kappa_pp:=FieldOfFractions(A);
 ```
+
+#### Linearizing Differential equations
+
+Given some differential equations we can linearize them at a generic point of reduced irreducible differential algebraic variety specified by a characteristic set. (WARNING: This is currently bugged and in package-dimension.mag)
+
+```
+R<t>:=PolynomialRing(Q,1);
+der:=map<R->R|f:->R!0>;
+A:=DifferentialRing(R,der,Q);
+F<t> := FieldOfFractions(A);
+P<x,y>:=PolynomialRingProlSeq(F,2: term_order:=<"dblocks",[[1,2]]>);
+
+f:=Diff(x,1)+Diff(y,3);
+g:=x^2+Diff(y,2)*Diff(x,1)+t;
+eqns:=[f,g];
+
+Cs:=CharacteristicSeries(eqns);
+sys:=Cs[1];
+lin_eqns:=Linearize(eqns,sys[1],sys[2]);
+lin_eqns;
+```
+```
+[
+Diff(x1,1),
+Diff(x,1)*Diff(y1,2) + Diff(y,2)*Diff(x,1)*Diff(x1,1) + 2*x*x1
+]
+```
