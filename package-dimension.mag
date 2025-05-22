@@ -156,3 +156,118 @@ intrinsic Linearize(eqns0::SeqEnum[RngMPolProlSeqElt],eqns1::SeqEnum[RngMPolProl
     
     return new_eqns;
 end intrinsic;
+
+////////////////////
+intrinsic LinearDivideStep(L2::RngMPolProlSeqElt,L1::RngMPolProlSeqElt)->AlgWeylElt,RngMPolProlSeqElt
+////////////////////
+{
+For linear differential equations to reduced L2 by L1 we
+need to reduce take the LeadingMonomial of L1, then figure out the
+max derivative to which is appears.
+}
+    require Degree(L1) le 1: "L1 must be linear";
+    require Degree(L2) le 1: "L2 must be linear";
+    
+    P1:=Parent(L1);
+    WP1<D>:=WeylAlgebra(P1);
+    LM1:=LeadingMonomial(L1);
+    pair:=Support(LM1)[1];
+    pairs:=[x : x in Support(L2)| x[1] eq pair[1] and x[2] ge pair[2]];
+    if #pairs eq 0 then
+        return WP1!0,L2;
+    else
+        r:=Max([x[2] : x in pairs]);
+        order_diff:=r-pair[1];
+        v:=Diff(LM1,order_diff);
+        c2:=Coefficients(L2,v)[2];
+        c1:=Coefficients(L1,LM1)[2];
+        Quo:=(c2/c1)*D^order_diff;
+        Rem:=L2-Quo@L1;
+        return Quo,Rem;
+    end if;
+    
+end intrinsic;
+
+////////////////////
+intrinsic LinearDivide(L2::RngMPolProlSeqElt,L1::RngMPolProlSeqElt)->AlgWeylElt,RngMPolProlSeqElt
+////////////////////
+{Division algorithm for linear differential equations only}
+    Quo1,Rem1:=LinearDivideStep(L2,L1);
+    if Rem1 ne L2 then
+        Quo2,Rem2:=LinearDivide(Rem1,L1);
+        Quo:=Quo2+Quo1;
+        Rem:=Rem1;
+    else
+        Quo:=Quo1;
+        Rem:=Rem1;
+    end if;
+    assert L2 eq Quo@L1+Rem;
+    return Quo,Rem;
+end intrinsic;
+
+////////////////////
+intrinsic LinearDivide(f::RngMPolProlSeqElt,G::SeqEnum[RngMPolProlSeqElt])->SeqEnum[RngMPolProlSeqElt],RngMPolProlSeqElt
+////////////////////
+{Division algorithm by characteristic sequences for linear}
+    assert LinearAutoreduce(G) eq G;
+    Quo1,Rem1:=LinearDivide(f,G[2..#G]);
+    Quo2,Rem2:=LinearDivide(Rem1,Quo1);
+    Quo3,Rem3:=LinearDivide(Rem2,G[2..#G]);
+    if Rem3 eq Rem2 then
+        Quo:=[Quo2] cat Quo1;
+        Rem:=Rem2;
+    else
+        Quo4,Rem4:=LinearDivide(Rem2,G);
+        Quo:=[Quo4[1]+Quo2] cat [Quo4[i]+Quo1[i] : i in [2..#G]];
+        Rem:=Rem4;
+    end if;
+    
+    assert f eq &+[Quo[i]@G[i] : i in [1..#G]]+Rem;
+    
+    return Quo,Rem;
+end intrinsic;
+
+////////////////////
+intrinsic LinearAutoreduce(linears::SeqEnum[RngMPolProlSeqElt])->SeqEnum[RngMPolProlSeqElt]
+////////////////////
+{Put a system of linear equations into standard form.}
+    if #linears eq 0 then
+        return linears;
+    else
+        assert &and[Degree(f) le 1 : f in linears]; //equations must be linear
+        sorted_linears:=Sorted(linears);
+        
+        if #sorted_linears eq 1 then
+            return sorted_linears;
+            
+        elif #sorted_linears eq 2 then
+            L1:=sorted_linears[1];
+            L2:=sorted_linears[2];
+            Quo1,Rem1:=LinearDivide(L1,L2);
+            if Rem1 eq L1 then
+                Quo2,Rem2:=LinearDivide(L2,L1);
+                if Rem2 eq L2 then
+                    return sorted_linears;
+                else
+                    return LinearAutoreduce([L1,Rem2]);
+                end if;
+            else
+                return LinearAutoreduce([Rem1,L2]);
+            end if;
+            
+        else
+            n:=#sorted_linears;
+            top:=sorted_linears[2..n];
+            top_reduced1:=LinearAutoreduce(top);
+            bot:=sorted_linears[1];
+            top_reduced2:=[LinearDivide(f,bot):f in top_reduced1];
+            sorted_linears_new:=Sorted([bot] cat top_reduced2);
+            if sorted_linears eq sorted_linears_new then
+                return sorted_linears;
+            else
+                return LinearAutoreduce(sorted_linears_new);
+            end if;
+        end if;
+    end if;
+    
+end intrinsic;

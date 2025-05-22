@@ -1407,3 +1407,14 @@ intrinsic IsDivisibleBy(f::RngMPolProlSeqElt,g::RngMPolProlSeqElt)->BoolElt,RngM
     end if;
 
 end intrinsic;
+
+
+////////////////////
+intrinsic PolynomialRingProlSeq(Q::FldRat,num_vars::RngIntElt: term_order:=<"dblocks",[]>)->RngMPolProlSeq
+////////////////////
+{}
+    f := map<Q->Q|a:->Q!0>;
+    A := DifferentialRing(Q, f, Q);
+    F := FieldOfFractions(A);
+    return PolynomialRingProlSeq(F,num_vars: term_order:=term_order);
+end intrinsic;
