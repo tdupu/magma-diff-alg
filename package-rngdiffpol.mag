@@ -15,7 +15,7 @@ declare type RngDiffPol[RngDiffPolElt];
 //declare type RngDiffPolMon;
 declare type RngDiffPolMon: RngDiffPolTerm, RngDiffPolElt;
 declare type RngDiffPolTerm: RngDiffPolElt;
-
+{Help!!!!!}
 declare attributes RngDiffPol:
     base_ring,
     variable_names,
