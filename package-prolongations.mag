@@ -883,6 +883,24 @@ intrinsic '-'(x1::RngMPolProlSeqElt,x2::RngIntElt)->RngMPolProlSeqElt
 end intrinsic;
 
 ////////////////////
+intrinsic '-'(x1::RngMPolProlSeqElt,x2::FldFunRatMElt)->RngMPolProlSeqElt
+////////////////////
+{}
+    P:=Parent(x1);
+    return x1+(-P!x2);
+end intrinsic;
+
+////////////////////
+intrinsic '-'(x1::RngMPolProlSeqElt,x2::.)->RngMPolProlSeqElt
+////////////////////
+{}
+    P:=Parent(x1);
+    return x1+(-P!x2);
+end intrinsic;
+
+
+
+////////////////////
 intrinsic '^'(f1::RngMPolProlSeqElt,n::RngIntElt)->BoolElt
 ////////////////////
 {}
