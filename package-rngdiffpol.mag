@@ -194,7 +194,7 @@ intrinsic Nvars(R::RngDiffPol)->RngIntElt
 end intrinsic;
 
 intrinsic 'eq'(R1::RngDiffPol,R2::RngDiffPol) -> BoolElt
-{Tests equality between two RngDiffPol.}
+{Tests equality between two RngDiffPol, differential polynomials.}
 /*
 I didn't really think about this.
 Really we should compare all of the attributes of the two rings.
