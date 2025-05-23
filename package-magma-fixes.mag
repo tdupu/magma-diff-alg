@@ -42,6 +42,18 @@ intrinsic 'in'(x::RngMPolElt,K::FldFunRat)->BoolElt
     end if;
 end intrinsic;
 
+
+
+/*
+Q:=RationalField();
+R:=PolynomialRing(Q,1);
+F<t>:=FieldOfFractions(R);
+P<x>:=PolynomialRing(F,1);
+F!P.1 eq F.1;
+*/
+
+
+
 //####################
 //####################
 // QUOTIENTS
@@ -171,8 +183,25 @@ FQB:=FieldOfFractions(QB);
 //FQB!QB.1;
 */
 
+
+
+
 /*
-//Magma doesn't allow you to add these
+UnderlyingRing(F1) eq FieldOfFractions(UnderlyingRing(A1));
+*/
+
+
+
+
+
+//
+//#########################
+//Untouchable Bugs
+//#########################
+//
+
+
+/*
 
 intrinsic 'in'(f::RngMPolResElt,F::RngFunFrac)->BoolElt
 {}
@@ -183,10 +212,4 @@ intrinsic IsCoercible(F::RngFunFrac,f::RngMPolResElt)->BoolElt,.
 {}
     return IsCoercible(F,F!(f/1));
 end intrinsic;
-*/
-
-
-/*
-UnderlyingRing(F1) eq FieldOfFractions(UnderlyingRing(A1));
-
 */

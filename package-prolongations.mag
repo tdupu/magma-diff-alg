@@ -639,21 +639,13 @@ Return false otherwise.
         y`elt:=BaseRing(P)!x;
         y`order:=-1;
         return true,y;
-    elif IsCoercible(Jet(P,-1),x) then
-        y:=New(RngMPolProlSeqElt);
-        y`parent:=P;
-        y`elt:=Jet(P,-1)!x;
-        y`order:=-1;
-        return true, y;
     elif Type(x) eq RngMPolElt then
-        
-        r:=0;
-        
+        r:=-1;
         while r lt order(P) do
             if x in Jet(P,r) then
                 y:=New(RngMPolProlSeqElt);
                 y`parent:=P;
-                y`elt:=x;
+                y`elt:=Jet(P,r)!x;
                 y`order:=r;
                 return true,y;
             else
@@ -661,6 +653,12 @@ Return false otherwise.
             end if;
         end while;
         return false;
+    elif IsCoercible(Jet(P,-1),x) then
+        y:=New(RngMPolProlSeqElt);
+        y`parent:=P;
+        y`elt:=Jet(P,-1)!x;
+        y`order:=-1;
+        return true, y;
     elif Type(Parent(x)) eq AlgWeyl then
         WP:=Parent(x);
         eltseq:=Eltseq(x);
