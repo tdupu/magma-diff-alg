@@ -189,7 +189,7 @@ intrinsic differentialPolynomialRing(R::Rng, n::RngIntElt: term_order:=<"rank",o
 end intrinsic;
 
 intrinsic Nvars(R::RngDiffPol)->RngIntElt
-{}
+{returns the number of differential variables}
     return R`number_of_variables;
 end intrinsic;
 
