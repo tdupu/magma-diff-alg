@@ -15,7 +15,7 @@ declare type RngDiffPol[RngDiffPolElt];
 //declare type RngDiffPolMon;
 declare type RngDiffPolMon: RngDiffPolTerm, RngDiffPolElt;
 declare type RngDiffPolTerm: RngDiffPolElt;
-{Help!!!!!}
+
 declare attributes RngDiffPol:
     base_ring,
     variable_names,
@@ -176,7 +176,7 @@ end function;
 //##################################################
 
 intrinsic differentialPolynomialRing(R::Rng, n::RngIntElt: term_order:=<"rank",orderlyLexRank>) -> RngDiffPol
-{create a differential polynomial ring}
+{Help!!!}
     P:=New(RngDiffPol);
     P`number_of_variables:=n;
     P`base_ring:=R;
