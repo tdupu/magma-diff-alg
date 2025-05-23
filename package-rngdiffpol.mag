@@ -176,7 +176,7 @@ end function;
 //##################################################
 
 intrinsic differentialPolynomialRing(R::Rng, n::RngIntElt: term_order:=<"rank",orderlyLexRank>) -> RngDiffPol
-{create a differential polynomial ring}
+{create a differential polynomial ring.}
     P:=New(RngDiffPol);
     P`number_of_variables:=n;
     P`base_ring:=R;
