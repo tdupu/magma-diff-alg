@@ -51,6 +51,38 @@ f1:=x^2+Diff(y,2)*Diff(x,1)+t;
 f2:=Diff(x,1)+Diff(y,3);
 ```
 
+
+### Example: Linear Differential Equations and Weyl Algebra Element Sequences
+
+We attach and setup as normal.
+```
+AttachSpec("diffalg.spec");
+Z:=Integers();
+Q:=RationalField();
+R<t>:=PolynomialRing(Q,1);
+f := map<R->R|f:->0>;
+A<t> := DifferentialRing(R, f, Q);
+F:=FieldOfFractions(A);
+P<x,y>:=PolynomialRingProlSeq(F,2: term_order:=<"dblocks",[[1,2]]>);
+```
+
+For every linear differential equations $u \in K\lbrace x_1,\ldots,x_n\rbrace$ there exists Weyl algebra elements $L_1,\ldots,L_n$ such that $u=L_1\cdot x+1 + \cdots + L_n x_n$. There is an intrinsic which when given a linear $u$ will return the sequence $(L_1,\ldots,L_n)$. 
+The intrinsic is called `LinearOperators`.
+```
+u:=Diff(x,3)+2*Diff(y,1);
+Ls:=LinearOperators(u);
+u eq &+[Ls[i]@P.i : i in [1..Ngens(P)]];
+Ls;
+```
+```
+true
+[
+D^3,
+2*D^1
+]
+```
+
+
 ### Example: Truncating to Polynomial Rings of Finite Order
 
 All of this runs through Magma's RngMPol types so naturally there is a way to take the rth jet ring of a prolongation sequence and take the image of a differential polynomial in a polynomial ring. 
