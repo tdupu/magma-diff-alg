@@ -13,23 +13,24 @@ Also term order associated with block rankings are implemented in the prolongati
 1. [Example: Instantiating Basic Objects](example-instantiating-basic-objects)
 2. [Example: Linear Differential Equations and Weyl Algebra Element Sequences](example-linear-differential-equations-and-weyl-algebra-element-sequences)
 3. [Example: Weyl Algebras](example-weyl-algebras)
-4. [Example: Truncating to Polynomial Rings of Finite Order](example-truncating-to-polynomial-rings-of-finite-order)
-5. [Example: Leading Monomials, Leaders, Separants, Initials, TopCoeff](example-leading-monomials-leaders-separants-initials-topcoeff)
-6. [Example: Eltseq and Coercion](example-eltseq-and-coercion)
-7. [Example: Evaluation of Differential Polynomials](example-evaluation-of-differential-polynomials)
-8. [Example: Specialization of Coefficients of Differential Polynomials](example-specialization-of-coefficients-of-differential-polynomials)
-9. [Example: Polynomial Pseudodivision](example-polynomial-pseudodivision)
-10. [Example: Ritt's Division Algorithm](example-ritts-division-algorithm)
-11. [Example: Element Comparison and Sorting](example-element-comparison-and-sorting)
-12. [Example: Characteristic Sets and Pseudodivision for Polynomial Rings](example-characteristic-sets-and-pseudodivision-for-polynomial-rings)
-13. [Example: Characteristic Sets and Pseudodivision for RngMPolProlSeq](example-characteristic-sets-and-pseudodivision-for-rngmpolprolseq)
-14. [Example: The Rosenfeld-Groebner Algorithm](example-the-rosenfeld-groebner-algorithm)
-15. [Example: Ollivier's Division Algorithm](example-olliviers-division-algorithm)
-16. [Example: Evaluation of Free Algebra Elements into Weyl Algebras](example-evaluation-of-free-algebra-elements-into-weyl-algebras)
-17. [Example: LaTeX](example-latex)
-18. [Example: Differential Rings of Differential Prime Ideals](example-differential-rings-of-differential-prime-ideals)
-19. [Example: Magma Enhancement, Quotients of Quotients](example-magma-enhancement-quotients-of-quotients)
-20. [Example: Linearizing Differential equations](example-linearizing-differential-equations)
+4. [Example: Weyl Algebra Division Algorithm Over A Field](example-weil-algebra-division-algorithm-over-a-field)
+5. [Example: Truncating to Polynomial Rings of Finite Order](example-truncating-to-polynomial-rings-of-finite-order)
+6. [Example: Leading Monomials, Leaders, Separants, Initials, TopCoeff](example-leading-monomials-leaders-separants-initials-topcoeff)
+7. [Example: Eltseq and Coercion](example-eltseq-and-coercion)
+8. [Example: Evaluation of Differential Polynomials](example-evaluation-of-differential-polynomials)
+9. [Example: Specialization of Coefficients of Differential Polynomials](example-specialization-of-coefficients-of-differential-polynomials)
+10. [Example: Polynomial Pseudodivision](example-polynomial-pseudodivision)
+11. [Example: Ritt's Division Algorithm](example-ritts-division-algorithm)
+12. [Example: Element Comparison and Sorting](example-element-comparison-and-sorting)
+13. [Example: Characteristic Sets and Pseudodivision for Polynomial Rings](example-characteristic-sets-and-pseudodivision-for-polynomial-rings)
+14. [Example: Characteristic Sets and Pseudodivision for RngMPolProlSeq](example-characteristic-sets-and-pseudodivision-for-rngmpolprolseq)
+15. [Example: The Rosenfeld-Groebner Algorithm](example-the-rosenfeld-groebner-algorithm)
+16. [Example: Ollivier's Division Algorithm](example-olliviers-division-algorithm)
+17. [Example: Evaluation of Free Algebra Elements into Weyl Algebras](example-evaluation-of-free-algebra-elements-into-weyl-algebras)
+18. [Example: LaTeX](example-latex)
+19. [Example: Differential Rings of Differential Prime Ideals](example-differential-rings-of-differential-prime-ideals)
+20. [Example: Magma Enhancement, Quotients of Quotients](example-magma-enhancement-quotients-of-quotients)
+21. [Example: Linearizing Differential equations](example-linearizing-differential-equations)
 
 
 # Examples
@@ -159,6 +160,25 @@ Parent(dW) eq W;
 true
 ```
 Coercion from valid Eltseqs back into the WeylAlgElt types is supported. 
+
+### Example: Weyl Algebra Division Algorithm Over A Field
+
+Given Weyl algebra elements $A$ and $B$ in $K[\partial]$ where $K$ is a differential field we can find other Weyl algebra elements $Q$ and $R$ where the order of $R$ is less than the order of $A$ such that $B=QA+R$. This is left division of $B$ by $A$ and it proceeds in a fashion similar to the usual Euclidean algorithm.
+
+```
+WP<D>:=WeylAlgebra(P);
+B:=1+t*D^2+2*D^5;
+A:=1+t*D^3;
+quo,rem:=Divide(B,A);
+B eq quo*A+rem;
+quo;
+rem;
+```
+```
+true
+2/t*D^2
+D^0+ (t^2 - 2)/t*D^2
+```
 
 ### Example: Truncating to Polynomial Rings of Finite Order
 
