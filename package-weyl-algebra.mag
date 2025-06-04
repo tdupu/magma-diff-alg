@@ -917,3 +917,40 @@ end intrinsic;
 
 */
 
+
+/////////////////////////
+intrinsic LinearOperators(u::RngMPolProlSeqElt)->SeqEnum[WeylAlgElt]
+/////////////////////////
+{
+Given a linear differential equation, return
+elements of the Weyl algebra Q1,...,Qn such that
+Q1@x1+...+Qn@xn eq u;
+}
+    assert Degree(u) eq 1; //only defined for linear differential equations
+    P:=Parent(u);
+    WP<D>:=WeylAlgebra(BaseRing(P));
+    //WP<D>:=WeylAlgebra(P);
+    dict:=AssociativeArray();
+    ords:=Orders(u);
+    coeffs:=Coefficients(u);
+    mons:=[Support(m)[1] : m in Monomials(u)];
+    for mon in mons do
+        term:=coeffs[Index(mons,mon)]*D^mon[2];
+        if mon[1] in Keys(dict) then
+            dict[mon[1]]:=dict[mon[1]]+term;
+        else
+            dict[mon[1]]:=term;
+        end if;
+    end for;
+
+    list:=[];
+    for i in [1..Ngens(P)] do
+        if i in Keys(dict) then
+            Append(~list,dict[i]);
+        else
+            Append(~list,WP!0);
+        end if;
+    end for;
+    
+    return list;
+end intrinsic;
