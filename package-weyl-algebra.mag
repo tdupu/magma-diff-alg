@@ -846,76 +846,13 @@ intrinsic '.'(WR::AlgWeyl,n::RngIntElt)->AlgWeylElt
 end intrinsic;
 
 
-//###############################
-//      USAGE
-//###############################
-/*
-    Attach the package. Unlike "load" functions inside are only locally accessible.
-    
-        >Attach("package-weyl-algebra.mag");
-
-    Create a AlgWeyl object.
-    
-        >Q:=Rationals();
-        >P := PolynomialRing(Q);
-        >f := map<P->P | a:->5*Derivative(a)>;
-        >R := DifferentialRing(P, f,Q);
-        >W := WeylAlgebra(R);
-        
-    Create some elements to test things with.
-        >x:=P.1;
-        >x:=R!x;
-        >E1 := elt(W, x);
-        >E2 := elt(W, 20);
-        >E1+E2;
-        $.1 + 20 d^0
-        
-    Test the different ways to instantiate Weyl algebra elements and make sure they give the
-    right thing back.
-    
-        >my_array:=AssociativeArray();
-        >my_array[0]:=x;
-        >E1arr:=elt(W,my_array);
-        >E2tup := elt(W, [<20,0>]);
-        >E1tup := elt(W, [<x,0>]);
-        >dW:= elt(W,[<1,1>]);
-        >two:=elt(W,2);
-        >E2tup eq E2;
-        >E1arr eq E1;
-        >2*x*dW+0 eq 2*x*dW;
-        >0+2*dW eq 2*dW;
-        true
-        true
-        true
-        true
-        
-    Test that the operations of addition an multiplication are well-defined.
-
-        >E3 := E1 + E2;
-        >E4 := E1 * E2;
-        >E3+1;
-        $.1 + 21 d^0
-        
-    Test exponentiation and getting the derivation
-    
-        >dW:=Derivation(W);
-        >dW^2;
-        0 d^1+ 1 d^2
-        
-    There are a couple other functions that aren't show.
-    One can Eltseq() of an element.
-    
-        >Q:=Rationals();
-        >P := PolynomialRing(Q);
-        >f := map<P->P | a:->5*Derivative(a)>;
-        >R := DifferentialRing(P, f,Q);
-        >x:=P.1;
-        >W := WeylAlgebra(R);
-        >dW:=elt(W,[<x,1>]);
-        >Parent(dW) eq W;
-        true
-
-*/
+/////////////////////////
+//#######################
+/////////////////////////
+// ADDED AFTER "CORE" PART
+/////////////////////////
+//#######################
+/////////////////////////
 
 
 /////////////////////////
@@ -953,4 +890,13 @@ Q1@x1+...+Qn@xn eq u;
     end for;
     
     return list;
+end intrinsic;
+
+/////////////////////////
+intrinsic Order(L::WeylAlgElt)->RngIntElt
+/////////////////////////
+{Returns the order of an element of a Weyl algebra}
+
+    return Maximum([ tup[2]: tup in Eltseq(L)]);
+
 end intrinsic;

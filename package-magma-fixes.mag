@@ -14,7 +14,8 @@ B.1 in A;
 intrinsic 'in'(x::.,R::RngDiff)->BoolElt
 ////////////////////
 {}
-    return x in UnderlyingRing(R);
+    return IsCoercible(UnderlyingRing(R),x);
+    //return x in UnderlyingRing(R);
 end intrinsic;
 
 
