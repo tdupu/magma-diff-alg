@@ -893,7 +893,7 @@ Q1@x1+...+Qn@xn eq u;
 end intrinsic;
 
 /////////////////////////
-intrinsic Order(L::WeylAlgElt)->RngIntElt
+intrinsic Order(L::AlgWeylElt)->RngIntElt
 /////////////////////////
 {Returns the order of an element of a Weyl algebra}
 
