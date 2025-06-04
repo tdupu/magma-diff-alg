@@ -295,6 +295,14 @@ end intrinsic;
 intrinsic GetDerivationElt(W::AlgWeyl) -> AlgWeylElt
 //################################
 {For a Weyl algebra R[d] return the element d.}
+    return Derivation(W);
+end intrinsic;
+
+
+//################################
+intrinsic Derivation(W::AlgWeyl) -> AlgWeylElt
+//################################
+{For a Weyl algebra R[d] return the element d.}
     return elt(W,[<1,1>]);
 end intrinsic;
 
@@ -899,4 +907,69 @@ intrinsic Order(L::AlgWeylElt)->RngIntElt
 
     return Maximum([ tup[2]: tup in Eltseq(L)]);
 
+end intrinsic;
+
+/////////////////////////
+intrinsic Coefficients(L::AlgWeylElt)->SeqEnum
+/////////////////////////
+{Return the coefficients of a Weyl algebra element.}
+    return [tup[1] : tup in Eltseq(L)];
+end intrinsic;
+
+/////////////////////////
+intrinsic LeadingCoefficient(L::AlgWeylElt)->.
+/////////////////////////
+{Return the top coefficients of a Weyl algebra element.}
+    WP:=Parent(L);
+    require L ne WP!0: "There is no leading coefficient of the zero element";
+    coeffs:=Coefficients(L);
+    return coeffs[#coeffs];
+end intrinsic;
+
+/////////////////////////
+intrinsic DivideStep(B::AlgWeylElt,A::AlgWeylElt : side:="left")->AlgWeylElt,AlgWeylElt
+/////////////////////////
+{A single step of the division algorithm for Weyl algebras associated to differential fields.
+Returns Q,R such that B=Q*A+R with Order(A)<Order(A) if the side if left division.
+If the side option is set to "right", then it performs right division.
+The standard convention in the literature is the left division is undone by right multiplication.
+}
+    WB:=Parent(B);
+    D:=Derivation(WB);
+    assert IsCoercible(WB,A); //"A can't be put into the Weyl algebra of B";
+    delta:=Order(B)-Order(A);
+    if delta lt 0 then
+        quo:=WB!0;
+        rem:=B;
+    else
+        if side eq "left" then
+            L:=D^(delta);
+            cB:=LeadingCoefficient(B);
+            cA:=LeadingCoefficient(L*A);
+            quo:=(cB/cA)*L;
+            rem:=B-quo*A;
+        elif side eq "right" then
+            error "Not implemented";
+        else
+            error "Only valid options for side are 'left' or 'right' ";
+        end if;
+    end if;
+    return quo,rem;
+end intrinsic;
+
+/////////////////////////
+intrinsic Divide(B::AlgWeylElt,A::AlgWeylElt : side:="left")->AlgWeylElt,AlgWeylElt
+/////////////////////////
+{Returns Q,R such that B=Q*A+R with Order(A)<Order(A) if the side if left division.
+If the side option is set to "right", then it performs right division.
+The standard convention in the literature is the left division is undone by right multiplication.}
+    WB:=Parent(B);
+    rem:=B;
+    quo:=WB!0;
+    while Order(rem) ge Order(A) do
+        quo1,rem1:=DivideStep(B,A: side:=side);
+        rem:=rem1;
+        quo:=quo+quo1;
+    end while;
+    return quo,rem;
 end intrinsic;
