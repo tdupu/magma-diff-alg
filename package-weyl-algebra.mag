@@ -644,7 +644,6 @@ intrinsic '@'(L::AlgWeylElt, f::RngElt) -> RngDiffElt
     ff:=R!f;
     Ltup:=Eltseq(L);
     return R!weyl_action(Ltup,ff);
-
 end intrinsic;
 
 //############################
@@ -655,10 +654,22 @@ intrinsic '@'(L::AlgWeylElt, f::RngMPolProlSeqElt) -> RngMPolProlSeqElt
 }
     W:=L`parent;
     R:=W`rngdiff;
-    require f in R: "The element is not in the differential ring defining the Weyl algebra so the module action is not defined";
-    ff:=R!f;
-    Ltup:=Eltseq(L);
-    return R!weyl_action(Ltup,ff);
+    
+    in_R,ff:=IsCoercible(R,f);
+    if in_R then
+        ff:=R!f;
+        Ltup:=Eltseq(L);
+        return R!weyl_action(Ltup,ff);
+    else
+        P:=Parent(f);
+        WP:=WeylAlgebra(P);
+        in_WP,L_WP:=IsCoercible(WP,L);
+        if in_WP then
+            return L_WP@f;
+        else
+            error "L can't be made to act on f by coercing f into the base of L or L into the Weyl algebra of the parent of f.";
+        end if;
+    end if;
 
 end intrinsic;
 
