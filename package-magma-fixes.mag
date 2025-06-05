@@ -257,7 +257,13 @@ end intrinsic;
 
 intrinsic 'eq'(A0::ModMatRngElt0,B0::ModMatRngElt0)->ModMatRng0
 {Equality of matrices.}
-    return Eltseq(A0) eq Eltseq(B0);
+    flag1:=(Parent(A0) eq Parent(B0));
+    if flag1 then
+        P:=BaseRing(Parent(A0));
+        return [[ P!x : x in y ] : y in Eltseq(A0)] eq [[P!x : x in y] : y in Eltseq(B0)];
+    else
+        return false;
+    end if;
 end intrinsic;
 
 intrinsic Parent(A0::ModMatRngElt0)->ModMatRng0
@@ -284,7 +290,8 @@ end intrinsic;
 
 intrinsic Eltseq(A::ModMatRngElt0)->SeqEnum
 {Return the sequence of the underlying matrix}
-    return A`seq;
+    P:=BaseRing(Parent(A));
+    return [[ P!x : x in y ] : y in A`seq];
 end intrinsic;
 
 intrinsic '*'(A0::ModMatRngElt0,B0::ModMatRngElt0)->ModMatRngElt0

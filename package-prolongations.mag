@@ -1069,6 +1069,13 @@ intrinsic 'eq'(f1::RngMPolProlSeqElt,x::.)->BoolElt
 end intrinsic;
 
 ////////////////////
+intrinsic 'eq'(x::.,f1::RngMPolProlSeqElt)->BoolElt
+////////////////////
+{}
+    return f1 eq x; //punt
+end intrinsic;
+
+////////////////////
 intrinsic 'ne'(f1::RngMPolProlSeqElt,f2::RngMPolProlSeqElt)->BoolElt
 ////////////////////
 {}

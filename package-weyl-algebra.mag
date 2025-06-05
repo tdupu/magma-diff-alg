@@ -408,7 +408,6 @@ intrinsic 'eq'(x::AlgWeylElt, y::AlgWeylElt) -> BoolElt
 {
 Checks if two AlgWeylElt objects are equal.
 It does so by checking if the parent object are equal and the associated arrays are equal.
-
 }
     return x`parent eq y`parent and DictEq(x`array,y`array);
 end intrinsic;
