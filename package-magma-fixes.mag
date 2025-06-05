@@ -206,9 +206,9 @@ intrinsic Hash(M::ModMatRngElt0)->RngIntElt
     return Hash(Eltseq(M));
 end intrinsic;
 
-intrinsic Print(M::ModMatRng0)
+intrinsic Print(Mats::ModMatRng0)
 {The print statement for ModMatRng}
-    printf "My matrices over basering";
+    printf "(user defined) Matrices over %o", BaseRing(Mats);
 end intrinsic;
 
 intrinsic Print(M::ModMatRngElt0)
@@ -218,25 +218,53 @@ intrinsic Print(M::ModMatRngElt0)
     end for;
 end intrinsic;
 
-intrinsic Matrix0(seq::SeqEnum)->ModMatRngElt0
+intrinsic Matrix0(R::.,seq::SeqEnum)->ModMatRngElt0
 {Create a matrix from a sequence}
     nrows:=#seq;
     ncols:=#seq[1];
     require &and[ncols eq #seq[j] : j in [1..nrows]]: "all rows need to have the same length.";
     
-    elt:=seq[1][1];
-    P:=Parent(elt);
+    flag:=IsCoercible(R,seq[1][1]);
+    require flag: "Sequence is not coercible into the base ring.";
     Mats:=New(ModMatRng0);
-    Mats`basering:=P;
+    Mats`basering:=R;
     
     A:=New(ModMatRngElt0);
     A`parent:=Mats;
     A`nrows:=nrows;
     A`ncols:=ncols;
-    A`seq:=seq;
+    A`seq:=[[R!seq[i,j] : j in [1..ncols]]: i in [1..nrows]];
     
     return A;
 end intrinsic;
+
+intrinsic Matrix0(seq::SeqEnum)->ModMatRngElt0
+{Create a matrix from a sequence}
+    elt:=seq[1][1];
+    P:=Parent(elt);
+    return Matrix0(P,seq);
+end intrinsic;
+
+intrinsic 'eq'(Mats1::ModMatRng0,Mats2::ModMatRng0)->ModMatRng0
+{Equality of matrix spaces.}
+    return Mats1`basering eq Mats2`basering;
+end intrinsic;
+
+intrinsic BaseRing(Mats1::ModMatRng0)->.
+{Return the base ring.}
+    return Mats1`basering;
+end intrinsic;
+
+intrinsic 'eq'(A0::ModMatRngElt0,B0::ModMatRngElt0)->ModMatRng0
+{Equality of matrices.}
+    return Eltseq(A0) eq Eltseq(B0);
+end intrinsic;
+
+intrinsic Parent(A0::ModMatRngElt0)->ModMatRng0
+{return the parent of A0}
+    return A0`parent;
+end intrinsic;
+
 
 //intrinsic '[]'(A::ModMatRngElt0,i::RngIntElt,j::RngIntElt)->.
 intrinsic Elt(A::ModMatRngElt0,i::RngIntElt,j::RngIntElt)->.
@@ -263,6 +291,28 @@ intrinsic '*'(A0::ModMatRngElt0,B0::ModMatRngElt0)->ModMatRngElt0
 {Multiply two matrices}
     require Ncols(A0) eq Nrows(B0): "The row length of A must be the column length of B.";
     return Matrix0([[&+[ Elt(A0,i,j)*Elt(B0,j,k) : j in [1..Ncols(A0)]] : k in [1..Ncols(B0)]] : i in [1..Nrows(A0)]]);
+end intrinsic;
+
+intrinsic '*'(c::.,B0::ModMatRngElt0)->ModMatRngElt0
+{Scalar multiplication of matrices}
+    flag,c_P:=IsCoercible(BaseRing(Parent(B0)),c);
+    if flag then
+        return Matrix0([[ c_P*Elt(B0,i,j) : j in [1..Nrows(B0)]] : i in [1..Ncols(B0)]]);
+    else
+        P:=Parent(c);
+        flag:=IsCoercible(P,Elt(B0,1,1));
+        if flag then
+            return Matrix0([[ c*P!Elt(B0,i,j) : j in [1..Nrows(B0)]] : i in [1..Ncols(B0)]]);
+        else
+            error "couldn't find a way to multiply c as a scalar for this matrix";
+        end if;
+    end if;
+end intrinsic;
+
+intrinsic '+'(A0::ModMatRngElt0,B0::ModMatRngElt0)->ModMatRngElt0
+{Add two matrices}
+    require Ncols(A0) eq Ncols(B0) and Nrows(A0) eq Nrows(B0): "The two matrices must be of the same size";
+    return Matrix0([[ Elt(A0,i,j)+Elt(B0,i,j) : j in [1..Nrows(A0)]] : i in [1..Ncols(A0)]]);
 end intrinsic;
 
 intrinsic Row(C0::ModMatRngElt0,i::RngIntElt)->ModMatRngElt0
@@ -360,6 +410,72 @@ end intrinsic;
 intrinsic SwapCols(A0::ModMatRngElt0,a::RngIntElt,b::RngIntElt)->ModMatRngElt0
 {Swap the column in position a with the column in position b}
     return Transpose(SwapRows(Transpose(A0),a,b));
+end intrinsic;
+
+
+//
+//#########################
+//For Row Operations
+//#########################
+//
+
+function StandardSequence(i0,n)
+    if i0 eq n then
+        return [0 : i in [1..n-1]] cat [1];
+    elif i0 eq 1 then
+        return [1] cat [0 : i in [1..n-1]];
+    else
+        return [0 : j in [1..i0-1]] cat [1] cat [0 : j in [i0+1..n]];
+    end if;
+end function;
+
+function IdentitySequence(n)
+    return [StandardSequence(i,n) : i in [1..n]];
+end function;
+
+function KroneckerSequence(m,n,i0,j0)
+    function kronecker_delta(i,j)
+        if i eq i0 and j eq j0 then
+            return 1;
+        else
+            return 0;
+        end if;
+    end function;
+    
+    return [[kronecker_delta(i,j) : i in [1..n]]: j in [1..m]];
+end function;
+
+////////////////////
+intrinsic IsCoercible(Mats::ModMatRngElt0,seq::SeqEnum[SeqEnum])->BoolElt,.
+////////////////////
+{}
+    B:=BaseRing(Mats);
+    flag:=IsCoercible(B,seq[1][1]);
+    if flag then
+        return true, Matrix0(B,seq);
+    else
+        return false;
+    end if;
+end intrinsic;
+
+////////////////////
+intrinsic IdentityMatrix0(R::.,n::RngIntElt)->ModMatRngElt0
+////////////////////
+{Returns and n by n identity matrix.}
+    return Matrix0(R,IdentitySequence(n));
+end intrinsic;
+
+
+////////////////////
+intrinsic ElementaryMatrix0(R::.,n::RngIntElt,i::RngIntElt,j::RngIntElt : multiple:=1)->ModMatRngElt0
+////////////////////
+{
+Adds a row j multiplied by m to row i.
+A way to remember the formula is by applying it to the identity matrix.
+}
+    K:=Matrix0(R,KroneckerSequence(n,n,i,j));
+    I:=Matrix0(R,IdentitySequence(n));
+    return multiple*K+I;
 end intrinsic;
 
 

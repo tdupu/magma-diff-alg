@@ -453,10 +453,14 @@ Prints a AlgWeylElt object.
 
     pieces:=[];
     for pair in myseq do
-        if pair[1] ne 1 then
+        if pair[1] ne 1 and pair[2] ne 0 then
             piece:=Sprintf( "%o*%o^%o", pair[1],Parent(E)`der_name,pair[2]);
-        else
+        elif pair[1] ne 1 and pair[2] eq 0 then
+            piece:=Sprintf( "%o", pair[1]);
+        elif pair[1] eq 1 and pair[2] ne 0 then
             piece:=Sprintf( "%o^%o", Parent(E)`der_name,pair[2]);
+        elif pair[1] eq 1 and pair[2] eq 0 then
+            piece:="1";
         end if;
             Append(~pieces,piece);
     end for;
@@ -465,6 +469,7 @@ Prints a AlgWeylElt object.
     for i in [2..#pieces] do
         mystring:=mystring cat "+ " cat pieces[i];
     end for;
+    
     printf mystring;
 end intrinsic;
 
@@ -636,6 +641,18 @@ intrinsic '*'(x::., y::AlgWeylElt) -> AlgWeylElt
     Ex:=elt(W,R!x);
     return Ex*y;
 
+end intrinsic;
+
+//############################
+intrinsic '*'(x::AlgWeylElt, y::.) -> AlgWeylElt
+//############################
+{
+    Given R[d] and x in R and y something define x*y.
+    The speed can be improved by bypassing the multiplication algorithm.
+}
+    W:=Parent(x);
+    y_W:=W!y;
+    return x*y;
 end intrinsic;
 
 
@@ -864,7 +881,7 @@ end intrinsic;
 
 
 /////////////////////////
-intrinsic LinearOperators(u::RngMPolProlSeqElt)->SeqEnum[WeylAlgElt]
+intrinsic LinearOperators(u::RngMPolProlSeqElt)->SeqEnum
 /////////////////////////
 {
 Given a linear differential equation, return
@@ -888,7 +905,7 @@ Q1@x1+...+Qn@xn eq u;
         end if;
     end for;
 
-    list:=[];
+    list:=[WP|];
     for i in [1..Ngens(P)] do
         if i in Keys(dict) then
             Append(~list,dict[i]);
@@ -966,10 +983,22 @@ The standard convention in the literature is the left division is undone by righ
     WB:=Parent(B);
     rem:=B;
     quo:=WB!0;
-    while Order(rem) ge Order(A) do
+    while (Order(rem) ge Order(A)) and (rem ne 0) do
         quo1,rem1:=DivideStep(B,A: side:=side);
         rem:=rem1;
         quo:=quo+quo1;
     end while;
     return quo,rem;
+end intrinsic;
+
+/////////////////////////
+intrinsic LinearOperators(eqns::SeqEnum[RngMPolProlSeqElt])->ModMatRngElt0
+/////////////////////////
+{Given a system of linear differential equations U, return the matrix of Weyl algebra A such that A*x=U}
+/*
+Taylor: In a future update we should make this spit out something over the base field of the ring of differential polynomails;
+*/
+    P:=Parent(eqns[1]);
+    WP:=WeylAlgebra(P);
+    return Matrix0([[WP! x: x in LinearOperators(f)] : f in eqns]);
 end intrinsic;

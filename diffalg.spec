@@ -1,9 +1,9 @@
+package-magma-fixes.mag
 package-rngdiffpol.mag
 package-prolongations.mag
 package-weyl-algebra.mag
 package-homog.mag
 package-reduction.mag
 package-noncommutative.mag
-package-magma-fixes.mag
 package-dimension.mag
 package-latex.mag
