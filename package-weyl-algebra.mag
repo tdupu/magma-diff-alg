@@ -984,7 +984,7 @@ The standard convention in the literature is the left division is undone by righ
     rem:=B;
     quo:=WB!0;
     while (Order(rem) ge Order(A)) and (rem ne 0) do
-        quo1,rem1:=DivideStep(B,A: side:=side);
+        quo1,rem1:=DivideStep(rem,A: side:=side);
         rem:=rem1;
         quo:=quo+quo1;
     end while;
