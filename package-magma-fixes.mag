@@ -191,8 +191,176 @@ FQB:=FieldOfFractions(QB);
 UnderlyingRing(F1) eq FieldOfFractions(UnderlyingRing(A1));
 */
 
+//
+//#########################
+//ModMatRng
+//#########################
+//
 
+declare type ModMatRng0[ModMatRngElt0];
+declare attributes ModMatRng0: basering;
+declare attributes ModMatRngElt0: parent,seq,nrows,ncols;
 
+intrinsic Hash(M::ModMatRngElt0)->RngIntElt
+{The hash for a matrix}
+    return Hash(Eltseq(M));
+end intrinsic;
+
+intrinsic Print(M::ModMatRng0)
+{The print statement for ModMatRng}
+    printf "My matrices over basering";
+end intrinsic;
+
+intrinsic Print(M::ModMatRngElt0)
+{The print statement for ModMatRngElt}
+    for i in [1..Nrows(M)] do
+        printf "%o\n", M`seq[i];
+    end for;
+end intrinsic;
+
+intrinsic Matrix0(seq::SeqEnum)->ModMatRngElt0
+{Create a matrix from a sequence}
+    nrows:=#seq;
+    ncols:=#seq[1];
+    require &and[ncols eq #seq[j] : j in [1..nrows]]: "all rows need to have the same length.";
+    
+    elt:=seq[1][1];
+    P:=Parent(elt);
+    Mats:=New(ModMatRng0);
+    Mats`basering:=P;
+    
+    A:=New(ModMatRngElt0);
+    A`parent:=Mats;
+    A`nrows:=nrows;
+    A`ncols:=ncols;
+    A`seq:=seq;
+    
+    return A;
+end intrinsic;
+
+//intrinsic '[]'(A::ModMatRngElt0,i::RngIntElt,j::RngIntElt)->.
+intrinsic Elt(A::ModMatRngElt0,i::RngIntElt,j::RngIntElt)->.
+{For returning entries of a matrix}
+    return A`seq[i,j];
+end intrinsic;
+
+intrinsic Ncols(A::ModMatRngElt0)->RngIntElt
+{Return the number of columns}
+    return A`ncols;
+end intrinsic;
+
+intrinsic Nrows(A::ModMatRngElt0)->RngIntElt
+{Return the number of rows}
+    return A`nrows;
+end intrinsic;
+
+intrinsic Eltseq(A::ModMatRngElt0)->SeqEnum
+{Return the sequence of the underlying matrix}
+    return A`seq;
+end intrinsic;
+
+intrinsic '*'(A0::ModMatRngElt0,B0::ModMatRngElt0)->ModMatRngElt0
+{Multiply two matrices}
+    require Ncols(A0) eq Nrows(B0): "The row length of A must be the column length of B.";
+    return Matrix0([[&+[ Elt(A0,i,j)*Elt(B0,j,k) : j in [1..Ncols(A0)]] : k in [1..Ncols(B0)]] : i in [1..Nrows(A0)]]);
+end intrinsic;
+
+intrinsic Row(C0::ModMatRngElt0,i::RngIntElt)->ModMatRngElt0
+{Return the ith row of C0}
+    return Matrix0([Eltseq(C0)[i]]);
+end intrinsic;
+
+intrinsic Col(C0::ModMatRngElt0,j::RngIntElt)->ModMatRngElt0
+{Return the jth col of C0}
+    return Matrix0([[Eltseq(C0)[i][j]]: i in [1..Nrows(C0)]]);
+end intrinsic;
+
+intrinsic Transpose(C0::ModMatRngElt0)->ModMatRngElt0
+{Take the transpose of a matrix}
+    return Matrix0([[Elt(C0,i,j) : i in [1..Nrows(C0)]] : j in [1..Ncols(C0)]]);
+end intrinsic;
+
+intrinsic RemoveRow(C0::ModMatRngElt0,i0::RngIntElt)->ModMatRngElt0
+{Remove the row i0 from the matrix}
+    seq:=Eltseq(C0);
+    return Matrix0([ seq[i] : i in [1..Nrows(C0)] | i ne i0]);
+end intrinsic;
+
+intrinsic RemoveCol(C0::ModMatRngElt0,j0::RngIntElt)->ModMatRngElt0
+{Remove the column j0 from the matrix}
+    return Transpose(RemoveRow(Transpose(C0),j0));
+end intrinsic;
+
+intrinsic Cofactor(C0::ModMatRngElt0,i0::RngIntElt,j0::RngIntElt)->ModMatRngElt0
+{Remove the column and entry corresponding to (i0,j0)}
+    return RemoveCol(RemoveRow(C0,i0),j0);
+end intrinsic;
+
+intrinsic Determinant(C0::ModMatRngElt0)->.
+{Take the determinant of a square matrix via cofactor expansion.}
+    ncols:=Ncols(C0);
+    nrows:=Nrows(C0);
+    require ncols eq nrows: "The matrix must be square in order to take a determinant.";
+    
+    if ncols eq 1 then
+        return Elt(C0,1,1);
+    else
+        return &+[((-1)^(j+1))*Elt(C0,1,j)*Determinant(Cofactor(C0,1,j)) : j in [1..ncols]];
+    end if;
+    
+end intrinsic;
+
+intrinsic InsertRow(A0::ModMatRngElt0,i0::RngIntElt,row::SeqEnum)->ModMatRngElt0
+{insert a row into the i0th position}
+    require i0 gt 0 and i0 le Nrows(A0)+1: "Position must be between 1 and Nrows(A0)+1";
+    
+    if i0 eq Nrows(A0)+1 then
+        return Matrix0(Eltseq(A0) cat [row]);
+    elif i0 eq 1 then
+        return Matrix0( [row] cat Eltseq(A0));
+    else
+        new_seq:=Eltseq(A0)[1..i0-1] cat [ row ] cat Eltseq(A0)[i0..Nrows(A0)];
+        return Matrix0(new_seq);
+    end if;
+end intrinsic;
+
+intrinsic InsertRow(A0::ModMatRngElt0,i0::RngIntElt,row0::ModMatRngElt0)->ModMatRngElt0
+{insert a row into the i0th position}
+    row:=Eltseq(row0)[1];
+    return InsertRow(A0,i0,row);
+end intrinsic;
+
+intrinsic InsertCol(A0::ModMatRngElt0,j0::RngIntElt,col::SeqEnum)->ModMatRngElt0
+{insert a column into the j0th position}
+    return Transpose(InsertRow(Transpose(A0),j0,col));
+end intrinsic;
+
+intrinsic InsertCol(A0::ModMatRngElt0,j0::RngIntElt,col0::ModMatRngElt0)->ModMatRngElt0
+{insert a column into the j0th position}
+    col:=Eltseq(Transpose(col0));
+    return InsertCol(A0,j0,col);
+end intrinsic;
+
+intrinsic ReplaceRow(A0::ModMatRngElt0,i0::RngIntElt,row0::ModMatRngElt0)->ModMatRngElt0
+{replace a row at i0 with row0}
+    require Ncols(A0) eq Ncols(row0): "must replace a row with a new row of the same length";
+    return InsertRow(RemoveRow(A0,i0),i0,row0);
+end intrinsic;
+
+intrinsic SwapRows(A0::ModMatRngElt0,a::RngIntElt,b::RngIntElt)->ModMatRngElt0
+{Swap the ath row and the bth row in a matrix A0.}
+    i0,i1:=Explode(Sort([a,b]));
+    r0:=Row(A0,i0);
+    r1:=Row(A0,i1);
+    A1:=ReplaceRow(A0,i0,r1);
+    A2:=ReplaceRow(A1,i1,r0);
+    return A2;
+end intrinsic;
+
+intrinsic SwapCols(A0::ModMatRngElt0,a::RngIntElt,b::RngIntElt)->ModMatRngElt0
+{Swap the column in position a with the column in position b}
+    return Transpose(SwapRows(Transpose(A0),a,b));
+end intrinsic;
 
 
 //
