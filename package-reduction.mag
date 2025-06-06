@@ -1254,3 +1254,41 @@ A shorthand for CharacteristicSeries(F0::SeqEnum[RngMPolProlSeqElt],H0::SeqEnum[
 }
     return CharacteristicSeries(F0,[]);
 end intrinsic;
+
+
+/*
+#########################
+#########################
+Shit Algorithms
+#########################
+#########################
+*/
+
+intrinsic TraceIdeal(eqns::SeqEnum[RngMPolProlSeqElt],ord::RngIntElt:tolerance:=5)->RngMPol
+{Given a sequence of differential polynomials and an integer, attempt to return the trace ideal in that order.
+The method just computes derivatives of the defining equations above the tolerance.
+}
+    assert #eqns gt 0;
+    P:=Parent(eqns[1]);
+    J_low:=Jet(P,ord);
+    
+    diff_eqns:=[];
+    
+    for f in eqns do
+        r0:=Order(f);
+        num_ders:=Maximum([ord+tolerance-r0,0]);
+        diff_eqns:=diff_eqns cat [Diff(f,j) : j in [0..num_ders]];
+    end for;
+    
+    r0:=Order(diff_eqns);
+    
+    Ir0:=ideal<Jet(P,r0)|Jet(diff_eqns)>;
+    lower_derivatives:=[Diff(P.i,j) : j in [0..ord], i in [1..Ngens(P)]];
+    lower_derivatives_r0:=Jet(lower_derivatives,r0);
+    
+    EI0:=EliminationIdeal(Ir0,{v: v in lower_derivatives_r0});
+    lower_derivatives:=Jet(lower_derivatives,ord);
+    zeros:=[J_low!0 : j in [ord+1..r0], i in [1..Ngens(P)]];
+    I_low:=ideal<J_low|[Evaluate(g,lower_derivatives cat zeros) : g in Generators(EI0)]>;
+    return I_low;
+end intrinsic;
