@@ -62,8 +62,9 @@ Huburt, Factorization-free Decomposition Algorithms in Differential Algebra, J. 
     require #eqns gt 0: "Must have a non-empty set of equations.";
    
     r:=Order(eqns cat ineqns);
-    Jr:=Jet(Parent(eqns[2]),r);
     P:=Parent(eqns[1]);
+    Jr:=Jet(P,r);
+    
     
     new_rels:=[];
     if IsAutoreduced(eqns) then

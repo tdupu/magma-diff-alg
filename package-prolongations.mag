@@ -206,7 +206,7 @@ intrinsic Diff(f::RngDiffElt,n::RngIntElt)->RngDiffElt
         return f;
     elif n eq 1 then
         return Diff(f);
-    elif n gt 2 then
+    elif n ge 2 then
         return Diff(Diff(f),n-1);
     end if;
 end intrinsic;
