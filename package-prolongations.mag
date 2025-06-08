@@ -640,7 +640,7 @@ Return false otherwise.
         y`order:=-1;
         return true,y;
     elif Type(x) eq RngMPolElt then
-        r:=0;
+        r:=0; //don't you dare set this to r=-1. See issue #11.
         while r lt order(P) do
             if x in Jet(P,r) then
                 y:=New(RngMPolProlSeqElt);
