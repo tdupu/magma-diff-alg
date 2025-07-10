@@ -31,6 +31,7 @@ Also term order associated with block rankings are implemented in the prolongati
 19. [Example: Differential Rings of Differential Prime Ideals](example-differential-rings-of-differential-prime-ideals)
 20. [Example: Magma Enhancement, Quotients of Quotients](example-magma-enhancement-quotients-of-quotients)
 21. [Example: Linearizing Differential equations](example-linearizing-differential-equations)
+22. [Example: Strictly and Weakly Increasing Sequences](example-strictly-and-weakly-increasing-sequences)
 
 
 # Examples
