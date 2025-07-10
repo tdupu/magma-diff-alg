@@ -855,3 +855,52 @@ Diff(x1,1),
 Diff(x,1)*Diff(y1,2) + Diff(y,2)*Diff(x,1)*Diff(x1,1) + 2*x*x1
 ]
 ```
+
+### Example: Differentially Homogeneous Polynomials
+
+A differential polynomial $f(x_1,\ldots,x_n) \in K\lbrace x_1,\ldots,x_n\rbrace$ is called differentially homogeneous if and only if there exists some integer $d$ such that $f(\lambda x_1,\ldots,\lambda x_n) = \lambda^d f(x_1,\ldots,x_n)$.
+This package has some support for differentially homogeneous polynomials. 
+
+First, Sit-Reinhart, Etesse, and Merker-Chen have use bijections between strictly increasing and weakly increasing sequences of integers and differentially homogeneous polynomials. Consider a sequence of integers $a_1,\ldots,a_s$. We say a sequence is strictly increasin if $a_1<a_2<\ldots<a_s$ and it is weakly increasing or non-decreasing if $a_1 \leq a_1 \leq \ldots \leq a_s$. 
+We have some functionality for testing sequences and producing sequences. 
+```
+seqs:=StrictSeqs(3,5);
+myseq:=seqs[5];
+myseq;
+IsStrictSeq(myseq);
+IsWeakSeq(myseq);
+```
+```
+true
+true
+```
+
+There is a bijection between strictly and weakly increasing sequences and `StrictToWeak` and `WeakToStrict` instantiate that bijection.
+We also have the ability to take a week sequence and then exponentiate a differential polynomial with respect to the weak sequence.
+If $a_1,\ldots,a_s$ is a non-decreasing sequence then $x^{(a_1,\ldots,a_n)}$ is defined to be $x^{(a_1)}x^{(a_2)}\cdots x^{(a_s)}$. 
+For each monomial, we can associate a weight to it. The weight of a monomial, the weight of a strictly increasing sequence, and the weight of a weakly increasing sequence are all defined to be the same thing which is the sum of the entries of the weakly increasing sequence.
+```
+weak_seq:=StrictToWeak(myseq);
+mon:=x^weak_seq;
+Weight(mon) eq WeightWeak(weak_seq);
+WeightStrict(myseq) eq WeightWeak(weak_seq);
+```
+```
+true
+true
+```
+There is support fo the empty sequence. This was causing some bugs in an early version of this so its important that this case works.
+```
+x^[] eq 1;
+```
+```
+true
+```
+We can extract the weak sequence from a given monomial using the command `WeakSeqs`. 
+```
+mon:=(x^weak_seq)*y;
+mon eq &*[P.i^WeakSeqs(mon)[i] : i in [1..Ngens(P)]];
+```
+```
+true 
+```
