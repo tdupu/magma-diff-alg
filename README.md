@@ -909,4 +909,9 @@ true
 Note that because of the bijection between monomials and weakly increasing sequences there is a bijection between monomial orderings and orderings on weakly increasing sequences. It is convenient to make an inductive definition for weakly increasing sequences. If $(a_1,\ldots,a_n)$ and $(b_1,\ldots,b_m)$ are weakly increasing sequences then we say that $(a_1,\ldots,a_n)<(b_1,\ldots,b_m)$ where provided that 1) $a_n<b_m$ or 2) $a_n=b_m$ and $(a_1,\ldots,a_{n-1})<(b_1,\ldots,b_{m-1})$. In this setup we use the convention that the empty sequence is less than everything. This gives a good inductive algorithm for checking this particular term order. See Chen-Merker Theorem 3.4.
 
 
+### Example: Rienhart-Wronskians
+
+Given a 
+
+
 
