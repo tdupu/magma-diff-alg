@@ -857,7 +857,7 @@ Diff(x,1)*Diff(y1,2) + Diff(y,2)*Diff(x,1)*Diff(x1,1) + 2*x*x1
 ]
 ```
 
-### Example: Differentially Homogeneous Polynomials
+### Example: Strictly and Weakly Increasing Sequences
 
 A differential polynomial $f(x_1,\ldots,x_n) \in K\lbrace x_1,\ldots,x_n\rbrace$ is called differentially homogeneous if and only if there exists some integer $d$ such that $f(\lambda x_1,\ldots,\lambda x_n) = \lambda^d f(x_1,\ldots,x_n)$.
 This package has some support for differentially homogeneous polynomials. 
