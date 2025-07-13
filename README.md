@@ -31,6 +31,7 @@ Also term order associated with block rankings are implemented in the prolongati
 19. [Example: Differential Rings of Differential Prime Ideals](example-differential-rings-of-differential-prime-ideals)
 20. [Example: Magma Enhancement, Quotients of Quotients](example-magma-enhancement-quotients-of-quotients)
 21. [Example: Linearizing Differential equations](example-linearizing-differential-equations)
+22. [Example: Strictly and Weakly Increasing Sequences](example-strictly-and-weakly-increasing-sequences)
 
 
 # Examples
@@ -855,3 +856,74 @@ Diff(x1,1),
 Diff(x,1)*Diff(y1,2) + Diff(y,2)*Diff(x,1)*Diff(x1,1) + 2*x*x1
 ]
 ```
+
+### Example: Strictly and Weakly Increasing Sequences
+
+First, Sit-Reinhart, Etesse, and Merker-Chen have use bijections between strictly increasing and weakly increasing sequences of integers and differentially homogeneous polynomials. Consider a sequence of integers $a_1,\ldots,a_s$. We say a sequence is strictly increasin if $a_1<a_2<\ldots<a_s$ and it is weakly increasing or non-decreasing if $a_1 \leq a_1 \leq \ldots \leq a_s$. 
+We have some functionality for testing sequences and producing sequences. 
+```
+seqs:=StrictSeqs(3,5);
+myseq:=seqs[5];
+myseq;
+IsStrictSeq(myseq);
+IsWeakSeq(myseq);
+```
+```
+true
+true
+```
+
+There is a bijection between strictly and weakly increasing sequences and `StrictToWeak` and `WeakToStrict` instantiate that bijection.
+We also have the ability to take a week sequence and then exponentiate a differential polynomial with respect to the weak sequence.
+If $a_1,\ldots,a_s$ is a non-decreasing sequence then $x^{(a_1,\ldots,a_n)}$ is defined to be $x^{(a_1)}x^{(a_2)}\cdots x^{(a_s)}$. 
+For each monomial, we can associate a weight to it. The weight of a monomial, the weight of a strictly increasing sequence, and the weight of a weakly increasing sequence are all defined to be the same thing which is the sum of the entries of the weakly increasing sequence.
+```
+weak_seq:=StrictToWeak(myseq);
+mon:=x^weak_seq;
+Weight(mon) eq WeightWeak(weak_seq);
+WeightStrict(myseq) eq WeightWeak(weak_seq);
+```
+```
+true
+true
+```
+There is support fo the empty sequence. This was causing some bugs in an early version of this so its important that this case works.
+```
+x^[] eq 1;
+```
+```
+true
+```
+We can extract the weak sequence from a given monomial using the command `WeakSeqs`. 
+```
+mon:=(x^weak_seq)*y;
+mon eq &*[P.i^WeakSeqs(mon)[i] : i in [1..Ngens(P)]];
+```
+```
+true 
+```
+
+Note that because of the bijection between monomials and weakly increasing sequences there is a bijection between monomial orderings and orderings on weakly increasing sequences. It is convenient to make an inductive definition for weakly increasing sequences. If $(a_1,\ldots,a_n)$ and $(b_1,\ldots,b_m)$ are weakly increasing sequences then we say that $(a_1,\ldots,a_n)<(b_1,\ldots,b_m)$ where provided that 1) $a_n<b_m$ or 2) $a_n=b_m$ and $(a_1,\ldots,a_{n-1})<(b_1,\ldots,b_{m-1})$. In this setup we use the convention that the empty sequence is less than everything. This gives a good inductive algorithm for checking this particular term order. See Chen-Merker Theorem 3.4.
+
+
+### Example: Differentially Homogeneous Polynomials and Reinhart-Wronskians
+
+A differential polynomial $f(x_1,\ldots,x_n) \in K\lbrace x_1,\ldots,x_n\rbrace$ is called differentially homogeneous if and only if there exists some integer $d$ such that $f(\lambda x_1,\ldots,\lambda x_n) = \lambda^d f(x_1,\ldots,x_n)$.
+This package has some support for differentially homogeneous polynomials. 
+
+There is a subring $V \subset K\lbrace x_0,\ldots,x_n\rbrace$ of differential homogeneous polynomials which is graded by degree. 
+The Kolchin-Schmitt conjecture (now a Theorem of Etesse) says that $V_d$ has dimension $(n+1)^d$ as a $K$-vector space. 
+The basis for these differentially homogeneous polynomials are the Rienhart-Wronskians which are generalizations of Wronskians. 
+
+Given a sequence of strictly increasing sequences $\alpha = (\alpha_1,\ldots,\alpha_s)$ and a sequence of differentially homogeneous polynmomials $f=(f_1,\ldots,f_s)$ we are going to make a Reinhart-Wronskian $W(\alpha,f)$ which is going to be a determinant of a certain $L\times L$ matrix.
+If $l=(l_1,\ldots,l_s)$ are the length sequences of the $(\alpha_1,\ldots,\alpha_s)$ we have $L = \sum_{i=1}^s l_i$. 
+We are going to get a matrix which is $L\times L$. 
+
+The matrix for the Reinhard-Wronskian is made up of $s+1$ blocks. 
+We need to make blocks `WronskPiece(alphas[i],variables[i])` where `variable[i] = xi`.
+
+In Chen-Merker they start at $N$ and then work down $N$,$N-1$,$N-2$,...,$1$, then get to the special one.
+To talk about the special block I need to tell you what $s_1$ is and what $M$ is. 
+The variable $M$ is the maximum order that appears in any of the previous blocks.
+The variable $s_1$ is the sum of all the previous lengths: $s_1 = \sum_{i=1}^s l_i$.
+The new block makes a bunch of `[WronskCol(i,x0) i in [s1...M]]`
