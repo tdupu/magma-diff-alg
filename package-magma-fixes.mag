@@ -485,6 +485,19 @@ A way to remember the formula is by applying it to the identity matrix.
     return multiple*K+I;
 end intrinsic;
 
+////////////////////
+intrinsic PartitionsWithZero(d::RngIntElt,N::RngIntElt)->SeqEnum[RngIntElt]
+////////////////////
+{Partition an integer d into N parts. Zeros are allowed. Zeroes are not allowed in the Magma built-in intrinsic Partitions.}
+    parts:=[];
+    for n in [0..N] do
+        for p in Partitions(d,N-n) do
+            Append(~parts,p cat [0 : i in [1..n]]);
+        end for;
+    end for;
+    return parts;
+end intrinsic;
+
 
 //
 //#########################
@@ -505,3 +518,4 @@ intrinsic IsCoercible(F::RngFunFrac,f::RngMPolResElt)->BoolElt,.
     return IsCoercible(F,F!(f/1));
 end intrinsic;
 */
+

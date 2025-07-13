@@ -28,6 +28,45 @@ intrinsic IsStrictSeq(seq::SeqEnum[RngIntElt])->BoolElt
 end intrinsic;
 
 ////////////////////
+intrinsic IsStrictSeqs(alphas::SeqEnum[SeqEnum[RngIntElt]])->BoolElt
+////////////////////
+{Determines if each element in the sequence is a strict sequence}
+    return &and[IsStrictSeq(alpha) : alpha in alphas];
+end intrinsic;
+
+////////////////////
+intrinsic IsStrictSeqss(seq0::SeqEnum[SeqEnum[RngIntElt]])->BoolElt
+////////////////////
+{
+Determines if a sequence of sequences is admissible. At any point empty sequences can be inserted.
+A sequence of sequences [s(1),...,s(M)] is admissible if and only if \n
+1) Each s(i) is a strictly increasing sequence.\
+2) For each i, s(i)[1] is greater than or equal to the sum of the lengths of the previous sequences.\n\n
+
+For example a sequences of sequences sequence could have the shape\n
+    [a11,a12],[a21,a22],[a31,a32,a33],\n
+then we would require that a21>=2 and a31>=2+2.\n \n
+
+Concretely [[3,4],[2,5],[4,7,9]] is such an example. Also, [[3,4],[],[2,5],[],[],[4,7,9]] is an example.
+The first corresponds to a Wronskian in four homogeneous coordinates and the second corresponds to a Wronskian in seven homogeneous coordinates.
+}
+    seq:=[s : s in seq0 | #seq0 gt 0 ];
+
+    lengths:=[#s : s in seq];
+    if &and[IsStrictSeq(s): s in seq] then
+        for i in [2..#seq] do
+            if seq[i][1] lt &+lengths[1..i-1] then
+                return false;
+            end if;
+        end for;
+        return true;
+    else
+        false;
+    end if;
+end intrinsic;
+
+
+////////////////////
 intrinsic IsWeakSeq(seq::SeqEnum[RngIntElt])->BoolElt
 ////////////////////
 {Determines if seq is of the form a_0 <= a_1 <= ... <= a_n}
@@ -55,7 +94,7 @@ end intrinsic;
 intrinsic StrictSeqs(l::RngIntElt,bound::RngIntElt : lower:=0)->SeqEnum[SeqEnum[RngIntElt]]
 ////////////////////
 {
-All of the sequences of a_i in [1..bound] of length l with
+All of the sequences of a_i in [0..bound] of length l with
 a_1<...<a_l.
 }
 require l ge 0: "Sequence must be of non-negative length.";
@@ -74,12 +113,19 @@ require bound ge l: "There do not exists strictly increasing sequences of with a
         seqs_prev:=StrictSeqs(l-1,bound:lower:=lower);
         seqs:=[];
         for seq0 in seqs_prev do
-            last:=seq0[l-1];
-            //if last lt bound
-            for i in [last+1..bound] do
-                seq:=seq0 cat [i];
-                Append(~seqs,seq);
-            end for;
+            if #seq0 gt 0 then
+                last:=seq0[l-1];
+                //if last lt bound
+                for i in [last+1..bound] do
+                    seq:=seq0 cat [i];
+                    Append(~seqs,seq);
+                end for;
+            else
+                for i in [lower..bound] do
+                    seq :=seq0 cat [i];
+                    Append(~seqs,seq);
+                end for;
+            end if;
         end for;
         return seqs;
     end if;
@@ -155,13 +201,59 @@ intrinsic WeightStrict(alpha::SeqEnum[RngIntElt])->RngIntElt
     return WeightWeak(StrictToWeak(alpha));
 end intrinsic;
 
+////////////////////
+intrinsic StrictSeqs(u0::SeqEnum[RngIntElt],N::RngIntElt)->SeqEnum[SeqEnum]
+////////////////////
+{
+Given an a sequence of length d in lbrace 1,...,N rbrace produce an admissible sequence of length N consisting of strictly increasing sequences. \n\n
+
+This bijection is used in the Chen-Merker proof of Etesse-Kolchin-Schmidt-Reinhart Theorem that the dimension of the graded piece of differentially homogeneous polynomials of degree d in N+1 variables is (N+1)^d. \n \n
+
+This comes from Chen-Merker Lemma 4.10: \n
+The number of sequences of length N strictly increasing sequences which are admissible of maximum order d-1 is equal to (N+1)^d.\n \n
+
+The proof of Lemma 4.10 is a bijection between lbrace 1,...,N rbrace^d and strictly increasing sequences of length d which we implement.\n \n
+
+Let u(0) of lbrace 1,...,N rbrace^d. We take all the indices i such that u(0)[i]=N.\n
+Throw them into a pile after subtracting one to get alpha(1). \n
+Call the length of this guy n(1).\n
+Remove all of those u(0)[i] where u(0)[i]=N\n
+and throw them at the beginning of the sequence to get u(1).\n\n
+
+Now u(1) in lbrace 1,...,N-1 rbrace^(d(1)) where d(i)=d-n(1). alpha(2) are all the i such that u(1)[i]=N-1. u(2) is all of those removed.\n \n
+
+Note that any of these alpha(i) could be empty. This is very important.There needs to be exactly N sequences. \n\n
+
+Eventually we get u(i) in lbrace 1,...,N-i rbrace^d(i) where d(i)=d(i-1)-n(i).\n
+
+u(i+1) = (list with the N-i indices popped and put to the front)\n
+alpha(i+1) = (indices where we popped)\n
+}
+    u:=u0;
+    alphas:=[];
+    small:=u0;
+    for j in [0..N-1] do
+        M:=N-j;
+        small:=[x : x in u | x lt M];
+        equal:=[x : x in u | x eq M];
+        big:=[x : x in u | x gt M] cat equal;
+        alpha:=[i-1 : i in [1..#u] | u[i] eq M];
+        Append(~alphas,alpha);
+        u:=big cat small;
+    end for;
+    return alphas;
+end intrinsic;
+
+
 //##############################
 //##############################
 // monomials
 //##############################
 //##############################
 
+////////////////////
 intrinsic '^'(x::RngMPolProlSeqElt,seq::SeqEnum[RngIntElt])->RngMPolProlSeqElt
+////////////////////
 {Given a weakly increasing sequence a_0<=a_1<=...<=a_n return the product of Diff(x,a_j).
 }
     require IsWeakSeq(seq):"seq is not weakly increasing";
@@ -173,7 +265,9 @@ intrinsic '^'(x::RngMPolProlSeqElt,seq::SeqEnum[RngIntElt])->RngMPolProlSeqElt
     end if;
 end intrinsic;
 
+////////////////////
 intrinsic WeakSeqs(mon::RngMPolProlSeqElt)->SeqEnum[SeqEnum[RngIntElt]]
+////////////////////
 {}
     P:=Parent(mon);
     eltseq:=Eltseq(mon);
@@ -210,28 +304,69 @@ end intrinsic;
 //##############################
 //##############################
 
+////////////////////
+intrinsic WronskCol(f::RngMPolProlSeqElt,l::RngIntElt,n::RngIntElt)->SeqEnum
+////////////////////
+{}
+    P:=Parent(f);
+    if n ge l+1 then
+        return [Binomial(l,k)*Diff(f,l-k) : k in [0..l]] cat [P|0 : k in [1..n-(l+1)]];
+    elif n le l+1 then
+        return [Binomial(l,k)*Diff(f,l-k) : k in [0..n-1]];
+    end if;
+end intrinsic;
 
-function WronskPieceSeq(alpha,x)
+
+////////////////////
+intrinsic WronskPieceSeq(alpha::SeqEnum,f::RngMPolProlSeqElt)->SeqEnum
+////////////////////
+{}
     ord:=Maximum(alpha);
     n:=#alpha;
     A:=[WronskCol(f,alpha[i],n) : i in [1..n]];
     return A;
-end function;
+end intrinsic;
 
-function WronskPiece(alpha,x)
+////////////////////
+intrinsic WronskPiece(alpha::SeqEnum,x::RngMPolProlSeqElt)->ModMatRngElt0
+////////////////////
+{}
     ord:=Maximum(alpha);
     n:=#alpha;
     A:=Matrix([ [Jet(y,ord) : y in z] : z in WronskPieceSeq(alpha,x)]);
     return Transpose(A);
-end function;
+end intrinsic;
 
-function StrictSeqss(lengths,bound)
+////////////////////
+intrinsic StrictSeqss(lengths::SeqEnum,bound::RngIntElt)->SeqEnum
+////////////////////
+{}
+/*
+These are currently not producing the correct sequences.
+EXAMPLE:
+[[3,4],[2,5],[4,7,9]];
 
+*/
+
+    seqss:=[[] : i in [1..#lengths]];
+    seqss[1]:=StrictSeqs(lengths[1],bound);
+    for i in [2..#lengths] do
+        seqss[i]:=StrictSeqs(lengths[i],bound : lower:=&+lengths[1..i-1]);
+    end for;
+    alphas:=[ [a[1],a[2],a[3]] : a in CartesianProduct(seqss)];
+    return alphas;
+
+end intrinsic;
+
+/*
+    N:=#lengths;
+    //-----
     function lower_bound(i)
-        if i eq N then
-            return 0;
+    //-----
+        if i eq 1 then
+            return 1;
         else
-            return &+lengths[N-i+1..N];
+            return &+lengths[1..i];
         end if;
     end function;
 
@@ -242,15 +377,14 @@ function StrictSeqss(lengths,bound)
     
     prod:=CartesianProduct(<alphas[k] : k in [1..N]>);
     return [ [y : y in x] : x in prod];
-end function;
-
-function ReinhartWronskian(alphas,variables)
-/*
-    assert IsStrictSeqss(alphas);
-
+end intrinsic;
 */
 
 /*
+////////////////////
+intrinsic ReinhartWronskian(alphas::SeqEnum,variables::SeqEnum)->SeqEnum
+////////////////////
+{
 We are going to get a matrix which is LxL where L:=&+lengths.
 Take alphas in seqss[1];
 There are going to be #lengths+1 blocks.
@@ -260,18 +394,18 @@ The special block:
 s1:=&+lengths;
 M := Maximum(&cat(alphas));
 Then we take one more block which is the transpose of [WronskCol(i,x0) i in [s1...M]]
-*/
-
+}
+    assert IsStrictSeqss(alphas);
     assert #alphas eq #variables-1;
     lengths:=[#alpha : alpha in alphas];
     L:=&+lengths;
-    
-    //do the standard blocks
-    wronsk:=&cat WronskPieceSeq(alphas[i],variables[i]);
-    
     //add the special block
     s1:=&+lengths;
-    ord := M;
+    M := Maximum(&cat(alphas));
+    //do the standard blocks
+    wronsk:=&cat([WronskPieceSeq(alphas[i],variables[i]) : i in [s1...M]]);
+    
+   
     
     //make into a matrix;
     n:=#alpha;
@@ -279,3 +413,66 @@ Then we take one more block which is the transpose of [WronskCol(i,x0) i in [s1.
     A:=[ [Jet(y,M) : y in wronsk] : i in [1..L]];
     return Transpose(Matrix(A));
 end function;
+*/
+
+////////////////////
+intrinsic WronskianMatrix(alphas::SeqEnum[SeqEnum],variables::SeqEnum[RngMPolProlSeqElt] : affine:=false)->ModMatRngElt0
+////////////////////
+{
+This outputs the homogenization of the affine Wronskian matrix.\n \n \n
+
+Section 4.4 of Merker, Chen, "Global sections of the positively twisted Green-Griffiths bundles
+" https://arxiv.org/pdf/2410.12752 \n\n
+
+Given a sequence of stictly increasing sequences alpha =(alpha1,alpha2,...,alphaN) of lengths l(1),l(2),...,l(N) where we require the weak lower bound on alphai to be l(1)+l(2)+...+l(i-1) and variables x(1),x(2),...,x(n) we construct the Reinhart-Wronskian matrix where for the variable x(i) we take Wronskian columns alpha(i)(1), ..., alpha(i)(l(i)) where the length of the column is by definition the sum of the l(i).\n\n
+
+The homogenized version uses an extra variable y (which by convention will be the last one of the input) and adds Wronskian columns of order l(1)+....+l(N) up to the maximum order +1. Also, the Wronskian columns for the "affine part" are adjusted so that they have the same length (which is the maximum order+1).\n\n
+
+ }
+    assert IsStrictSeqs(alphas);
+    
+    lengths:=[#alpha : alpha in alphas];
+    sN:=&+lengths;
+    M := Maximum(&cat(alphas));
+    L:=&+lengths;
+    
+    if affine then
+        assert #alphas eq #variables;
+        seq:=[];
+        for i in [1..#variables] do
+            for a in alphas[i] do
+                Append(~seq,WronskCol(variables[i],a,L));
+            end for;
+        end for;
+        
+        //no need to append a column
+        all:=seq;
+    else
+        //proj version
+        assert #alphas eq #variables-1;
+        seq:=[];
+        for i in [1..#variables-1] do
+            for a in alphas[i] do
+                Append(~seq,WronskCol(variables[i],a,M+1));
+            end for;
+        end for;
+        
+        //we need to add an extra column
+        new:=[WronskCol(variables[#variables],i,M+1) : i in [sN..M]];
+        assert #seq[1] eq #seq+#new;
+        all:=seq cat new;
+    end if;
+    
+    RW_mat_tr:=Matrix0(all);
+    RW_mat:=Transpose(RW_mat_tr);
+    return RW_mat;
+end intrinsic;
+
+////////////////////
+intrinsic Wronskian(alphas::SeqEnum[SeqEnum],variables::SeqEnum[RngMPolProlSeqElt]: affine:=false)->RngMPolProlSeqElt
+////////////////////
+{See documentation for WronskianMatrix}
+    RW_mat:=WronskianMatrix(alphas,variables:affine:=affine);
+    return Determinant(RW_mat);
+end intrinsic;
+
