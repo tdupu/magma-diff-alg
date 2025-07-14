@@ -91,21 +91,23 @@ end intrinsic;
 
 
 ////////////////////
-intrinsic StrictSeqs(l::RngIntElt,bound::RngIntElt : lower:=0)->SeqEnum[SeqEnum[RngIntElt]]
+intrinsic StrictSeqs(l::RngIntElt,bound::RngIntElt : lower:=0)->SeqEnum
 ////////////////////
 {
 All of the sequences of a_i in [0..bound] of length l with
 a_1<...<a_l.
 }
 require l ge 0: "Sequence must be of non-negative length.";
-require bound ge l: "There do not exists strictly increasing sequences of with a bound of n of length larger than n";
+require bound ge l-1: "There do not exists strictly increasing sequences of with a bound less than the length-1";
 
     if l eq 0 then
         return [[]];
+    elif bound eq 0 and l eq 1 then
+        return [ [0] ];
     elif l eq 1 then
         return [[i] : i in [lower..bound]];
     elif l eq bound+1-lower then
-        return [ i : i in [lower..bound]];
+        return [[ i : i in [lower..bound]]];
     else
         /*
         new sequence = (old sequence) + (larger number)
@@ -242,6 +244,13 @@ alpha(i+1) = (indices where we popped)\n
         u:=big cat small;
     end for;
     return alphas;
+end intrinsic;
+
+////////////////////
+intrinsic StrictSeqsUpTo(n::RngIntElt)->SeqEnum
+////////////////////
+{Find the strict sequences up to a given integer n.}
+    return &cat([StrictSeqs(i,n) : i in [1..n]]);
 end intrinsic;
 
 
@@ -419,6 +428,8 @@ end function;
 intrinsic WronskianMatrix(alphas::SeqEnum[SeqEnum],variables::SeqEnum[RngMPolProlSeqElt] : affine:=false)->ModMatRngElt0
 ////////////////////
 {
+DEPRECATED.
+
 This outputs the homogenization of the affine Wronskian matrix.\n \n \n
 
 Section 4.4 of Merker, Chen, "Global sections of the positively twisted Green-Griffiths bundles
@@ -471,8 +482,146 @@ end intrinsic;
 ////////////////////
 intrinsic Wronskian(alphas::SeqEnum[SeqEnum],variables::SeqEnum[RngMPolProlSeqElt]: affine:=false)->RngMPolProlSeqElt
 ////////////////////
-{See documentation for WronskianMatrix}
+{DEPRECATED. Use Wronsk.\n\n
+See documentation for WronskianMatrix. }
     RW_mat:=WronskianMatrix(alphas,variables:affine:=affine);
     return Determinant(RW_mat);
 end intrinsic;
 
+function Diff0(f,k)
+/*
+This is a function used in the Wronsk implementation. It is just a derivative where if you try to take a negative order derivative of an element it returns zero.
+*/
+    if k lt 0 then
+        return Parent(f)!0;
+    else
+        return Diff(f,k);
+    end if;
+end function;
+
+////////////////////
+intrinsic Wronsk(alpha::SeqEnum,vars::SeqEnum[RngMPolProlSeqElt])->RngMPolProlSeqElt
+////////////////////
+{
+Give the Reinhart-Wronskian associated to an admissible sequence of increasing sequences.
+The intrinsic GeneratingSequences gives the alphas which give a generating degree d homogenous differential polynomial in N variables.
+}
+    l:=#vars;
+    degree:=&+[#a : a in alpha];
+    entries:=[];
+    for i in [1..l] do
+        for a in alpha[i] do
+            Append(~entries,[Factorial(a)*Binomial(k,a)*Diff0(vars[i],k-a) : k in [0..degree-1]]);
+        end for;
+    end for;
+    return Determinant(Transpose(Matrix0(entries)));
+end intrinsic;
+
+////////////////////
+intrinsic UnorderedPartitionsWithZero(d::RngIntElt,N::RngIntElt)->SeqEnum
+////////////////////
+{Find all the solutions of the equation x(1)+...+x(N)=d in the non-negative integers.}
+    G:=SymmetricGroup(N);
+    parts:=PartitionsWithZero(d,N);
+    parts_permed:={@ @};
+    for part in parts do
+        for g in G do
+            parts_permed := parts_permed join {@ [part[i^g] : i in [1..N]] @};
+        end for;
+    end for;
+    
+    return [x : x in parts_permed];
+end intrinsic;
+
+////////////////////
+intrinsic AdmissibleStrictSeqss(d::RngIntElt,N::RngIntElt)->SeqEnum
+////////////////////
+{
+Given an integer d and another integer N \n
+--find the partitions of d into N parts r(1)+r(2)+...+r(N) \n
+--for each partition will output alpha(1),...,alpha(N) sequences of strictly increasing sequences such that \n
+alpha(i,1)<alpha(i,2)<...<alpha(i,r(i))<r(1)+...+r(i).
+}
+    parts:=UnorderedPartitionsWithZero(d,N);
+    alphas_list:=[];
+
+    for part in parts do
+        alpha_seqs:=[];
+        for i in [1..N] do
+            len:=part[i];
+            bound:=&+[part[j] : j in [1..i]];
+            if bound ge len-1 then
+                //printf "bound %o, length %o \n", bound,len;
+                Append(~alpha_seqs,StrictSeqs(len,bound-1));
+            end if;
+        end for;
+        alphas_for_part:=[ [a : a in tup] : tup in CartesianProduct(alpha_seqs)];
+        Append(~alphas_list,alphas_for_part);
+    end for;
+
+    return &cat(alphas_list);
+end intrinsic;
+
+////////////////////
+intrinsic IsGenerator(alpha::SeqEnum)->BoolElt
+////////////////////
+{
+Etesse page 15 https://arxiv.org/pdf/2410.17946\n\n
+
+Given an index alpha for a vector-space generator determine if it is need as an algebra generators.\n\n
+
+--There needs to exist some sequence in the list starting at zero.\n
+--Every element of the sequence after this one needs to be bounded by the sums of the previous lengths\n
+--If the sequence has length at least two then it also needs to satify the bound condition.\n
+
+}
+
+    alpha_rev:=Reverse(alpha);
+    beta:=[a : a in alpha_rev| #a gt 0];
+    B:={ b: b in beta | b[1] eq 0 };
+    if #B gt 0 then
+        i:=Maximum([i : i in [1..#alpha] | alpha[i] in B]);
+        //printf "found i: i=%o \n", i;
+        part:=[#a : a in alpha];
+        a:=alpha[i];
+        
+        //-----
+        function test_entry(j)
+        //-----
+            if #alpha[j] eq 0 then
+                return true;
+            else
+                return (alpha[j][#alpha[j]] lt &+[part[k] : k in [1..j]]-1);
+            end if;
+        end function;
+        
+        flag2:=forall(j){ j : j in [i+1..#part] |  test_entry(j) };
+        
+        if flag2 then
+            if #a gt 1 then
+                flag1:=alpha[i][#a] lt &+[part[j] : j in [1..i]]-1;
+                //print "condition on zero sequence (could be true or false)";
+                return flag1;
+            else
+                return true;
+            end if;
+        else
+            //print "later sequences don't satisfy bound";
+            return false;
+        end if;
+    else
+        //print "no leading zero sequence";
+        return false;
+    end if;
+    
+end intrinsic;
+
+////////////////////
+intrinsic GeneratingSequences(d::RngIntElt,N::RngIntElt)->SeqEnum
+////////////////////
+{
+When get that GeneratingSequences(d,N+1) is N*((N+1)/2)*(N+1)^(d-2).
+}
+    alphas:=AdmissibleStrictSeqss(d,N);
+    return [alpha : alpha in alphas | IsGenerator(alpha)];
+end intrinsic;

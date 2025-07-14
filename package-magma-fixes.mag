@@ -492,7 +492,7 @@ intrinsic PartitionsWithZero(d::RngIntElt,N::RngIntElt)->SeqEnum[RngIntElt]
     parts:=[];
     for n in [0..N] do
         for p in Partitions(d,N-n) do
-            Append(~parts,p cat [0 : i in [1..n]]);
+            Append(~parts,Reverse(p cat [0 : i in [1..n]]));
         end for;
     end for;
     return parts;
