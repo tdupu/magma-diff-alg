@@ -952,9 +952,9 @@ N:=2;
 
 Using further work of Etesse we can determine a set of algebra generators for the graded ring of homogeneous polynomials in $N$ variables of order up to $d$. The function `GeneratingSequences(d,N)` generates those sequences of degree $d$ in $N$ variables that will give generators.
 ```
-```
 alphas:=GeneratingSequences(d,N);
 #alphas;
+```
 ```
 4
 ```
