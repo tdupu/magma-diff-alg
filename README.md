@@ -915,19 +915,7 @@ This package has some support for differentially homogeneous polynomials.
 There is a subring $V \subset K\lbrace x_0,\ldots,x_n\rbrace$ of differential homogeneous polynomials which is graded by degree. 
 The Kolchin-Schmitt conjecture (now a Theorem of Etesse) says that $V_d$ has dimension $(n+1)^d$ as a $K$-vector space. 
 The basis for these differentially homogeneous polynomials are the Rienhart-Wronskians which are generalizations of Wronskians. 
-
-Given a sequence of strictly increasing sequences $\alpha = (\alpha_1,\ldots,\alpha_s)$ and a sequence of differentially homogeneous polynmomials $f=(f_1,\ldots,f_s)$ we are going to make a Reinhart-Wronskian $W(\alpha,f)$ which is going to be a determinant of a certain $L\times L$ matrix.
-If $l=(l_1,\ldots,l_s)$ are the length sequences of the $(\alpha_1,\ldots,\alpha_s)$ we have $L = \sum_{i=1}^s l_i$. 
-We are going to get a matrix which is $L\times L$. 
-
-The matrix for the Reinhard-Wronskian is made up of $s+1$ blocks. 
-We need to make blocks `WronskPiece(alphas[i],variables[i])` where `variable[i] = xi`.
-
-In Chen-Merker they start at $N$ and then work down $N$,$N-1$,$N-2$,...,$1$, then get to the special one.
-To talk about the special block I need to tell you what $s_1$ is and what $M$ is. 
-The variable $M$ is the maximum order that appears in any of the previous blocks.
-The variable $s_1$ is the sum of all the previous lengths: $s_1 = \sum_{i=1}^s l_i$.
-The new block makes a bunch of `[WronskCol(i,x0) i in [s1...M]]`
+For example $W(x_0,t x_0, x_1,t^2 x_1)\vert_{t=0}$ is such a Wronskian.
 
 The file `test-homog-01.ipynb` in `./test-homog` contains the examples below. 
 
@@ -991,3 +979,16 @@ Wronsk(alpha4,[x0,x1]);
 -2*x1^2*Diff(x0,1)*Diff(x0,3) + 2*x0*x1*Diff(x1,1)*Diff(x0,3) + 2*x0*x1*Diff(x0,1)*Diff(x1,3) + -2*x0^2*Diff(x1,1)*Diff(x1,3) + 3*x1^2*Diff(x0,2)^2 + -6*x0*x1*Diff(x0,2)*Diff(x1,2) + 3*x0^2*Diff(x1,2)^2 + -6*x1*Diff(x0,1)*Diff(x1,1)*Diff(x0,2) + 6*x0*Diff(x1,1)^2*Diff(x0,2) + 6*x1*Diff(x0,1)^2*Diff(x1,2) + -6*x0*Diff(x0,1)*Diff(x1,1)*Diff(x1,2)
 2*x0*x1^2*Diff(x0,3) + -2*x0^2*x1*Diff(x1,3) + -6*x1^2*Diff(x0,1)*Diff(x0,2) + 6*x0^2*Diff(x1,1)*Diff(x1,2) + 12*x1*Diff(x0,1)^2*Diff(x1,1) + -12*x0*Diff(x0,1)*Diff(x1,1)^2
 ```
+
+We now discuss the Chen-Merker implemetation a bit. This is deprecated and may be deleted. Given a sequence of strictly increasing sequences $\alpha = (\alpha_1,\ldots,\alpha_s)$ and a sequence of differentially homogeneous polynmomials $f=(f_1,\ldots,f_s)$ we are going to make a Reinhart-Wronskian $W(\alpha,f)$ which is going to be a determinant of a certain $L\times L$ matrix.
+If $l=(l_1,\ldots,l_s)$ are the length sequences of the $(\alpha_1,\ldots,\alpha_s)$ we have $L = \sum_{i=1}^s l_i$. 
+We are going to get a matrix which is $L\times L$. 
+
+The matrix for the Reinhard-Wronskian is made up of $s+1$ blocks. 
+We need to make blocks `WronskPiece(alphas[i],variables[i])` where `variable[i] = xi`.
+
+In Chen-Merker they start at $N$ and then work down $N$,$N-1$,$N-2$,...,$1$, then get to the special one.
+To talk about the special block I need to tell you what $s_1$ is and what $M$ is. 
+The variable $M$ is the maximum order that appears in any of the previous blocks.
+The variable $s_1$ is the sum of all the previous lengths: $s_1 = \sum_{i=1}^s l_i$.
+The new block makes a bunch of `[WronskCol(i,x0) i in [s1...M]]`
