@@ -10,7 +10,7 @@ Also term order associated with block rankings are implemented in the prolongati
 
 # Contents
 
-1. [Example: Instantiating Basic Objects](example:-instantiating-basic-objects)
+1. [Example: Instantiating Basic Objects](example-instantiating-basic-objects)
 2. [Example: Linear Differential Equations and Weyl Algebra Element Sequences](example-linear-differential-equations-and-weyl-algebra-element-sequences)
 3. [Example: Weyl Algebras](example-weyl-algebras)
 4. [Example: Weyl Algebra Division Algorithm Over A Field](example-weil-algebra-division-algorithm-over-a-field)
