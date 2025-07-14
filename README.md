@@ -32,6 +32,7 @@ Also term order associated with block rankings are implemented in the prolongati
 20. [Example: Magma Enhancement, Quotients of Quotients](example-magma-enhancement-quotients-of-quotients)
 21. [Example: Linearizing Differential equations](example-linearizing-differential-equations)
 22. [Example: Strictly and Weakly Increasing Sequences](example-strictly-and-weakly-increasing-sequences)
+23. [Example: Homogeneous Differential Polynomials](example-homogeneous-differential-polynomials)
 
 
 # Examples
@@ -906,7 +907,7 @@ true
 Note that because of the bijection between monomials and weakly increasing sequences there is a bijection between monomial orderings and orderings on weakly increasing sequences. It is convenient to make an inductive definition for weakly increasing sequences. If $(a_1,\ldots,a_n)$ and $(b_1,\ldots,b_m)$ are weakly increasing sequences then we say that $(a_1,\ldots,a_n)<(b_1,\ldots,b_m)$ where provided that 1) $a_n<b_m$ or 2) $a_n=b_m$ and $(a_1,\ldots,a_{n-1})<(b_1,\ldots,b_{m-1})$. In this setup we use the convention that the empty sequence is less than everything. This gives a good inductive algorithm for checking this particular term order. See Chen-Merker Theorem 3.4.
 
 
-### Example: Differentially Homogeneous Polynomials and Reinhart-Wronskians
+### Example: Homogeneous Differential Polynomials
 
 A differential polynomial $f(x_1,\ldots,x_n) \in K\lbrace x_1,\ldots,x_n\rbrace$ is called differentially homogeneous if and only if there exists some integer $d$ such that $f(\lambda x_1,\ldots,\lambda x_n) = \lambda^d f(x_1,\ldots,x_n)$.
 This package has some support for differentially homogeneous polynomials. 
@@ -927,3 +928,66 @@ To talk about the special block I need to tell you what $s_1$ is and what $M$ is
 The variable $M$ is the maximum order that appears in any of the previous blocks.
 The variable $s_1$ is the sum of all the previous lengths: $s_1 = \sum_{i=1}^s l_i$.
 The new block makes a bunch of `[WronskCol(i,x0) i in [s1...M]]`
+
+The file `test-homog-01.ipynb` in `./test-homog` contains the examples below. 
+
+From the `./test-homog` folder we run 
+```
+AttachSpec("../diffalg.spec");
+Z:=Integers();
+Q:=RationalField();
+R<t>:=PolynomialRing(Q,1);
+f := map<R->R|f:->Derivative(f,t)>;
+A<t> := DifferentialRing(R, f, Q);
+F<t>:=FieldOfFractions(A);
+P<x0,x1,x2,x3>:=PolynomialRingProlSeq(F,4: term_order:=<"dblocks",[[1,2,3,4]]>);
+```
+
+There is quite a bit of functions added for working with partitions. This supplements the already nice library Magma has for YoungTableaux.
+
+
+```
+d:=4;
+N:=2;
+#UnorderedPartitionsWithZero(d,N);
+```
+```
+5
+```
+`AdmissibleStrictSeqss` corresponds to homogenous polynomials of degree $d$ in $N$ variables. There will always be $N^d$ of them. This is Etesse's Theorem which recently proved the Schmidt-Kolchin Conjecture.
+```
+#AdmissibleStrictSeqss(d,N);
+```
+```
+16
+```
+
+Using further work of Etesse we can determine a set of algebra generators for the graded ring of homogeneous polynomials in $N$ variables of order up to $d$. The function `GeneratingSequences(d,N)` generates those sequences of degree $d$ in $N$ variables that will give generators.
+```
+```
+alphas:=GeneratingSequences(d,N);
+#alphas;
+```
+4
+```
+
+In this particular example, these generating sequences correspond to 4 Wronskians.
+Note here that we are using Etesse's notation. There is also some other code for working in Chen-Merker coordinates. 
+
+```
+alpha1:=alphas[1];
+alpha2:=alphas[2];
+alpha3:=alphas[3];
+alpha4:=alphas[4];
+
+Wronsk(alpha1,[x0,x1]);
+Wronsk(alpha2,[x0,x1]);
+Wronsk(alpha3,[x0,x1]);
+Wronsk(alpha4,[x0,x1]);
+```
+```
+-2*x1^3*Diff(x0,3) + 2*x0*x1^2*Diff(x1,3) + 6*x1^2*Diff(x1,1)*Diff(x0,2) + 6*x1^2*Diff(x0,1)*Diff(x1,2) + -12*x0*x1*Diff(x1,1)*Diff(x1,2) + -12*x1*Diff(x0,1)*Diff(x1,1)^2 + 12*x0*Diff(x1,1)^3
+-2*x0^2*x1*Diff(x0,3) + 2*x0^3*Diff(x1,3) + 12*x0*x1*Diff(x0,1)*Diff(x0,2) + -6*x0^2*Diff(x1,1)*Diff(x0,2) + -6*x0^2*Diff(x0,1)*Diff(x1,2) + -12*x1*Diff(x0,1)^3 + 12*x0*Diff(x0,1)^2*Diff(x1,1)
+-2*x1^2*Diff(x0,1)*Diff(x0,3) + 2*x0*x1*Diff(x1,1)*Diff(x0,3) + 2*x0*x1*Diff(x0,1)*Diff(x1,3) + -2*x0^2*Diff(x1,1)*Diff(x1,3) + 3*x1^2*Diff(x0,2)^2 + -6*x0*x1*Diff(x0,2)*Diff(x1,2) + 3*x0^2*Diff(x1,2)^2 + -6*x1*Diff(x0,1)*Diff(x1,1)*Diff(x0,2) + 6*x0*Diff(x1,1)^2*Diff(x0,2) + 6*x1*Diff(x0,1)^2*Diff(x1,2) + -6*x0*Diff(x0,1)*Diff(x1,1)*Diff(x1,2)
+2*x0*x1^2*Diff(x0,3) + -2*x0^2*x1*Diff(x1,3) + -6*x1^2*Diff(x0,1)*Diff(x0,2) + 6*x0^2*Diff(x1,1)*Diff(x1,2) + 12*x1*Diff(x0,1)^2*Diff(x1,1) + -12*x0*Diff(x0,1)*Diff(x1,1)^2
+```
