@@ -641,7 +641,10 @@ end intrinsic;
 ////////////////////
 intrinsic CompactifiedJetSpace(r::RngIntElt,vars::SeqEnum[RngMPolProlSeqElt])->Sch
 ////////////////////
-{Given an order r, and a set of homogenous coordinates x0,x1,..,xN produce Proj V^(r) the compactification of J^r(PP^N).}
+{Given an order r, and a set of homogenous coordinates x0,x1,..,xN produce Proj V^(r) the compactification of J^r(PP^N).
+
+One can get a standard embedding of this by using the intrinsic Standard embedding. 
+}
     gens:=WronskianGenerators(r,vars);
     gens_jet:=Jet(gens);
     Jr:=Parent(gens_jet[1]);
@@ -657,3 +660,5 @@ intrinsic CompactifiedJetSpace(r::RngIntElt,vars::SeqEnum[RngMPolProlSeqElt])->S
     assert IsHomogeneous(IE);
     return Proj(RE/IE);
 end intrinsic;
+
+

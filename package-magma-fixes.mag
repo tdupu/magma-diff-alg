@@ -239,6 +239,39 @@ UnderlyingRing(F1) eq FieldOfFractions(UnderlyingRing(A1));
 
 //
 //#########################
+//Schemes
+//#########################
+//
+
+/*
+Magma can't do CanonicalSheaf of schemes in weighted projective space.
+This functions finds a d-uple embedding where d is the lcm of the weights so that one can then apply these functions to the image.
+*/
+
+////////////////////
+intrinsic StandardEmbedding(X::Sch)->Sch,Map,LinearSeries
+////////////////////
+{
+If X is a projective variety in weighted projective space of non-standard weights embed it into projective space by taking the lcm of the weights of the ambient projective space and uses the monomials of those weights to produce a linear series.\n \n
+
+This allows us to apply functions which normally only apply to Ordinary projective varieties.
+}
+    Y:=Ambient(X);
+    F:=BaseRing(X);
+    SY:=CoordinateRing(Y);
+    lcm:=LeastCommonMultiple(VariableWeights(SY));
+    LY:=LinearSystem(Y,lcm);
+    secs:=Sections(LY);
+    PP<[u]> := ProjectiveSpace(F,#secs-1);
+    phiX := map< X -> PP | secs >;
+    return Image(phiX), phiX, LY;
+end intrinsic;
+
+
+
+
+//
+//#########################
 //ModMatRng
 //#########################
 //
