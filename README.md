@@ -10,8 +10,9 @@ Also term order associated with block rankings are implemented in the prolongati
 
 # Contents
 
-1. [Example: Instantiating Basic Objects](example-instantiating-basic-objects)
-2. [Example: Linear Differential Equations and Weyl Algebra Element Sequences](example-linear-differential-equations-and-weyl-algebra-element-sequences)
+
+1. [Example: Instantiating Basic Objects](###example-instantiating-basic-objects)
+2. [Example: Linear Differential Equations and Weyl Algebra Element Sequences](###example-linear-differential-equations-and-weyl-algebra-element-sequences)
 3. [Example: Weyl Algebras](example-weyl-algebras)
 4. [Example: Weyl Algebra Division Algorithm Over A Field](example-weil-algebra-division-algorithm-over-a-field)
 5. [Example: Truncating to Polynomial Rings of Finite Order](example-truncating-to-polynomial-rings-of-finite-order)
@@ -32,6 +33,7 @@ Also term order associated with block rankings are implemented in the prolongati
 20. [Example: Magma Enhancement, Quotients of Quotients](example-magma-enhancement-quotients-of-quotients)
 21. [Example: Linearizing Differential equations](example-linearizing-differential-equations)
 22. [Example: Strictly and Weakly Increasing Sequences](example-strictly-and-weakly-increasing-sequences)
+23. [Example: Homogeneous Differential Polynomials](example-homogeneous-differential-polynomials)
 
 
 # Examples
@@ -906,7 +908,7 @@ true
 Note that because of the bijection between monomials and weakly increasing sequences there is a bijection between monomial orderings and orderings on weakly increasing sequences. It is convenient to make an inductive definition for weakly increasing sequences. If $(a_1,\ldots,a_n)$ and $(b_1,\ldots,b_m)$ are weakly increasing sequences then we say that $(a_1,\ldots,a_n)<(b_1,\ldots,b_m)$ where provided that 1) $a_n<b_m$ or 2) $a_n=b_m$ and $(a_1,\ldots,a_{n-1})<(b_1,\ldots,b_{m-1})$. In this setup we use the convention that the empty sequence is less than everything. This gives a good inductive algorithm for checking this particular term order. See Chen-Merker Theorem 3.4.
 
 
-### Example: Differentially Homogeneous Polynomials and Reinhart-Wronskians
+### Example: Homogeneous Differential Polynomials
 
 A differential polynomial $f(x_1,\ldots,x_n) \in K\lbrace x_1,\ldots,x_n\rbrace$ is called differentially homogeneous if and only if there exists some integer $d$ such that $f(\lambda x_1,\ldots,\lambda x_n) = \lambda^d f(x_1,\ldots,x_n)$.
 This package has some support for differentially homogeneous polynomials. 
@@ -914,8 +916,72 @@ This package has some support for differentially homogeneous polynomials.
 There is a subring $V \subset K\lbrace x_0,\ldots,x_n\rbrace$ of differential homogeneous polynomials which is graded by degree. 
 The Kolchin-Schmitt conjecture (now a Theorem of Etesse) says that $V_d$ has dimension $(n+1)^d$ as a $K$-vector space. 
 The basis for these differentially homogeneous polynomials are the Rienhart-Wronskians which are generalizations of Wronskians. 
+For example $W(x_0,t x_0, x_1,t^2 x_1)\vert_{t=0}$ is such a Wronskian.
 
-Given a sequence of strictly increasing sequences $\alpha = (\alpha_1,\ldots,\alpha_s)$ and a sequence of differentially homogeneous polynmomials $f=(f_1,\ldots,f_s)$ we are going to make a Reinhart-Wronskian $W(\alpha,f)$ which is going to be a determinant of a certain $L\times L$ matrix.
+The file `test-homog-01.ipynb` in `./test-homog` contains the examples below. 
+
+From the `./test-homog` folder we run 
+```
+AttachSpec("../diffalg.spec");
+Z:=Integers();
+Q:=RationalField();
+R<t>:=PolynomialRing(Q,1);
+f := map<R->R|f:->Derivative(f,t)>;
+A<t> := DifferentialRing(R, f, Q);
+F<t>:=FieldOfFractions(A);
+P<x0,x1,x2,x3>:=PolynomialRingProlSeq(F,4: term_order:=<"dblocks",[[1,2,3,4]]>);
+```
+
+There is quite a bit of functions added for working with partitions. This supplements the already nice library Magma has for YoungTableaux.
+
+
+```
+d:=4;
+N:=2;
+#UnorderedPartitionsWithZero(d,N);
+```
+```
+5
+```
+`AdmissibleStrictSeqss` corresponds to homogenous polynomials of degree $d$ in $N$ variables. There will always be $N^d$ of them. This is Etesse's Theorem which recently proved the Schmidt-Kolchin Conjecture.
+```
+#AdmissibleStrictSeqss(d,N);
+```
+```
+16
+```
+
+Using further work of Etesse we can determine a set of algebra generators for the graded ring of homogeneous polynomials in $N$ variables of order up to $d$. The function `GeneratingSequences(d,N)` generates those sequences of degree $d$ in $N$ variables that will give generators.
+```
+alphas:=GeneratingSequences(d,N);
+#alphas;
+```
+```
+4
+```
+
+In this particular example, these generating sequences correspond to 4 Wronskians.
+Note here that we are using Etesse's notation. There is also some other code for working in Chen-Merker coordinates. 
+
+```
+alpha1:=alphas[1];
+alpha2:=alphas[2];
+alpha3:=alphas[3];
+alpha4:=alphas[4];
+
+Wronsk(alpha1,[x0,x1]);
+Wronsk(alpha2,[x0,x1]);
+Wronsk(alpha3,[x0,x1]);
+Wronsk(alpha4,[x0,x1]);
+```
+```
+-2*x1^3*Diff(x0,3) + 2*x0*x1^2*Diff(x1,3) + 6*x1^2*Diff(x1,1)*Diff(x0,2) + 6*x1^2*Diff(x0,1)*Diff(x1,2) + -12*x0*x1*Diff(x1,1)*Diff(x1,2) + -12*x1*Diff(x0,1)*Diff(x1,1)^2 + 12*x0*Diff(x1,1)^3
+-2*x0^2*x1*Diff(x0,3) + 2*x0^3*Diff(x1,3) + 12*x0*x1*Diff(x0,1)*Diff(x0,2) + -6*x0^2*Diff(x1,1)*Diff(x0,2) + -6*x0^2*Diff(x0,1)*Diff(x1,2) + -12*x1*Diff(x0,1)^3 + 12*x0*Diff(x0,1)^2*Diff(x1,1)
+-2*x1^2*Diff(x0,1)*Diff(x0,3) + 2*x0*x1*Diff(x1,1)*Diff(x0,3) + 2*x0*x1*Diff(x0,1)*Diff(x1,3) + -2*x0^2*Diff(x1,1)*Diff(x1,3) + 3*x1^2*Diff(x0,2)^2 + -6*x0*x1*Diff(x0,2)*Diff(x1,2) + 3*x0^2*Diff(x1,2)^2 + -6*x1*Diff(x0,1)*Diff(x1,1)*Diff(x0,2) + 6*x0*Diff(x1,1)^2*Diff(x0,2) + 6*x1*Diff(x0,1)^2*Diff(x1,2) + -6*x0*Diff(x0,1)*Diff(x1,1)*Diff(x1,2)
+2*x0*x1^2*Diff(x0,3) + -2*x0^2*x1*Diff(x1,3) + -6*x1^2*Diff(x0,1)*Diff(x0,2) + 6*x0^2*Diff(x1,1)*Diff(x1,2) + 12*x1*Diff(x0,1)^2*Diff(x1,1) + -12*x0*Diff(x0,1)*Diff(x1,1)^2
+```
+
+We now discuss the Chen-Merker implemetation a bit. This is deprecated and may be deleted. Given a sequence of strictly increasing sequences $\alpha = (\alpha_1,\ldots,\alpha_s)$ and a sequence of differentially homogeneous polynmomials $f=(f_1,\ldots,f_s)$ we are going to make a Reinhart-Wronskian $W(\alpha,f)$ which is going to be a determinant of a certain $L\times L$ matrix.
 If $l=(l_1,\ldots,l_s)$ are the length sequences of the $(\alpha_1,\ldots,\alpha_s)$ we have $L = \sum_{i=1}^s l_i$. 
 We are going to get a matrix which is $L\times L$. 
 
