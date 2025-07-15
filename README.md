@@ -34,6 +34,7 @@ Also term order associated with block rankings are implemented in the prolongati
 21. [Example: Linearizing Differential equations](example-linearizing-differential-equations)
 22. [Example: Strictly and Weakly Increasing Sequences](example-strictly-and-weakly-increasing-sequences)
 23. [Example: Homogeneous Differential Polynomials](example-homogeneous-differential-polynomials)
+24. [Example: Compactified Jet Spaces of Projective Space](example-compactified-jet-spaces-of-projective-space)
 
 
 # Examples
@@ -993,3 +994,35 @@ To talk about the special block I need to tell you what $s_1$ is and what $M$ is
 The variable $M$ is the maximum order that appears in any of the previous blocks.
 The variable $s_1$ is the sum of all the previous lengths: $s_1 = \sum_{i=1}^s l_i$.
 The new block makes a bunch of `[WronskCol(i,x0) i in [s1...M]]`
+
+### Example: Compactified Jet Spaces of Projective Space
+
+Let $V^{(r)}$ denote the subring of $K[x_0,\ldots,x_N]^{(r)}$ consisting of homogeneous differential polynomials. We have implemented $Proj(V^{(r)})$ which is a compactification of $J^r(\mathbb{P}^N)$. The initialization is the standard one were we attach the package and define `Z` and `Q` to be the integers and rationals respectively. This automatically keeps track of the weights of the Wronskians and the weights between them.
+
+```
+R<t>:=PolynomialRing(Q,1);
+f := map<R->R|f:->Derivative(f,t)>;
+A<t> := DifferentialRing(R, f, Q);
+F<t>:=FieldOfFractions(A);
+P<x0,x1>:=PolynomialRingProlSeq(F,2: term_order:=<"dblocks",[[1],[2]]>);
+```
+```
+r:=2;
+vars:=[P.i : i in [1..Ngens(P)]];
+X:=CompactifiedJetSpace(r,vars);
+X;
+```
+```
+Scheme over F defined by
+w[3]^2 + -1/2*w[2]*w[4] + -1/2*w[1]*w[5]
+```
+Many of Magma's built-in functions for projective varieties don't work out of the box here as of Summer 2025. So we have defined a `StandardEmbedding` function which maps any scheme in a weighted projective space to a projective space by taking all of the monomials of degree d where d is the least common multiples of the weights of the variables and then embeds it into $\mathbb{P}^m$ for some $m$. The output will return the scheme theoretic closure of the image, the map that defined by these monomials, and the linear series object corresponding to those monomials (for which magma has a built-in morphism function). 
+
+```
+time X1,phi,L:=StandardEmbedding(X);
+```
+```
+Time: 3.600
+```
+
+
