@@ -110,6 +110,9 @@ Into a polynomial ring over a base that isn't a polynomial ring.
     W2:=VariableWeights(P1);
     W3:=W1 cat W2;
     P2:=PolynomialRing(B0,W3);
+    
+    //AssignNames(~P3,names1 cat names2);
+    
     //
     // map from P1->P2
     //
