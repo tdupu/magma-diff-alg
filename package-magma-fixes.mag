@@ -87,7 +87,9 @@ https://magma.maths.usyd.edu.au/magma/handbook/text/1301#14684
 quo< P | a1, ..., ar > : RngMPol, RngMPolElt, ..., RngMPolElt -> RngMPolRes, Map
 */
 
+////////////////////
 intrinsic FlattenPolynomialRing(P1::RngMPol)->RngMPol
+////////////////////
 {
 Turn a polynomial ring over a polynomial ring (possibly iterated).
 Into a polynomial ring over a base that isn't a polynomial ring.
@@ -103,7 +105,12 @@ Into a polynomial ring over a base that isn't a polynomial ring.
     assert Type(B1) eq RngMPol;
     
     B0:=BaseRing(B1);
-    P2:=PolynomialRing(B0,r1+r2);
+    
+    //Added this block about weights later... maybe comment this out if this breaks something.
+    W1:=VariableWeights(B1);
+    W2:=VariableWeights(P1);
+    W3:=W1 cat W2;
+    P2:=PolynomialRing(B0,W3);
     //
     // map from P1->P2
     //
@@ -122,7 +129,9 @@ Into a polynomial ring over a base that isn't a polynomial ring.
     end if;
 end intrinsic;
 
+////////////////////
 intrinsic Quot(P1::RngMPol,seq::SeqEnum[RngMPolElt])->RngMPolRes,Map,Map
+////////////////////
 {
 Quotients of polynomial rings over polynomial rings.
 }
@@ -132,7 +141,9 @@ Quotients of polynomial rings over polynomial rings.
     return Quo,map2*quo_map,map2;
 end intrinsic;
 
+////////////////////
 intrinsic Quot0(PA::RngMPol,seq::SeqEnum[RngMPolElt])->RngMPolRes,Map,UserProgram
+////////////////////
 {
 quotients for polynomial rings over RngMPolRes.
 
@@ -173,6 +184,42 @@ where Jtilde is just lifts of representatives.
     return Quo,quo_map,mymap;
 end intrinsic;
 
+
+
+////////////////////
+intrinsic EliminationIdealPlus(I::RngMPol,vars::SetEnum)->RngMPol
+////////////////////
+{This is the same as EliminationIdeal, but it makes a new ring.It also keeps track of the weights.}
+    IE:=EliminationIdeal(I,vars);
+    R:=Parent(Rep(vars));
+    B:=BaseRing(R);
+    R1:=PolynomialRing(B,#vars);
+    
+    names:=Names(R);
+    names_new:=[];
+    values:=AssociativeArray();
+
+    for i in [1..Ngens(R)] do
+        if R.i in vars then
+            Append(~names_new,names[i] cat "1");
+        else
+            values[i]:=0;
+        end if;
+    end for;
+    
+    AssignNames(~R1,names_new);
+
+    j:=1;
+    for i in [1..Ngens(R)] do
+        if not i in Keys(values) then
+            values[i]:=R1.j;
+            j:=j+1;
+        end if;
+    end for;
+    vals:=[values[i] : i in [1..Ngens(R)]];
+    return ideal<R1|[Evaluate(g,vals) : g in Generators(IE)]>;
+end intrinsic;
+
 /*
 Q:=RationalField();
 B:=PolynomialRing(Q,2);
@@ -183,9 +230,6 @@ FQB:=FieldOfFractions(QB);
 //QB.1 in FQB;
 //FQB!QB.1;
 */
-
-
-
 
 /*
 UnderlyingRing(F1) eq FieldOfFractions(UnderlyingRing(A1));
@@ -238,24 +282,32 @@ intrinsic Matrix0(R::.,seq::SeqEnum)->ModMatRngElt0
     return A;
 end intrinsic;
 
+////////////////////
 intrinsic Matrix0(seq::SeqEnum)->ModMatRngElt0
+////////////////////
 {Create a matrix from a sequence}
     elt:=seq[1][1];
     P:=Parent(elt);
     return Matrix0(P,seq);
 end intrinsic;
 
+////////////////////
 intrinsic 'eq'(Mats1::ModMatRng0,Mats2::ModMatRng0)->ModMatRng0
+////////////////////
 {Equality of matrix spaces.}
     return Mats1`basering eq Mats2`basering;
 end intrinsic;
 
+////////////////////
 intrinsic BaseRing(Mats1::ModMatRng0)->.
+////////////////////
 {Return the base ring.}
     return Mats1`basering;
 end intrinsic;
 
+////////////////////
 intrinsic 'eq'(A0::ModMatRngElt0,B0::ModMatRngElt0)->ModMatRng0
+////////////////////
 {Equality of matrices.}
     flag1:=(Parent(A0) eq Parent(B0));
     if flag1 then
@@ -266,41 +318,55 @@ intrinsic 'eq'(A0::ModMatRngElt0,B0::ModMatRngElt0)->ModMatRng0
     end if;
 end intrinsic;
 
+////////////////////
 intrinsic Parent(A0::ModMatRngElt0)->ModMatRng0
+////////////////////
 {return the parent of A0}
     return A0`parent;
 end intrinsic;
 
 
 //intrinsic '[]'(A::ModMatRngElt0,i::RngIntElt,j::RngIntElt)->.
+////////////////////
 intrinsic Elt(A::ModMatRngElt0,i::RngIntElt,j::RngIntElt)->.
+////////////////////
 {For returning entries of a matrix}
     return A`seq[i,j];
 end intrinsic;
 
+////////////////////
 intrinsic Ncols(A::ModMatRngElt0)->RngIntElt
+////////////////////
 {Return the number of columns}
     return A`ncols;
 end intrinsic;
 
+////////////////////
 intrinsic Nrows(A::ModMatRngElt0)->RngIntElt
+////////////////////
 {Return the number of rows}
     return A`nrows;
 end intrinsic;
 
+////////////////////
 intrinsic Eltseq(A::ModMatRngElt0)->SeqEnum
+////////////////////
 {Return the sequence of the underlying matrix}
     P:=BaseRing(Parent(A));
     return [[ P!x : x in y ] : y in A`seq];
 end intrinsic;
 
+////////////////////
 intrinsic '*'(A0::ModMatRngElt0,B0::ModMatRngElt0)->ModMatRngElt0
+////////////////////
 {Multiply two matrices}
     require Ncols(A0) eq Nrows(B0): "The row length of A must be the column length of B.";
     return Matrix0([[&+[ Elt(A0,i,j)*Elt(B0,j,k) : j in [1..Ncols(A0)]] : k in [1..Ncols(B0)]] : i in [1..Nrows(A0)]]);
 end intrinsic;
 
+////////////////////
 intrinsic '*'(c::.,B0::ModMatRngElt0)->ModMatRngElt0
+////////////////////
 {Scalar multiplication of matrices}
     flag,c_P:=IsCoercible(BaseRing(Parent(B0)),c);
     if flag then
@@ -316,44 +382,60 @@ intrinsic '*'(c::.,B0::ModMatRngElt0)->ModMatRngElt0
     end if;
 end intrinsic;
 
+////////////////////
 intrinsic '+'(A0::ModMatRngElt0,B0::ModMatRngElt0)->ModMatRngElt0
+////////////////////
 {Add two matrices}
     require Ncols(A0) eq Ncols(B0) and Nrows(A0) eq Nrows(B0): "The two matrices must be of the same size";
     return Matrix0([[ Elt(A0,i,j)+Elt(B0,i,j) : j in [1..Nrows(A0)]] : i in [1..Ncols(A0)]]);
 end intrinsic;
 
+////////////////////
 intrinsic Row(C0::ModMatRngElt0,i::RngIntElt)->ModMatRngElt0
+////////////////////
 {Return the ith row of C0}
     return Matrix0([Eltseq(C0)[i]]);
 end intrinsic;
 
+////////////////////
 intrinsic Col(C0::ModMatRngElt0,j::RngIntElt)->ModMatRngElt0
+////////////////////
 {Return the jth col of C0}
     return Matrix0([[Eltseq(C0)[i][j]]: i in [1..Nrows(C0)]]);
 end intrinsic;
 
+////////////////////
 intrinsic Transpose(C0::ModMatRngElt0)->ModMatRngElt0
+////////////////////
 {Take the transpose of a matrix}
     return Matrix0([[Elt(C0,i,j) : i in [1..Nrows(C0)]] : j in [1..Ncols(C0)]]);
 end intrinsic;
 
+////////////////////
 intrinsic RemoveRow(C0::ModMatRngElt0,i0::RngIntElt)->ModMatRngElt0
+////////////////////
 {Remove the row i0 from the matrix}
     seq:=Eltseq(C0);
     return Matrix0([ seq[i] : i in [1..Nrows(C0)] | i ne i0]);
 end intrinsic;
 
+////////////////////
 intrinsic RemoveCol(C0::ModMatRngElt0,j0::RngIntElt)->ModMatRngElt0
+////////////////////
 {Remove the column j0 from the matrix}
     return Transpose(RemoveRow(Transpose(C0),j0));
 end intrinsic;
 
+////////////////////
 intrinsic Cofactor(C0::ModMatRngElt0,i0::RngIntElt,j0::RngIntElt)->ModMatRngElt0
+////////////////////
 {Remove the column and entry corresponding to (i0,j0)}
     return RemoveCol(RemoveRow(C0,i0),j0);
 end intrinsic;
 
+////////////////////
 intrinsic Determinant(C0::ModMatRngElt0)->.
+////////////////////
 {Take the determinant of a square matrix via cofactor expansion.}
     ncols:=Ncols(C0);
     nrows:=Nrows(C0);
@@ -367,7 +449,9 @@ intrinsic Determinant(C0::ModMatRngElt0)->.
     
 end intrinsic;
 
+////////////////////
 intrinsic InsertRow(A0::ModMatRngElt0,i0::RngIntElt,row::SeqEnum)->ModMatRngElt0
+////////////////////
 {insert a row into the i0th position}
     require i0 gt 0 and i0 le Nrows(A0)+1: "Position must be between 1 and Nrows(A0)+1";
     
@@ -381,30 +465,40 @@ intrinsic InsertRow(A0::ModMatRngElt0,i0::RngIntElt,row::SeqEnum)->ModMatRngElt0
     end if;
 end intrinsic;
 
+////////////////////
 intrinsic InsertRow(A0::ModMatRngElt0,i0::RngIntElt,row0::ModMatRngElt0)->ModMatRngElt0
+////////////////////
 {insert a row into the i0th position}
     row:=Eltseq(row0)[1];
     return InsertRow(A0,i0,row);
 end intrinsic;
 
+////////////////////
 intrinsic InsertCol(A0::ModMatRngElt0,j0::RngIntElt,col::SeqEnum)->ModMatRngElt0
+////////////////////
 {insert a column into the j0th position}
     return Transpose(InsertRow(Transpose(A0),j0,col));
 end intrinsic;
 
+////////////////////
 intrinsic InsertCol(A0::ModMatRngElt0,j0::RngIntElt,col0::ModMatRngElt0)->ModMatRngElt0
+////////////////////
 {insert a column into the j0th position}
     col:=Eltseq(Transpose(col0));
     return InsertCol(A0,j0,col);
 end intrinsic;
 
+////////////////////
 intrinsic ReplaceRow(A0::ModMatRngElt0,i0::RngIntElt,row0::ModMatRngElt0)->ModMatRngElt0
+////////////////////
 {replace a row at i0 with row0}
     require Ncols(A0) eq Ncols(row0): "must replace a row with a new row of the same length";
     return InsertRow(RemoveRow(A0,i0),i0,row0);
 end intrinsic;
 
+////////////////////
 intrinsic SwapRows(A0::ModMatRngElt0,a::RngIntElt,b::RngIntElt)->ModMatRngElt0
+////////////////////
 {Swap the ath row and the bth row in a matrix A0.}
     i0,i1:=Explode(Sort([a,b]));
     r0:=Row(A0,i0);
@@ -414,7 +508,9 @@ intrinsic SwapRows(A0::ModMatRngElt0,a::RngIntElt,b::RngIntElt)->ModMatRngElt0
     return A2;
 end intrinsic;
 
+////////////////////
 intrinsic SwapCols(A0::ModMatRngElt0,a::RngIntElt,b::RngIntElt)->ModMatRngElt0
+////////////////////
 {Swap the column in position a with the column in position b}
     return Transpose(SwapRows(Transpose(A0),a,b));
 end intrinsic;
@@ -508,12 +604,16 @@ end intrinsic;
 
 /*
 
+////////////////////
 intrinsic 'in'(f::RngMPolResElt,F::RngFunFrac)->BoolElt
+////////////////////
 {}
     return F!(f/1) in F;
 end intrinsic;
 
+////////////////////
 intrinsic IsCoercible(F::RngFunFrac,f::RngMPolResElt)->BoolElt,.
+////////////////////
 {}
     return IsCoercible(F,F!(f/1));
 end intrinsic;
