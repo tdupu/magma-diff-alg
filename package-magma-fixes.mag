@@ -26,7 +26,6 @@ R<x,y>:=PolynomialRing(Q,2);
 F<x,y>:=FieldOfFractions(R);
 P<z,w>:=PolynomialRing(F,2);
 z in F;
-
 */
 
 ////////////////////
@@ -57,7 +56,7 @@ F!P.1 eq F.1;
 
 //####################
 //####################
-// QUOTIENTS
+// QUOTIENTS and ELIMINATION THEORY
 //####################
 //####################
 
@@ -100,8 +99,8 @@ Into a polynomial ring over a base that isn't a polynomial ring.
         return P1, Id(P1);
     end if;
     
-    r1:=Rank(B1);
-    r2:=Rank(P1);
+    r1:=Rank(B1); names1:=Names(B1);
+    r2:=Rank(P1); names2:=Names(P1);
     assert Type(B1) eq RngMPol;
     
     B0:=BaseRing(B1);
@@ -187,13 +186,13 @@ end intrinsic;
 
 
 ////////////////////
-intrinsic EliminationIdealPlus(I::RngMPol,vars::SetEnum)->RngMPol
+intrinsic EliminationIdealPlus(I::RngMPol,vars::SeqEnum)->RngMPol
 ////////////////////
-{This is the same as EliminationIdeal, but it makes a new ring.It also keeps track of the weights.}
-    IE:=EliminationIdeal(I,vars);
-    R:=Parent(Rep(vars));
+{This is the same as EliminationIdeal, but it makes a new ring. It also keeps track of the weights. At least it is supposed to.}
+    IE:=EliminationIdeal(I,{v: v in vars});
+    R:=Parent(vars[1]);
     B:=BaseRing(R);
-    R1:=PolynomialRing(B,#vars);
+    R1:=PolynomialRing(B,[Degree(v):v in vars]);
     
     names:=Names(R);
     names_new:=[];
@@ -201,7 +200,7 @@ intrinsic EliminationIdealPlus(I::RngMPol,vars::SetEnum)->RngMPol
 
     for i in [1..Ngens(R)] do
         if R.i in vars then
-            Append(~names_new,names[i] cat "1");
+            Append(~names_new,names[i]);
         else
             values[i]:=0;
         end if;
