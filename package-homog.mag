@@ -629,9 +629,31 @@ end intrinsic;
 ////////////////////
 intrinsic WronskianGenerators(r::RngIntElt,vars::SeqEnum[RngMPolProlSeqElt])->SeqEnum[RngMPolProlSeqElt]
 ////////////////////
-{Give a set of generators for the graded ring of homogeneous differential polynomials of order up to r.}
+{Give a set of generators for the graded ring of homogeneous differential polynomials of order up to r.
+Note that the things of order r are generated in degree d+1.
+}
     N:=#vars;
-    alphas:=&cat[GeneratingSequences(d,N) : d in [1..r]];
+    alphas:=&cat[GeneratingSequences(d,N) : d in [1..r+1]];
     gens:=[Wronsk(alpha,vars) : alpha in alphas];
     return gens;
+end intrinsic;
+
+////////////////////
+intrinsic CompactifiedJetSpace(r::RngIntElt,vars::SeqEnum[RngMPolProlSeqElt])->Sch
+////////////////////
+{Given an order r, and a set of homogenous coordinates x0,x1,..,xN produce Proj V^(r) the compactification of J^r(PP^N).}
+    gens:=WronskianGenerators(r,vars);
+    gens_jet:=Jet(gens);
+    Jr:=Parent(gens_jet[1]);
+    PJr<[w]>:=PolynomialRing(Jr,[Degree(g) : g in gens]);
+    rels:=[gens_jet[i]-PJr.i : i in [1..#gens]];
+    PJr0,f0:=FlattenPolynomialRing(PJr);
+    rels0:=[f0(rel) : rel in rels];
+    I0:=ideal<PJr0|rels0>;
+    vars0:=[PJr0.i : i in [1..Ngens(Jr)]];
+    v0:=#vars0;
+    keepers0:=[PJr0.(i+v0) : i in [1..Ngens(PJr)]];
+    IE,RE:=EliminationIdealPlus(I0,keepers0);
+    assert IsHomogeneous(IE);
+    return Proj(RE/IE);
 end intrinsic;

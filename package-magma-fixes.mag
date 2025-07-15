@@ -111,7 +111,7 @@ Into a polynomial ring over a base that isn't a polynomial ring.
     W3:=W1 cat W2;
     P2:=PolynomialRing(B0,W3);
     
-    //AssignNames(~P3,names1 cat names2);
+    AssignNames(~P2,names1 cat names2);
     
     //
     // map from P1->P2
@@ -189,7 +189,7 @@ end intrinsic;
 
 
 ////////////////////
-intrinsic EliminationIdealPlus(I::RngMPol,vars::SeqEnum)->RngMPol
+intrinsic EliminationIdealPlus(I::RngMPol,vars::SeqEnum)->RngMPol,RngMPol
 ////////////////////
 {This is the same as EliminationIdeal, but it makes a new ring. It also keeps track of the weights. At least it is supposed to.}
     IE:=EliminationIdeal(I,{v: v in vars});
@@ -219,7 +219,7 @@ intrinsic EliminationIdealPlus(I::RngMPol,vars::SeqEnum)->RngMPol
         end if;
     end for;
     vals:=[values[i] : i in [1..Ngens(R)]];
-    return ideal<R1|[Evaluate(g,vals) : g in Generators(IE)]>;
+    return ideal<R1|[Evaluate(g,vals) : g in Generators(IE)]>,R1;
 end intrinsic;
 
 /*
