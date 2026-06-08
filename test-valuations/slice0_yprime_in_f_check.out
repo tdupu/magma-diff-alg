@@ -1,0 +1,25 @@
+f    = Diff(x,2) + y*Diff(x,1) + y
+f'   = Diff(x,3) + y*Diff(x,2) + Diff(x,1)*Diff(y,1) + Diff(y,1)
+f''  = Diff(x,4) + y*Diff(x,3) + 2*Diff(y,1)*Diff(x,2) + Diff(x,1)*Diff(y,2) + 
+Diff(y,2)
+f''' = Diff(x,5) + y*Diff(x,4) + 3*Diff(y,1)*Diff(x,3) + Diff(x,1)*Diff(y,3) + 
+Diff(y,3) + 3*Diff(x,2)*Diff(y,2)
+g (=y''') = Diff(y,3)
+
+J5 rank = 12
+J5 variables: [ x, y, Diff(x,1), Diff(y,1), Diff(x,2), Diff(y,2), Diff(x,3), 
+Diff(y,3), Diff(x,4), Diff(y,4), Diff(x,5), Diff(y,5) ]
+
+Generators of [f] truncated to J5 (no saturation):
+  Jet(f, 5)   = Diff(x,2) + y*Diff(x,1) + y
+  Jet(f', 5)  = Diff(x,3) + y*Diff(x,2) + Diff(x,1)*Diff(y,1) + Diff(y,1)
+  Jet(f'', 5) = Diff(x,4) + y*Diff(x,3) + 2*Diff(y,1)*Diff(x,2) + 
+    Diff(x,1)*Diff(y,2) + Diff(y,2)
+  Jet(f''', 5)= Diff(x,5) + y*Diff(x,4) + 3*Diff(y,1)*Diff(x,3) + 
+    Diff(x,1)*Diff(y,3) + Diff(y,3) + 3*Diff(x,2)*Diff(y,2)
+
+========= REGIME A: <f, f', f''> in J5 =========
+y''' in <f, f', f''>? false
+
+========= REGIME B: <f, f', f'', f'''> in J5 =========
+y''' in <f, f', f'', f'''>? false

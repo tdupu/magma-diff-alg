@@ -1,0 +1,27 @@
+==== Jet(P, 4) ====
+Rank: 10
+Names: [ x, y, Diff(x,1), Diff(y,1), Diff(x,2), Diff(y,2), Diff(x,3), Diff(y,3),
+Diff(x,4), Diff(y,4) ]
+
+==== r = 4 generators (canonical infinite-notebook ideal) ====
+Jet(f, 4)    = Diff(x,2) + y*Diff(x,1) + y
+Jet(f', 4)   = Diff(x,3) + y*Diff(x,2) + Diff(x,1)*Diff(y,1) + Diff(y,1)
+Jet(f'', 4)  = Diff(x,4) + y*Diff(x,3) + 2*Diff(y,1)*Diff(x,2) + 
+    Diff(x,1)*Diff(y,2) + Diff(y,2)
+
+==== Sage translation ====
+// Drop into a Sage tightened-ring slice2()/slice3() function:
+//   x     = gens_dict['x00']
+//   xp    = gens_dict['x01']
+//   xpp   = gens_dict['x02']
+//   xppp  = gens_dict['x03']
+//   xpppp = gens_dict['x04']
+//   y     = gens_dict['y00']
+//   yp    = gens_dict['y01']
+//   ypp   = gens_dict['y02']
+//   f   = xpp + xp*y + y
+//   fp  = xppp + xpp*y + xp*yp + yp
+//   fpp = xpppp + xppp*y + 2*xpp*yp + xp*ypp + ypp
+//   I   = S.ideal([f, fp, fpp])
+
+==== END ====

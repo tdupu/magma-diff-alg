@@ -1,0 +1,79 @@
+// slice0_traceideal_vs_prolongation.mag
+//
+// Demonstrates that TraceIdeal([f], r) is NOT the same as the raw prolongation
+// chain <Jet(f,r), Jet(f',r), ..., Jet(f^(r-Order(f)),r)>. For f = x'' + x'y + y
+// at r=5:
+//   - Manual chain: 4 simple generators, linear in highest derivatives.
+//   - TraceIdeal:   14 generators, several quadratic in highest derivatives,
+//                   including a -6*Diff(x,4)^4 generator that cannot come from
+//                   raw prolongations.
+// Direct eq test: TraceIdeal([f], 5) ne <Jet(f,5), ..., Jet(f''',5)>.
+//
+// Mechanism (per package-reduction.mag:1267-1294): TraceIdeal(eqns, ord) prolongs
+// each generator up to order ord + tolerance (default 5), builds the polynomial
+// ideal in Jet(P, ord + tolerance), then eliminates the high-order variables.
+// So TraceIdeal([f], 5) actually works in Jet(P, 10) and eliminates 10 vars,
+// producing an over-prolonged elimination ideal — not the raw polynomial chain.
+//
+// Phase-2 Slice 0 corollary. For sticky-cone work that compares against Sage
+// notebooks: USE the manual prolongation chain, NOT TraceIdeal. For
+// literature-faithful differential trace at order r: TraceIdeal is closer but
+// is a tolerance-truncated approximation.
+//
+// Dependencies: package-dimension.mag, package-prolongations.mag, package-reduction.mag
+// Expected output:
+//   - TraceIdeal([f], 5) returns 14 generators (vs 4 from the manual chain)
+//   - TI_5 eq I_manual? -> false
+//   - First leading monomial of TraceIdeal output: Diff(x,4)^4 (LC = -6)
+
+SetQuitOnError(true);
+AttachSpec("/Users/tdupuy/repos/magma-diff-alg/diffalg.spec");
+
+Q := Rationals();
+R<t> := PolynomialRing(Q, 1);
+deriv := map<R -> R | f :-> Derivative(f, t)>;
+A := DifferentialRing(R, deriv, Q);
+F<tt> := FieldOfFractions(A);
+
+P<x, y> := PolynomialRingProlSeq(F, 2 : term_order := <"dblocks", [[1, 2]]>);
+Extend(P, 5);
+
+f := Diff(x, 2) + Diff(x, 1)*y + y;
+
+print "=== Variable layout in Jet(P, 5) ===";
+J5 := Jet(P, 5);
+print "Names(J5):", Names(J5);
+print "Rank:", Rank(J5);
+
+// ----------------- TraceIdeal([f], 5) -----------------
+print "\n=== TraceIdeal([f], 5) ===";
+TI_5 := TraceIdeal([f], 5);
+print "Number of generators:", #Basis(TI_5);
+
+print "\nLeading monomials (LM) with leading coefficient (LC):";
+i := 0;
+for h in Basis(TI_5) do
+    i := i + 1;
+    printf "  g%o: %o   (LC = %o)\n", i, LeadingMonomial(h), LeadingCoefficient(h);
+end for;
+
+// ----------------- Manual chain <f, f', f'', f'''> -----------------
+print "\n=== Manual chain: <Jet(f,5), Jet(f',5), Jet(f'',5), Jet(f''',5)> ===";
+fp   := Diff(f, 1);
+fpp  := Diff(f, 2);
+fppp := Diff(f, 3);
+I_manual := ideal< J5 | [Jet(f,5), Jet(fp,5), Jet(fpp,5), Jet(fppp,5)] >;
+print "Number of generators:", #Basis(I_manual);
+
+print "Generators:";
+for h in Basis(I_manual) do print "  ", h; end for;
+
+// ----------------- Comparison -----------------
+print "\n=== Equality test ===";
+print "TraceIdeal([f], 5) eq <Jet(f,5), Jet(f',5), Jet(f'',5), Jet(f''',5)>?", TI_5 eq I_manual;
+
+// Also against the shorter chain (skipping f'''):
+I_short := ideal< J5 | [Jet(f,5), Jet(fp,5), Jet(fpp,5)] >;
+print "TraceIdeal([f], 5) eq <Jet(f,5), Jet(f',5), Jet(f'',5)>?", TI_5 eq I_short;
+
+exit;

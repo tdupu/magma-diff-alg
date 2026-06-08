@@ -1,0 +1,37 @@
+=== Variable layout in Jet(P, 5) ===
+Names(J5): [ x, y, Diff(x,1), Diff(y,1), Diff(x,2), Diff(y,2), Diff(x,3), 
+Diff(y,3), Diff(x,4), Diff(y,4), Diff(x,5), Diff(y,5) ]
+Rank: 12
+
+=== TraceIdeal([f], 5) ===
+Number of generators: 14
+
+Leading monomials (LM) with leading coefficient (LC):
+  g1: Diff(x,4)^4   (LC = -6)
+  g2: Diff(y,4)*Diff(x,5)   (LC = 1)
+  g3: Diff(x,2)^3*Diff(x,5)   (LC = 1)
+  g4: y*Diff(x,5)   (LC = 1)
+  g5: y*Diff(x,1)*Diff(x,5)   (LC = -1)
+  g6: Diff(y,4)*Diff(x,5)   (LC = -1/6)
+  g7: y*Diff(x,5)^2   (LC = 1/2)
+  g8: Diff(x,2)*Diff(x,5)   (LC = 1/2)
+  g9: Diff(x,2)^2*Diff(x,5)   (LC = -1/2)
+  g10: Diff(x,2)*Diff(x,5)^2   (LC = 1)
+  g11: Diff(x,4)   (LC = 1)
+  g12: Diff(x,1)*Diff(x,4)   (LC = 1)
+  g13: Diff(x,2)*Diff(x,5)   (LC = 1/2)
+  g14: Diff(x,4)*Diff(x,5)   (LC = 1)
+
+=== Manual chain: <Jet(f,5), Jet(f',5), Jet(f'',5), Jet(f''',5)> ===
+Number of generators: 4
+Generators:
+   Diff(x,2) + y*Diff(x,1) + y
+   Diff(x,3) + y*Diff(x,2) + Diff(x,1)*Diff(y,1) + Diff(y,1)
+   Diff(x,4) + y*Diff(x,3) + 2*Diff(y,1)*Diff(x,2) + Diff(x,1)*Diff(y,2) + 
+    Diff(y,2)
+   Diff(x,5) + y*Diff(x,4) + 3*Diff(y,1)*Diff(x,3) + Diff(x,1)*Diff(y,3) + 
+    Diff(y,3) + 3*Diff(x,2)*Diff(y,2)
+
+=== Equality test ===
+TraceIdeal([f], 5) eq <Jet(f,5), Jet(f',5), Jet(f'',5), Jet(f''',5)>? false
+TraceIdeal([f], 5) eq <Jet(f,5), Jet(f',5), Jet(f'',5)>? false

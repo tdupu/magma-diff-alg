@@ -1,0 +1,70 @@
+// slice3_r4_jet_ideal_infinite.mag
+//
+// Builds the level-4 trace ideal I^[4] = <Jet(f,4), Jet(f',4), Jet(f'',4)>
+// in the tightened ambient Jet(P, 4) = rank-10 polynomial ring for the
+// canonical infinite-notebook construction.
+//
+// Phase-2 Slice 3 Piece A. The generators printed by this script were handed
+// off to the Sage side (test-valuations/slice2_sage_pipeline.py or similar)
+// to compute the level-4 Gröbner fan, which then fed into the sticky /
+// transient classification reported in notes.tex Section 21.
+//
+// f = x'' + x'y + y. Rank-10 ambient ring (vs the original 41-var notebook
+// ambient — this is the karen-tightening that gave a ~46x gfan speedup at
+// r=4 in Sage).
+//
+// Dependencies: package-prolongations.mag
+// Expected output:
+//   Rank: 10
+//   Names: [ x, y, Diff(x,1), Diff(y,1), Diff(x,2), Diff(y,2), Diff(x,3), Diff(y,3), Diff(x,4), Diff(y,4) ]
+//   Jet(f, 4)    = Diff(x,2) + y*Diff(x,1) + y
+//   Jet(f', 4)   = Diff(x,3) + y*Diff(x,2) + Diff(x,1)*Diff(y,1) + Diff(y,1)
+//   Jet(f'', 4)  = Diff(x,4) + y*Diff(x,3) + 2*Diff(y,1)*Diff(x,2) + Diff(x,1)*Diff(y,2) + Diff(y,2)
+
+SetQuitOnError(true);
+AttachSpec("/Users/tdupuy/repos/magma-diff-alg/diffalg.spec");
+
+Q := Rationals();
+R<t> := PolynomialRing(Q, 1);
+deriv := map<R -> R | u :-> Derivative(u, t)>;
+A := DifferentialRing(R, deriv, Q);
+F<tt> := FieldOfFractions(A);
+
+P<x, y> := PolynomialRingProlSeq(F, 2 : term_order := <"dblocks", [[1, 2]]>);
+Extend(P, 4);
+
+f   := Diff(x, 2) + Diff(x, 1)*y + y;
+fp  := Diff(f, 1);
+fpp := Diff(f, 2);
+
+J4 := Jet(P, 4);
+print "==== Jet(P, 4) ====";
+print "Rank:", Rank(J4);
+print "Names:", Names(J4);
+
+g_f_4   := Jet(f, 4);
+g_fp_4  := Jet(fp, 4);
+g_fpp_4 := Jet(fpp, 4);
+
+print "\n==== r = 4 generators (canonical infinite-notebook ideal) ====";
+print "Jet(f, 4)    =", g_f_4;
+print "Jet(f', 4)   =", g_fp_4;
+print "Jet(f'', 4)  =", g_fpp_4;
+
+print "\n==== Sage translation ====";
+print "// Drop into a Sage tightened-ring slice2()/slice3() function:";
+print "//   x     = gens_dict['x00']";
+print "//   xp    = gens_dict['x01']";
+print "//   xpp   = gens_dict['x02']";
+print "//   xppp  = gens_dict['x03']";
+print "//   xpppp = gens_dict['x04']";
+print "//   y     = gens_dict['y00']";
+print "//   yp    = gens_dict['y01']";
+print "//   ypp   = gens_dict['y02']";
+print "//   f   = xpp + xp*y + y";
+print "//   fp  = xppp + xpp*y + xp*yp + yp";
+print "//   fpp = xpppp + xppp*y + 2*xpp*yp + xp*ypp + ypp";
+print "//   I   = S.ideal([f, fp, fpp])";
+
+print "\n==== END ====";
+exit;
