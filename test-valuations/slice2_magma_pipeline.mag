@@ -1,0 +1,43 @@
+// Phase 2 sticky-cone deliverable: Magma half of the trace-ideal pipeline for the
+// canonical worked example f = x'' + x'y + y in K{x,y}. Builds the trace ideals
+// at r = 2, 3, 4 via the manual prolongation chain <f, f', ..., f^(r-2)> in
+// Jet(P, r) and prints the generators in a form a Sage script can ingest.
+//
+// Inputs:  uses packages from /Users/tdupuy/repos/magma-diff-alg/diffalg.spec
+//          (rngdiffpol, prolongations, reduction, dimension).
+// Outputs: prints Names(Jet(P,r)) and the explicit generators Jet(f^(k), r)
+//          for k = 0 .. r-2, at each level r in {2, 3, 4}.
+// Runtime: < 1 s on Taylor's laptop (Magma V2.27).
+// Memory:  project_slice2_magma_sage_pipeline_verified.md
+//          (See also project_jetideal_minimal_order_gotcha.md for why we use
+//           the manual chain rather than `JetIdeal` or `TraceIdeal`.)
+
+AttachSpec("/Users/tdupuy/repos/magma-diff-alg/diffalg.spec");
+Q := Rationals();
+R<t> := PolynomialRing(Q, 1);
+deriv := map<R -> R | u :-> Derivative(u, t)>;
+A := DifferentialRing(R, deriv, Q);
+F<tt> := FieldOfFractions(A);
+P<x, y> := PolynomialRingProlSeq(F, 2 : term_order := <"dblocks", [[1,2]]>);
+
+f := Diff(x, 2) + Diff(x, 1)*y + y;
+
+procedure dump_level(P, f, r)
+    Extend(P, r);
+    Jr := Jet(P, r);
+    print "==== r =", r, "====";
+    print "Names(J_r):";
+    print Names(Jr);
+    print "Generators (manual prolongation chain f, f', ..., f^(r-2)):";
+    for k in [0 .. r - 2] do
+        print "Jet(Diff(f,", k, "),", r, "):";
+        print Jet(Diff(f, k), r);
+    end for;
+end procedure;
+
+dump_level(P, f, 2);
+dump_level(P, f, 3);
+dump_level(P, f, 4);
+
+print "==== END ====";
+exit;
