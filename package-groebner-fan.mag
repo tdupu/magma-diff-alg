@@ -172,5 +172,19 @@ directions that DO have positive entry at coordinate i).
         end if;
     end for;
 
-    return [w[i] + k * h[i] : i in [1..n]];
+    result := [w[i] + k * h[i] : i in [1..n]];
+
+    // Post-condition guard: if h has a NEGATIVE entry where w had a POSITIVE
+    // entry, shifting by k * h can drive that coord negative. The chosen k is
+    // computed only from coords where w was negative, so it can be too large
+    // for coords where h is negative. Detect that and tell the caller to
+    // canonicalize w further (e.g. add another lineality direction with the
+    // opposite-sign profile).
+    if not &and[result[i] ge 0 : i in [1..n]] then
+        error Sprintf("ShiftToNonNegative failed: shift by k = %o * h drives " *
+                      "some coord negative (result = %o). h has a mixed-sign " *
+                      "profile relative to w; canonicalize w mod additional " *
+                      "lineality directions before calling.", k, result);
+    end if;
+    return result;
 end intrinsic;
