@@ -7,3 +7,4 @@ package-reduction.mag
 package-noncommutative.mag
 package-dimension.mag
 package-latex.mag
+package-groebner-fan.mag

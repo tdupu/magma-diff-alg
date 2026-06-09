@@ -1,0 +1,190 @@
+/*
+ * package-groebner-fan.mag
+ *
+ * Gröbner-fan / initial-ideal machinery for polynomial ideals.
+ *
+ * Phase 3 of the sticky-cone deliverable (notes.tex §21): provides the
+ * Magma-side InitialIdeal(I, w) primitive so that sticky-cone classification
+ * can be done natively in Magma without round-tripping through Sage.
+ *
+ * The intrinsic composes existing Magma primitives:
+ *   - PolynomialRing(F, n, "weight", N×N-matrix-as-flat-seq) for the
+ *     weight-induced matrix monomial order;
+ *   - GroebnerBasis(I) to reduce I to a w-Gröbner basis;
+ *   - LeadingMonomial(g) to extract the initial under that order;
+ *   - ideal< Sw | leading_monomials > to wrap the initial as an ideal.
+ *
+ * Constraints (deliberately scoped to the Phase-3 use case):
+ *   - Requires non-negative entries in w. For sticky-cone use this is fine
+ *     because the diff-homogeneity direction h has all-non-negative entries,
+ *     so ShiftToNonNegative(w, h) makes w non-negative without changing the
+ *     initial ideal (h is in the lineality of any diff-homogeneous ideal).
+ *   - Lineality of I is the caller's responsibility — use
+ *     CanonicalizeWeightModuloLineality(w, basis) to put w in canonical form
+ *     before calling.
+ *   - Tie-break is lex on Sw's variables. For interior weights (the open
+ *     case in any Gröbner-fan cone), the tie-break is irrelevant. For
+ *     boundary weights, the result is order-dependent — out of scope here.
+ *
+ * Tests:    test-valuations/test_initial_ideal_intrinsic.mag
+ *           test-valuations/test_initial_ideal_sage_xcheck.py
+ * Memory:   project_slice3_sticky_result.md, project_lineality_in_sticky_check.md
+ */
+
+
+intrinsic InitialIdeal(I::RngMPol, w::SeqEnum) -> RngMPol
+{
+The initial ideal of I with respect to the weight vector w, computed by
+constructing a matrix-order polynomial ring whose first row is w and whose
+remaining rows are the lex tie-breaker, then taking the leading monomials
+of the resulting Gröbner basis.
+
+Requires w to have length equal to Rank(Generic(I)) and all entries
+non-negative (Magma's "weight" matrix order rejects negative entries).
+For weights with negative components, use ShiftToNonNegative first;
+for diff-homogeneous ideals the shift is initial-ideal-invariant.
+
+Returns an RngMPol ideal living in a fresh polynomial ring with the
+matrix order. The fresh ring is accessible via Generic of the returned
+ideal.
+}
+    S := Generic(I);
+    n := Rank(S);
+    require #w eq n:
+        "Weight vector length", #w, "must equal rank of ambient ring", n;
+    require &and[w[i] ge 0 : i in [1..n]]:
+        "Weight vector must be non-negative; shift via ShiftToNonNegative first";
+
+    // Build the N×N matrix-order: first row = w; remaining N-1 rows are
+    // identity rows {e_i : i in [1..N] \ {pivot}} where pivot is some index
+    // with w[pivot] ≠ 0 (guarantees linear independence of the full matrix).
+    // Magma rejects matrix orders whose rows are linearly dependent.
+    pivot := 0;
+    for i in [1..n] do
+        if w[i] gt 0 then
+            pivot := i;
+            break;
+        end if;
+    end for;
+    require pivot gt 0:
+        "InitialIdeal requires at least one strictly positive entry in w";
+    tie_breaker := &cat[ [j eq k select 1 else 0 : j in [1..n]]
+                        : k in [1..n] | k ne pivot ];
+    mat := w cat tie_breaker;
+    Sw := PolynomialRing(BaseRing(S), n, "weight", mat);
+
+    // Coerce I into the matrix-order ring.
+    phi := hom< S -> Sw | [Sw.i : i in [1..n]] >;
+    Iw := ideal< Sw | [phi(g) : g in Basis(I)] >;
+
+    // Initial ideal = leading monomials of a Gröbner basis under the new order.
+    return ideal< Sw | [LeadingMonomial(g) : g in GroebnerBasis(Iw)] >;
+end intrinsic;
+
+
+intrinsic CanonicalizeWeightModuloLineality(w::SeqEnum, lineality_basis::SeqEnum) -> SeqEnum
+{
+Project w onto the orthogonal complement of the lineality space spanned by
+the given basis vectors. Two weights differing by a vector in the lineality
+canonicalize to the same output (so the initial ideal computed by
+InitialIdeal is well-defined on the quotient).
+
+The result has rational entries in general (the orthogonal projection
+involves rational coefficients). Caller can clear denominators if integer
+weights are needed.
+
+lineality_basis is a sequence of basis vectors, each of length #w. The
+vectors need NOT be orthogonal; Gram-Schmidt is applied internally.
+}
+    n := #w;
+    require &and[#v eq n : v in lineality_basis]:
+        "All lineality basis vectors must have length equal to #w";
+
+    if #lineality_basis eq 0 then
+        return [Rationals() ! c : c in w];
+    end if;
+
+    // Convert to rationals for the projection arithmetic.
+    Q := Rationals();
+    w_q := Vector(Q, [Q ! c : c in w]);
+
+    // Gram-Schmidt orthogonalize the lineality basis, then subtract w's
+    // projection onto each orthogonalized vector.
+    orth := [];
+    for v in lineality_basis do
+        v_q := Vector(Q, [Q ! c : c in v]);
+        // Subtract projections onto previous orthogonalized vectors.
+        for u in orth do
+            u_dot_u := InnerProduct(u, u);
+            if u_dot_u ne 0 then
+                v_q := v_q - (InnerProduct(v_q, u) / u_dot_u) * u;
+            end if;
+        end for;
+        if v_q ne Vector(Q, [0 : i in [1..n]]) then
+            Append(~orth, v_q);
+        end if;
+    end for;
+
+    // Subtract w's projection onto each orthogonalized basis vector.
+    w_canonical := w_q;
+    for u in orth do
+        u_dot_u := InnerProduct(u, u);
+        if u_dot_u ne 0 then
+            w_canonical := w_canonical - (InnerProduct(w_canonical, u) / u_dot_u) * u;
+        end if;
+    end for;
+
+    return [w_canonical[i] : i in [1..n]];
+end intrinsic;
+
+
+intrinsic ShiftToNonNegative(w::SeqEnum, h::SeqEnum) -> SeqEnum
+{
+Shift w by an integer multiple of h until all entries of w + k*h are
+non-negative. Returns the shifted vector w + k*h with the smallest k >= 0
+that makes the result non-negative entrywise.
+
+Intended for use with a diff-homogeneity direction h: if I is differentially
+homogeneous of some weight (every generator has all its monomials at the
+same h-weight), then InitialIdeal(I, w) = InitialIdeal(I, w + k*h) for any
+integer k. So the shift is initial-ideal-invariant when h is in the
+lineality of I.
+
+Fails (errors) if there is no k for which w + k*h has all entries non-negative
+— specifically, if any coordinate i has h[i] = 0 and w[i] < 0. In that case
+the caller must canonicalize w further (e.g. modulo additional lineality
+directions that DO have positive entry at coordinate i).
+}
+    n := #w;
+    require #h eq n: "Shift direction h must have same length as w";
+
+    // Find smallest k >= 0 with w[i] + k * h[i] >= 0 for every i.
+    k := 0;
+    for i in [1..n] do
+        if w[i] lt 0 then
+            require h[i] gt 0:
+                "Cannot shift w[", i, "] =", w[i],
+                "to non-negative via h: h[", i, "] =", h[i], "is not positive";
+            k_i := Ceiling(Rationals() ! (-w[i]) / (Rationals() ! h[i]));
+            if k_i gt k then
+                k := k_i;
+            end if;
+        end if;
+    end for;
+
+    result := [w[i] + k * h[i] : i in [1..n]];
+
+    // Post-condition guard: if h has a NEGATIVE entry where w had a POSITIVE
+    // entry, shifting by k * h can drive that coord negative. The chosen k is
+    // computed only from coords where w was negative, so it can be too large
+    // for coords where h is negative. Detect that and tell the caller to
+    // canonicalize w further (e.g. add another lineality direction with the
+    // opposite-sign profile).
+    if not &and[result[i] ge 0 : i in [1..n]] then
+        error Sprintf("ShiftToNonNegative failed: shift by k = %o * h drives " *
+                      "some coord negative (result = %o). h has a mixed-sign " *
+                      "profile relative to w; canonicalize w mod additional " *
+                      "lineality directions before calling.", k, result);
+    end if;
+    return result;
+end intrinsic;
