@@ -1,0 +1,22 @@
+Sage cross-validation against Magma's InitialIdeal intrinsic.
+================================================================
+--- L3-cone 0 (Magma → {x02, x03}) ---
+  w = [0, 0, 9, 0, 20, 0, 15, 0]
+  pivot = 3
+  Sage LMs:  ['x02', 'x03']
+  expected:  ['x02', 'x03']
+  PASS (ideal equality)
+--- L3-cone 5 (Magma → {x01*y01, x01*y00, x02*y01}) ---
+  w = [0, 0, 10, 5, 0, 0, 0, 0]
+  pivot = 3
+  Sage LMs:  ['x01*y01', 'y00*x01', 'y01*x02']
+  expected:  ['x01*y01', 'x01*y00', 'x02*y01']
+  PASS (ideal equality)
+
+=== Invariance test (shift by 7 * h) ===
+  w_a        LMs: ['x02', 'x03']
+  w_a + 7h   LMs: ['x02', 'x03']
+  PASS — shift invariance
+
+================================================================
+OVERALL: ALL PASS

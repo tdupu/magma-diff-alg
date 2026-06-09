@@ -1,0 +1,30 @@
+==== J_3 setup ====
+Rank: 8
+Names: [ x, y, Diff(x,1), Diff(y,1), Diff(x,2), Diff(y,2), Diff(x,3), Diff(y,3) 
+]
+Raw-chain I^[3] generators:
+   Diff(x,2) + y*Diff(x,1) + y
+   Diff(x,3) + y*Diff(x,2) + Diff(x,1)*Diff(y,1) + Diff(y,1)
+
+==== L3-cone 0 interior weight (sum of 5 rays) ====
+Raw: [ 0, -5, 9, -10, 15, 0, 5, 0 ]
+After ShiftToNonNegative(w, diff_hom): [ 0, 0, 9, 0, 20, 0, 15, 0 ]
+
+==== InitialIdeal(I, w_shifted) ====
+Initial-ideal generators (= leading monomials of w-Groebner basis):
+   $.5
+   $.7
+
+==== L3-cone 5 interior weight ====
+Raw: [ 0, -1, 10, 3, -1, 0, -2, 0 ]
+Shifted: [ 0, 0, 10, 5, 0, 0, 0, 0 ]
+InitialIdeal(I, w5_shifted) generators:
+   $.3*$.4
+   $.2*$.3
+   $.4*$.5
+
+==== Invariance: InitialIdeal(I, w_shifted) == InitialIdeal(I, w_shifted + 
+7*diff_hom) ? ====
+Same set of leading monomials? true
+
+==== END ====

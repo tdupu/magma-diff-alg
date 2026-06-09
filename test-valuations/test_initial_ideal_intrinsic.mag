@@ -1,0 +1,130 @@
+// test_initial_ideal_intrinsic.mag
+//
+// Magma side of the cross-validation for the new InitialIdeal(I, w) intrinsic
+// (package-groebner-fan.mag). Builds the level-3 raw-chain trace ideal for
+// the sticky-cone canonical example f = x'' + x'y + y, picks weight vectors
+// in the interior of known sticky cones from project_slice3_sticky_result.md
+// (shifted to non-negative via the differential-homogeneity direction), and
+// dumps the leading monomials of the resulting initial ideals.
+//
+// Sage side (test_initial_ideal_sage_xcheck.py) reads this output and
+// re-computes the initial ideal under the same weight, asserting that the
+// leading-monomial sets agree.
+//
+// Phase 3 step 3 deliverable for the sticky-cone work.
+//
+// Dependencies: package-groebner-fan.mag (the new intrinsics),
+//               package-prolongations.mag (Jet, Diff, Extend, etc.),
+//               package-rngdiffpol.mag (PolynomialRingProlSeq).
+// Memory:       project_slice3_sticky_result.md (sticky-cone L3 ray data),
+//               project_lineality_in_sticky_check.md (lineality bases).
+
+SetQuitOnError(true);
+AttachSpec("/Users/tdupuy/repos/magma-diff-alg/diffalg.spec");
+
+Q := Rationals();
+R<t> := PolynomialRing(Q, 1);
+deriv := map<R -> R | u :-> Derivative(u, t)>;
+A := DifferentialRing(R, deriv, Q);
+F<tt> := FieldOfFractions(A);
+
+P<x, y> := PolynomialRingProlSeq(F, 2 : term_order := <"dblocks", [[1, 2]]>);
+Extend(P, 3);
+J3 := Jet(P, 3);
+print "==== J_3 setup ====";
+print "Rank:", Rank(J3);
+print "Names:", Names(J3);
+
+f := Diff(x, 2) + Diff(x, 1)*y + y;
+fp := Diff(f, 1);
+I := ideal< J3 | [Jet(f, 3), Jet(fp, 3)] >;
+print "Raw-chain I^[3] generators:";
+for g in Basis(I) do print "  ", g; end for;
+
+// Lineality directions for pf3 from project_lineality_in_sticky_check.md
+// (in the Names(J3) = [x, y, x', y', x'', y'', x''', y'''] order):
+//   e_x00 = e_1 (x absent in I)
+//   diff_hom = (0, 1, 0, 2, 1, 0, 2, 0) -- weight-1 scaling
+//   e_y02 = e_6 (y'' absent in I_3 generators)
+//   e_y03 = e_8 (y''' absent in I_3 generators)
+lineality_3 := [
+    [1, 0, 0, 0, 0, 0, 0, 0],
+    [0, 1, 0, 2, 1, 0, 2, 0],
+    [0, 0, 0, 0, 0, 1, 0, 0],
+    [0, 0, 0, 0, 0, 0, 0, 1]
+];
+diff_hom := lineality_3[2];
+
+// Interior weights for the 10 L3 cones, derived as the sum of their primitive
+// rays (from project_slice3_sticky_result.md) then shifted via diff_hom to
+// be non-negative. The rays come from pf3.rays() in the interleaved layout.
+//
+// pf3 rays (verbatim from the Sage diagnostic; index = ray index in pf3):
+//   [0]  (0, -3, 10, -6,  7, 0,  4, 0)
+//   [1]  (0, -2,  0,  1, -2, 0,  1, 0)
+//   [2]  (0, -1,  0, -2,  9, 0, -2, 0)
+//   [3]  (0,  0, -1,  0,  0, 0,  0, 0)
+//   [4]  (0,  1,  0, -3,  1, 0,  2, 0)
+//   [5]  (0,  1,  0,  0, -1, 0,  0, 0)
+//   [6]  (0,  1,  0,  2,  1, 0, -3, 0)
+//   [7]  (0,  3,  0,  6, -7, 0, -4, 0)
+//   [8]  (0,  9,  0, -2, -1, 0, -2, 0)
+//
+// Test cone: L3-cone 0 has ray-indices [0, 1, 2, 3, 4] (from
+// project_slice3_sticky_result.md). Interior = sum of rays.
+rays3 := [
+    [0, -3, 10, -6,  7, 0,  4, 0],
+    [0, -2,  0,  1, -2, 0,  1, 0],
+    [0, -1,  0, -2,  9, 0, -2, 0],
+    [0,  0, -1,  0,  0, 0,  0, 0],
+    [0,  1,  0, -3,  1, 0,  2, 0]
+];
+n := 8;
+w_interior := [&+[ray[i] : ray in rays3] : i in [1..n]];
+print "\n==== L3-cone 0 interior weight (sum of 5 rays) ====";
+print "Raw:", w_interior;
+
+// Sticky-cone use case: shift via diff_hom (which IS in the lineality of I).
+w_shifted := ShiftToNonNegative(w_interior, diff_hom);
+print "After ShiftToNonNegative(w, diff_hom):", w_shifted;
+
+// Sanity: shift should NOT change initial. We confirm by computing initial
+// at both raw (will error -- has negatives) and shifted.
+print "\n==== InitialIdeal(I, w_shifted) ====";
+In_shifted := InitialIdeal(I, w_shifted);
+print "Initial-ideal generators (= leading monomials of w-Groebner basis):";
+for g in Basis(In_shifted) do
+    print "  ", g;
+end for;
+
+// Also try a second weight for variety: cell-interior weight from L3-cone 5.
+// L3-cone 5 has ray-indices [0, 1, 6, 7].
+rays_cone5 := [
+    [0, -3, 10, -6,  7, 0,  4, 0],
+    [0, -2,  0,  1, -2, 0,  1, 0],
+    [0,  1,  0,  2,  1, 0, -3, 0],
+    [0,  3,  0,  6, -7, 0, -4, 0]
+];
+w5 := [&+[ray[i] : ray in rays_cone5] : i in [1..n]];
+print "\n==== L3-cone 5 interior weight ====";
+print "Raw:", w5;
+w5_shifted := ShiftToNonNegative(w5, diff_hom);
+print "Shifted:", w5_shifted;
+print "InitialIdeal(I, w5_shifted) generators:";
+In_5 := InitialIdeal(I, w5_shifted);
+for g in Basis(In_5) do
+    print "  ", g;
+end for;
+
+// Invariance test: shifting further should not change the initial ideal.
+print "\n==== Invariance: InitialIdeal(I, w_shifted) == InitialIdeal(I, w_shifted + 7*diff_hom) ? ====";
+w_more_shifted := [w_shifted[i] + 7 * diff_hom[i] : i in [1..n]];
+In_more := InitialIdeal(I, w_more_shifted);
+// Compare basis sets (both ideals in DIFFERENT rings, but same matrix order
+// over the same base — semantically identical).
+LMs_a := { Sprintf("%o", g) : g in Basis(In_shifted) };
+LMs_b := { Sprintf("%o", g) : g in Basis(In_more) };
+print "Same set of leading monomials?", LMs_a eq LMs_b;
+
+print "\n==== END ====";
+exit;
