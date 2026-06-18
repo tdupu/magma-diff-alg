@@ -1,0 +1,76 @@
+// test_stable_trace.mag
+//
+// Tests for the StableTrace(eqns, r : MaxTolerance) intrinsic in
+// package-groebner-fan.mag.
+//
+// For f = x'' + x'y + y (canonical sticky-cone example), the Phase-3
+// empirical finding (project_rawchain_tstable_same_fan.md) showed:
+//   s_0(r) = 0 for r = 2, 3, 4
+// i.e. I_{r, r} = I_{r, r+1}, so stability is reached with tolerance = 0.
+//
+// This test verifies that finding programmatically and checks that the
+// returned ideal contains the expected generators.
+//
+// Dependencies: diffalg.spec (all packages, including package-groebner-fan.mag)
+// Memory: project_rawchain_tstable_same_fan.md
+// Expected output: PASS for each r = 2, 3, 4.
+
+SetQuitOnError(true);
+AttachSpec("/Users/tdupuy/repos/magma-diff-alg/diffalg.spec");
+
+Q := Rationals();
+R<t> := PolynomialRing(Q, 1);
+deriv := map<R -> R | f :-> Derivative(f, t)>;
+A := DifferentialRing(R, deriv, Q);
+F<tt> := FieldOfFractions(A);
+P<x, y> := PolynomialRingProlSeq(F, 2 : term_order := <"dblocks", [[1, 2]]>);
+
+f := Diff(x, 2) + Diff(x, 1)*y + y;
+
+print "=== StableTrace tests for f = x'' + x'y + y ===";
+print "Expected: s_0(r) = 0 for r = 2, 3, 4 (Phase-3 empirical finding)";
+print "";
+
+all_pass := true;
+
+for r in [2, 3, 4] do
+    printf "--- r = %o ---\n", r;
+    t0 := Cputime();
+    T_stable, s_0 := StableTrace([f], r);
+    elapsed := Cputime(t0);
+
+    printf "  s_0(%o) = %o  (expected 0)  %o\n", r, s_0,
+        s_0 eq 0 select "PASS" else "FAIL";
+    printf "  #generators of T_stable = %o\n", #Basis(T_stable);
+    printf "  wall: %o s\n", elapsed;
+
+    if s_0 ne 0 then
+        all_pass := false;
+        print "  FAIL: s_0 != 0";
+    end if;
+
+    // Check that the raw prolongation chain generators are *contained in* T_stable.
+    // (They should be since raw chain ⊆ T_stable per theory; and the Phase-3
+    // finding was that both give the same Gröbner fan.)
+    Jr := Jet(P, r);
+    raw_gens := [Jet(Diff(f, k), r) : k in [0 .. r - 2]];
+    // T_stable lives in Jet(P, r + s_0) = Jet(P, r) since s_0 = 0.
+    // Coerce raw generators into T_stable's ambient.
+    Jeff_stable := Generic(T_stable);
+    phi_r_to_jeff := hom<Jr -> Jeff_stable |
+        [i le 2*(r+1) select Jeff_stable.i else Jeff_stable!0 : i in [1..Rank(Jr)]]>;
+
+    raw_in_T_stable := &and[phi_r_to_jeff(g) in T_stable : g in raw_gens];
+    printf "  raw chain gens in T_stable? %o  (expected true)\n",
+        raw_in_T_stable;
+    if not raw_in_T_stable then
+        all_pass := false;
+        print "  FAIL: raw generator not in T_stable";
+    end if;
+
+    print "";
+end for;
+
+print "=== Summary ===";
+print all_pass select "ALL PASS" else "SOME TESTS FAILED";
+exit;
