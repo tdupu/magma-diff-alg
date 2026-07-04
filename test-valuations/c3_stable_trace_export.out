@@ -1,0 +1,22 @@
+=== C3: StableTrace re-verification for f = x'' + x'y + y ===
+
+--- r = 2 ---
+  StableTrace returned s0 (relative) = 0; absolute s_0(2) = r + 0 = 2  (expected 2)  PASS
+  T_stable = I_raw(2) as ideals in Jet(P, 2)?  true  (expected true)  PASS
+  exported 1 generator(s) -> test-valuations/c3_stable_trace_gens_r2.txt
+  wall: 0.010 s
+
+--- r = 3 ---
+  StableTrace returned s0 (relative) = 0; absolute s_0(3) = r + 0 = 3  (expected 3)  PASS
+  T_stable = I_raw(3) as ideals in Jet(P, 3)?  true  (expected true)  PASS
+  exported 2 generator(s) -> test-valuations/c3_stable_trace_gens_r3.txt
+  wall: 0.010 s
+
+--- r = 4 ---
+  StableTrace returned s0 (relative) = 0; absolute s_0(4) = r + 0 = 4  (expected 4)  PASS
+  T_stable = I_raw(4) as ideals in Jet(P, 4)?  true  (expected true)  PASS
+  exported 3 generator(s) -> test-valuations/c3_stable_trace_gens_r4.txt
+  wall: 0.010 s
+
+=== Summary ===
+ALL PASS

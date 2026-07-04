@@ -34,6 +34,7 @@
  * Tests:    test-valuations/test_initial_ideal_intrinsic.mag
  *           test-valuations/test_initial_ideal_sage_xcheck.py
  *           test-valuations/test_stable_trace.mag
+ *           test-valuations/c3_stable_trace_export.mag (+ c3_stable_trace_sticky.py)
  * Memory:   project_slice3_sticky_result.md, project_lineality_in_sticky_check.md
  *           project_rawchain_tstable_same_fan.md
  */
@@ -223,14 +224,27 @@ Returns:
   s0       : RngIntElt -- the smallest tolerance at which stability was reached
              (so I_r_s0 = I_r_s0plus1).
 
+Convention note -- the returned s0 is RELATIVE, not absolute. It counts the
+extra prolongation steps beyond r, so s0 = 0 means I_(r,r) = I_(r,r+1),
+i.e. stability already at depth s = r. PHASE-4-PLAN's standing definition
+s_0(r) := min( s ge r : I_(r,s) = I_(r,s+1) ) is an ABSOLUTE jet depth; the
+two conventions differ by the offset r:
+    s_0(r)  (absolute, PHASE-4-PLAN)  =  r + s0  (relative, this intrinsic).
+In particular the Phase-3 empirical finding "s_0(r) = r for f = x''+x'y+y
+at r = 2, 3, 4" is the same statement as this intrinsic returning s0 = 0 in
+all three cases.
+
 Note on the ambient ring: the returned ideal lives in Jet(P, r + s0), not
 in a re-embedded Jet(P, r). The generators only use J^r variables, so any
 computation that depends only on polynomials in those generators is valid.
 If you need the ideal in the smaller ring Jet(P, r) specifically, use
 EliminationIdeal or manual coercion with Jet(g, r) on each generator.
 
-Tests: test-valuations/test_stable_trace.mag (verifies s0(r) = 0 for
-f = x''+x'y+y at r=2,3,4, matching Phase-3 empirical finding).
+Tests: test-valuations/test_stable_trace.mag (verifies the relative s0 = 0,
+i.e. absolute s_0(r) = r, for f = x''+x'y+y at r=2,3,4, matching the
+Phase-3 empirical finding); test-valuations/c3_stable_trace_export.mag +
+c3_stable_trace_sticky.py (C3: end-to-end re-verification of the Phase-3
+sticky-cone classification from StableTrace-built ideals).
 
 Memory: project_rawchain_tstable_same_fan.md,
         project_traceideal_vs_prolongation_chain.md

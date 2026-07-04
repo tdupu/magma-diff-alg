@@ -1,0 +1,6 @@
+# StableTrace generators for f = x'' + x'y + y at r = 2
+# s0 relative = 0, s_0(2) absolute = 2 (PHASE-4-PLAN convention)
+# interleaved ring vars: x00 y00 x01 y01 x02 y02
+# generator count: 1 (one per line)
+x02 + y00*x01 + y00
+

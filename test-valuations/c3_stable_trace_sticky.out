@@ -1,0 +1,27 @@
+Building fans from StableTrace generators...
+  gens per level: r2=1, r3=2, r4=3
+  pf2: 2 cones; pf3: 10 cones; pf4: 346 cones   (expected 2 / 10 / 346)
+  level-3 and level-4 maximal-cone dicts match the Phase-3 reference artifacts  PASS
+
+r=2 -> r=3 classification...
+  STRICT (C2 == C3_proj): 2 / 2
+  reverse-contained L3 cones: 10 / 10
+  refinement profile: [3, 7]
+  strict lifts: [[0], [2]]
+  straddlers: []
+  PASS
+
+r=3 -> r=4 classification (346 x 10 LP pairs)...
+  LP loop: 33.07s
+  STRICT (C3 == C4_proj): 10 / 10
+  reverse-contained L4 cones: 342 / 346
+  refinement profile: [4, 7, 13, 32, 16, 19, 87, 20, 51, 93]
+  strict lifts: [[0], [2], [22], [20], [42], [16], [102], [38], [89], [195]]
+  straddlers: [43, 64, 65, 223]
+  PASS
+
+ALL PASS — StableTrace-built ideals reproduce the Phase-3 sticky classification:
+  2/2 sticky at r=2->r=3 (profile [3, 7], 0 straddlers);
+  10/10 sticky at r=3->r=4 (342/346 reverse-contained);
+  straddlers = {L4-43, L4-64, L4-65, L4-223}.
+Total: 69.98s

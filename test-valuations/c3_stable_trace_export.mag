@@ -1,0 +1,94 @@
+// c3_stable_trace_export.mag
+//
+// Phase-4 C3 deliverable (bead dv-644), Magma half: re-verify the Phase-3
+// sticky-cone inputs using the StableTrace intrinsic (C1, package-groebner-fan.mag)
+// instead of the hand-written raw prolongation chain.
+//
+// For f = x'' + x'y + y at r = 2, 3, 4 this script:
+//   1. runs StableTrace([f], r) and checks the returned RELATIVE s0 is 0,
+//      i.e. the absolute stabilization depth is s_0(r) = r + 0 = r in the
+//      PHASE-4-PLAN convention s_0(r) := min{ s >= r : I_{r,s} = I_{r,s+1} };
+//   2. checks T_stable equals the raw-chain ideal
+//      I_raw(r) = < Jet(Diff(f,k), r) : 0 <= k <= r-2 > as ideals in Jet(P, r)
+//      (ideal equality forces Groebner-fan equality, which is what licenses
+//      comparing cone indices between the raw-chain and StableTrace runs);
+//   3. exports the StableTrace generators, one per line in the interleaved
+//      variable names x00, y00, x01, y01, ..., to
+//      test-valuations/c3_stable_trace_gens_r{2,3,4}.txt for the Sage half
+//      (c3_stable_trace_sticky.py) to rebuild the fans from.
+//
+// Run from the repo root (paths are relative):
+//     magma -b test-valuations/c3_stable_trace_export.mag
+//
+// Runtime: < 5 s. Expected output: PASS on all checks, three gens files.
+// Memory: project_rawchain_tstable_same_fan.md (Phase-3 finding this re-verifies)
+
+SetQuitOnError(true);
+SetColumns(0);
+AttachSpec("diffalg.spec");
+
+Q := Rationals();
+R<t> := PolynomialRing(Q, 1);
+deriv := map<R -> R | u :-> Derivative(u, t)>;
+A := DifferentialRing(R, deriv, Q);
+F<tt> := FieldOfFractions(A);
+P<x, y> := PolynomialRingProlSeq(F, 2 : term_order := <"dblocks", [[1, 2]]>);
+
+f := Diff(x, 2) + Diff(x, 1)*y + y;
+
+print "=== C3: StableTrace re-verification for f = x'' + x'y + y ===";
+print "";
+
+all_pass := true;
+
+for r in [2, 3, 4] do
+    printf "--- r = %o ---\n", r;
+    t0 := Cputime();
+    T_stable, s0_rel := StableTrace([f], r);
+    elapsed := Cputime(t0);
+
+    // Check 1: relative s0 = 0, i.e. absolute s_0(r) = r + s0_rel = r.
+    s0_abs := r + s0_rel;
+    printf "  StableTrace returned s0 (relative) = %o; absolute s_0(%o) = r + %o = %o  (expected %o)  %o\n",
+        s0_rel, r, s0_rel, s0_abs, r, s0_abs eq r select "PASS" else "FAIL";
+    if s0_abs ne r then
+        all_pass := false;
+    end if;
+
+    // Check 2: T_stable equals the raw prolongation-chain ideal in Jet(P, r).
+    Extend(P, r);
+    Jr := Jet(P, r);
+    n_low := 2 * (r + 1);
+    raw := ideal<Jr | [Jet(Diff(f, k), r) : k in [0 .. r - 2]]>;
+    Jeff := Generic(T_stable);   // Jet(P, r + s0_rel); generators only use J^r vars
+    phi := hom<Jeff -> Jr |
+        [i le n_low select Jr.i else Jr!0 : i in [1 .. Rank(Jeff)]]>;
+    stable_in_Jr := ideal<Jr | [phi(g) : g in Basis(T_stable)]>;
+    ideals_equal := raw eq stable_in_Jr;
+    printf "  T_stable = I_raw(%o) as ideals in Jet(P, %o)?  %o  (expected true)  %o\n",
+        r, r, ideals_equal, ideals_equal select "PASS" else "FAIL";
+    if not ideals_equal then
+        all_pass := false;
+    end if;
+
+    // Export the StableTrace generators with interleaved plain names.
+    names := &cat[["x0" cat IntegerToString(j), "y0" cat IntegerToString(j)] : j in [0 .. r]];
+    AssignNames(~Jr, names);
+    gens := Basis(stable_in_Jr);
+    out := Sprintf("# StableTrace generators for f = x'' + x'y + y at r = %o\n", r);
+    out cat:= Sprintf("# s0 relative = %o, s_0(%o) absolute = %o (PHASE-4-PLAN convention)\n", s0_rel, r, s0_abs);
+    out cat:= "# interleaved ring vars: " cat &cat[names[i] cat (i lt #names select " " else "") : i in [1 .. #names]] cat "\n";
+    out cat:= Sprintf("# generator count: %o (one per line)\n", #gens);
+    for g in gens do
+        out cat:= Sprint(g) cat "\n";
+    end for;
+    path := "test-valuations/c3_stable_trace_gens_r" cat IntegerToString(r) cat ".txt";
+    PrintFile(path, out : Overwrite := true);
+    printf "  exported %o generator(s) -> %o\n", #gens, path;
+    printf "  wall: %o s\n", elapsed;
+    print "";
+end for;
+
+print "=== Summary ===";
+print all_pass select "ALL PASS" else "SOME CHECKS FAILED";
+exit;
