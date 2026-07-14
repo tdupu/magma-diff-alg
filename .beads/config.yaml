@@ -1,3 +1,4 @@
 dolt.auto-start: "false"
 sync:
     remote: "git+ssh://git@github.com/./tdupu/magma-diff-alg-dolt.git"
+sync.remote: "git+ssh://git@github.com/./tdupu/magma-diff-alg-dolt.git"
