@@ -1,0 +1,333 @@
+// test-pdiffpol.mag
+//
+// Tests for package-pdiffpol.mag, the partial differential polynomial
+// ring RngPDiffPol.
+//
+// From the ./test-pdiffpol folder:
+//
+//     magma test-pdiffpol.mag
+//
+// The four tests are the ones required by the package specification:
+//
+//   1. commutativity of the derivations on a non-trivial polynomial;
+//   2. a heat-equation reduction under an elimination ranking, with the
+//      multiplied-input identity checked;
+//   3. the m = 1 degeneration, checked against package-rngdiffpol.mag;
+//   4. the ranking axioms, spot-checked for every shipped ranking.
+//
+// Every test carries a mutation control: a deliberately wrong variant of
+// the same check that MUST be rejected.  A test whose control also passes
+// is reported as a failure, because it cannot distinguish right from
+// wrong.
+//
+// Expected output: PASS on every line and ALL PASS at the end; the script
+// exits non-zero if anything fails.
+
+SetQuitOnError(true);
+AttachSpec("../diffalg.spec");
+
+Q := Rationals();
+all_pass := true;
+
+procedure check(~all, name, cond)
+    if cond then
+        printf "PASS  %o\n", name;
+    else
+        printf "FAIL  %o\n", name;
+        all := false;
+    end if;
+end procedure;
+
+print "=== 1. commuting derivations ===";
+
+// Three derivations, two differential variables, and an f that is
+// nonlinear, has several terms and mixes the variables -- not a monomial.
+R3 := pDifferentialPolynomialRing(Q, 2, 3 : names := ["u", "w"],
+                                            derivation_names := ["x", "y", "z"]);
+u := R3.1;
+w := R3.2;
+f := u^2 * Diff(w, [1,0,0])
+   + Diff(u, [0,1,0]) * Diff(w, [0,0,1])
+   + 5 * Diff(u, [1,1,0]) * w^3
+   - Diff(u, [0,0,1])^2 * Diff(w, [1,0,0]);
+
+check(~all_pass, "the test polynomial is not a monomial",
+      #terms(f) eq 4 and not isMonomial(f));
+
+for i in [1..3] do
+    for j in [i+1..3] do
+        check(~all_pass, Sprintf("d%o d%o f = d%o d%o f", i, j, j, i),
+              Diff(Diff(f, i), j) eq Diff(Diff(f, j), i));
+    end for;
+end for;
+
+check(~all_pass, "the three derivations commute in every order",
+      Diff(Diff(Diff(f,1),2),3) eq Diff(Diff(Diff(f,3),2),1)
+      and Diff(Diff(Diff(f,1),2),3) eq Diff(Diff(Diff(f,2),1),3));
+
+check(~all_pass, "multi-index differentiation agrees with iterated differentiation",
+      Diff(f, [1,1,1]) eq Diff(Diff(Diff(f,1),2),3)
+      and Diff(f, [2,0,1]) eq Diff(Diff(Diff(f,1),1),3));
+
+// CONTROL: distinct derivations must give distinct answers, otherwise the
+// equalities above would hold for trivial reasons.
+check(~all_pass, "CONTROL d1 d2 f is not d1 d1 f",
+      Diff(Diff(f,1),2) ne Diff(Diff(f,1),1));
+
+print "";
+print "=== 2. heat equation reduction ===";
+
+// One differential variable u, two derivations d1 = d/dx and d2 = d/dt.
+rkx := derivationEliminationRanking(1, 2, [1,2]);   // x dominates t
+Rh := pDifferentialPolynomialRing(Q, 1, 2 : names := ["u"],
+                                            derivation_names := ["x", "t"],
+                                            ranking := rkx);
+setRanking(Rh, rkx, "derivation-elimination [x,t]");
+uh  := Rh.1;
+ut  := Diff(uh, [0,1]);
+uxx := Diff(uh, [2,0]);
+heat := ut - uxx;
+
+check(~all_pass, "the leader of u_t - u_xx is u_xx for x-dominant elimination",
+      leader(heat) eq uxx and degreeInLeader(heat) eq 1);
+check(~all_pass, "the initial and separant of the heat operator are -1",
+      initial(heat) eq Rh ! (-1) and separant(heat) eq Rh ! (-1));
+
+// Reducing u_xx against u_t - u_xx: the required reduction.
+quo, rem, mult := pseudoDivide(uxx, heat);
+check(~all_pass, "u_xx reduces to -u_t", rem eq -ut);
+check(~all_pass, "the multiplier is -1", mult eq Rh ! (-1));
+check(~all_pass, "the multiplied-input identity holds for u_xx",
+      pseudoDivisionIdentity(uxx, heat, quo, rem, mult));
+check(~all_pass, "the remainder is reduced", isReduced(rem, heat));
+
+// CONTROL: the identity must fail once the remainder is perturbed.
+check(~all_pass, "CONTROL a perturbed remainder breaks the identity",
+      not pseudoDivisionIdentity(uxx, heat, quo, rem + 1, mult));
+check(~all_pass, "CONTROL a perturbed multiplier breaks the identity",
+      not pseudoDivisionIdentity(uxx, heat, quo, rem, mult + 1));
+
+// The same reduction one prolongation deeper: u_xxxx must reduce to u_tt.
+// This exercises phase one of the algorithm, which has to prolong the
+// heat operator to reach the proper derivatives of its leader.
+uxxxx := Diff(uh, [4,0]);
+utt   := Diff(uh, [0,2]);
+quo4, rem4, mult4 := pseudoDivide(uxxxx, heat);
+check(~all_pass, "u_xxxx reduces to u_tt", rem4 eq utt);
+check(~all_pass, "the multiplier for u_xxxx is 1", mult4 eq Rh ! 1);
+check(~all_pass, "the multiplied-input identity holds for u_xxxx",
+      pseudoDivisionIdentity(uxxxx, heat, quo4, rem4, mult4));
+check(~all_pass, "the quotient prolongs the heat operator to order two",
+      {p[1] : p in quo4} eq {[2,0], [0,1]});
+
+// The reduction is ranking-dependent: making t dominant instead makes u_t
+// the leader, and then u_xx is already reduced.
+rkt := derivationEliminationRanking(1, 2, [2,1]);   // t dominates x
+setRanking(Rh, rkt, "derivation-elimination [t,x]");
+check(~all_pass, "the leader of u_t - u_xx is u_t for t-dominant elimination",
+      leader(heat) eq ut);
+quoT, remT, multT := pseudoDivide(uxx, heat);
+check(~all_pass, "u_xx is already reduced for t-dominant elimination",
+      remT eq uxx and multT eq Rh ! 1 and #quoT eq 0);
+check(~all_pass, "the multiplied-input identity holds for t-dominant elimination",
+      pseudoDivisionIdentity(uxx, heat, quoT, remT, multT));
+setRanking(Rh, rkx, "derivation-elimination [x,t]");
+
+// A nonlinear divisor, where the multiplier is a genuine power of the
+// separant rather than a unit.
+nl := uxx^2 - uh * ut;
+fnl := Diff(uh, [3,0]) * uh + uxx^3;
+quoN, remN, multN := pseudoDivide(fnl, nl);
+check(~all_pass, "a nonlinear divisor still yields a reduced remainder",
+      isReduced(remN, nl));
+check(~all_pass, "the multiplied-input identity holds for a nonlinear divisor",
+      pseudoDivisionIdentity(fnl, nl, quoN, remN, multN));
+check(~all_pass, "the multiplier is not a unit for a nonlinear divisor",
+      not isConstant(multN));
+
+// Both phases at once, with a divisor whose initial is not a unit.  Phase
+// one removes a proper derivative of the leader and leaves a quotient
+// entry behind; phase two then cuts the degree in the leader down, and
+// every entry already standing has to be scaled by the initial as it goes.
+// A quotient that is scaled by the separant but not by the initial still
+// produces the right remainder and multiplier, so only the quotient can
+// detect it.  check := false returns the identity as a value instead of
+// asserting it, so that shows up here as a FAIL rather than a crash.
+gsc := uh * uxx^2 - ut;
+fsc := Diff(uh, [3,0]) + uxx^2;
+quoS, remS, multS := pseudoDivide(fsc, gsc : check := false);
+proper := [p : p in quoS | p[1] ne [0,0]];
+
+check(~all_pass, "the initial of the scaled-initial divisor is not a unit",
+      not isConstant(initial(gsc)));
+check(~all_pass, "both reduction phases run on the scaled-initial example",
+      #proper gt 0 and #[p : p in quoS | p[1] eq [0,0]] gt 0);
+check(~all_pass, "the multiplied-input identity holds when the initial scales the quotient",
+      pseudoDivisionIdentity(fsc, gsc, quoS, remS, multS));
+check(~all_pass, "the phase-one quotient entry is scaled by the initial",
+      #[p : p in proper | not isConstant(p[2])] gt 0);
+check(~all_pass, "the scaled-initial remainder is reduced", isReduced(remS, gsc));
+
+// CONTROL: leaving that entry unscaled -- the exact shape of a quotient
+// that phase two forgot to scale -- must break the identity.
+quoUnscaled := [p[1] eq [0,0] select p else <p[1], one(Rh)> : p in quoS];
+check(~all_pass, "CONTROL an unscaled phase-one quotient breaks the identity",
+      not pseudoDivisionIdentity(fsc, gsc, quoUnscaled, remS, multS));
+
+print "";
+print "=== 3. the m = 1 degeneration ===";
+
+/*
+package-rngdiffpol.mag cannot always add or multiply when terms cancel:
+in that ring (Diff(x,2) + x*Diff(y,1))*(Diff(x,2) - x*Diff(y,1)) raises
+"Differential polynomial must be a term", because the cancelled term is
+kept in the term set and monomials() then rejects it.  The comparisons
+below therefore work on Eltseq data, and the shared examples are chosen
+so that no ordinary product cancels.  That limitation is a property of
+the ordinary package, not of the comparison.
+*/
+
+R0 := differentialPolynomialRing(Q, 2);
+R1 := pDifferentialPolynomialRing(Q, 2, 1);
+u1 := R1.1;
+v1 := R1.2;
+x  := R0.1;
+y  := R0.2;
+
+okey := function(z)
+    return Sort([Sprint(t) : t in Eltseq(differentialPolynomial(z))]);
+end function;
+
+fp := 3 * Diff(u1, [2]) * Diff(v1, [1])^2 + (1/2) * v1;
+f0 := 3 * Diff(x, 2) * Diff(y, 1)^2 + (1/2) * y;
+
+check(~all_pass, "the bridge to RngDiffPol reproduces the same polynomial",
+      okey(toOrdinary(fp, R0)) eq okey(f0));
+check(~all_pass, "leaders agree with package-rngdiffpol.mag",
+      okey(toOrdinary(leader(fp), R0)) eq okey(leader(f0)));
+check(~all_pass, "separants agree with package-rngdiffpol.mag",
+      okey(toOrdinary(separant(fp), R0)) eq okey(separant(f0)));
+check(~all_pass, "the derivation agrees with package-rngdiffpol.mag",
+      okey(toOrdinary(Diff(fp, 1), R0)) eq okey(Diff(f0)));
+
+// The ordinary package has no initial, so the initial is recovered there
+// from its defining property: for a polynomial of degree d in its leader,
+// the d-th partial derivative in the leader is d! times the initial.
+dg := degreeInLeader(fp);
+check(~all_pass, "initials agree with package-rngdiffpol.mag",
+      okey(toOrdinary(initial(fp), R0))
+      eq okey((1 / Factorial(dg)) * derivative(f0, dg, leader(f0))));
+
+// CONTROL: the comparison must separate different polynomials.
+check(~all_pass, "CONTROL the leader comparison rejects a wrong leader",
+      okey(toOrdinary(leader(fp), R0)) ne okey(leader(Diff(f0))));
+
+// One pseudo-division, with its identity re-checked using the ordinary
+// package's own Diff and multiplication.  The summation is done here on
+// Eltseq data rather than with the ordinary '+', for the reason above.
+accumulate := procedure(~A, z, sgn)
+    for t in Eltseq(differentialPolynomial(z)) do
+        k := Sprint(t[2]);
+        c := sgn * t[1];
+        if IsDefined(A, k) then
+            A[k] := A[k] + c;
+        else
+            A[k] := c;
+        end if;
+    end for;
+end procedure;
+
+gp := Diff(u1, [2]) - Diff(v1, [1]);
+fq := Diff(u1, [3]) * Diff(v1, [1]) + Diff(u1, [2]);
+quo1, rem1, mult1 := pseudoDivide(fq, gp);
+
+check(~all_pass, "the m = 1 pseudo-division satisfies its identity",
+      pseudoDivisionIdentity(fq, gp, quo1, rem1, mult1));
+check(~all_pass, "the m = 1 remainder is reduced", isReduced(rem1, gp));
+
+g0 := toOrdinary(gp, R0);
+A := AssociativeArray();
+accumulate(~A, toOrdinary(mult1 * fq, R0), 1);
+accumulate(~A, toOrdinary(rem1, R0), -1);
+for p in quo1 do
+    accumulate(~A, toOrdinary(p[2], R0) * Diff(g0, p[1][1]), -1);
+end for;
+check(~all_pass, "the same identity holds in RngDiffPol",
+      #[k : k in Keys(A) | A[k] ne 0] eq 0);
+
+// CONTROL: dropping the quotient must leave a residual.
+B := AssociativeArray();
+accumulate(~B, toOrdinary(mult1 * fq, R0), 1);
+accumulate(~B, toOrdinary(rem1, R0), -1);
+check(~all_pass, "CONTROL the RngDiffPol identity fails without the quotient",
+      #[k : k in Keys(B) | B[k] ne 0] gt 0);
+
+print "";
+print "=== 4. ranking axioms ===";
+
+nv := 2;
+nd := 2;
+bound := 2;
+
+rankings := [* <"orderly", orderlyRanking(nv, nd)>,
+               <"elimination", eliminationRanking(nv, nd)>,
+               <"elimination [2,1]", eliminationRanking(nv, nd, [2,1])>,
+               <"block [[2],[1]]", blockRanking(nv, nd, [[2],[1]])>,
+               <"derivation-elimination [1,2]", derivationEliminationRanking(nv, nd, [1,2])>,
+               <"derivation-elimination [2,1]", derivationEliminationRanking(nv, nd, [2,1])> *];
+
+for k in [1..#rankings] do
+    nm  := rankings[k][1];
+    cmp := rankings[k][2];
+    ok, msg := rankingAxiomsHold(cmp, nv, nd, bound);
+    check(~all_pass, Sprintf("%o satisfies the ranking axioms", nm), ok);
+    if not ok then
+        printf "      %o\n", msg;
+    end if;
+
+    // theta u > u, spelled out rather than taken from the checker.
+    check(~all_pass, Sprintf("%o: theta u > u", nm),
+          cmp([1,1,0], [1,0,0]) gt 0
+          and cmp([1,0,1], [1,0,0]) gt 0
+          and cmp([2,1,1], [2,0,0]) gt 0);
+
+    // theta v > theta w exactly when v > w, spelled out on a sample.
+    stable := true;
+    for v in [[1,0,0], [1,1,0], [2,0,1], [2,1,0]] do
+        for w in [[1,0,0], [1,0,1], [2,1,1], [2,0,0]] do
+            for a in [[1,0], [0,1], [1,1]] do
+                tv := [v[1], v[2] + a[1], v[3] + a[2]];
+                tw := [w[1], w[2] + a[1], w[3] + a[2]];
+                if Sign(cmp(v, w)) ne Sign(cmp(tv, tw)) then
+                    stable := false;
+                end if;
+            end for;
+        end for;
+    end for;
+    check(~all_pass, Sprintf("%o: v > w iff theta v > theta w", nm), stable);
+end for;
+
+// CONTROLS: things that are not rankings must be rejected.
+orderly := orderlyRanking(nv, nd);
+reversed := func<a, b | -orderly(a, b)>;
+okr := rankingAxiomsHold(reversed, nv, nd, bound);
+check(~all_pass, "CONTROL a reversed orderly order is not a ranking", not okr);
+
+varonly := func<a, b | a[1] - b[1]>;
+okv := rankingAxiomsHold(varonly, nv, nd, bound);
+check(~all_pass, "CONTROL an order blind to differentiation is not a ranking", not okv);
+
+// A comparison that satisfies the first axiom but not the second: compare
+// by total order, then break ties by the multi-index read backwards
+// against the variable index, which differentiation does not preserve.
+unstable := func<a, b |
+    (a[2] + a[3]) ne (b[2] + b[3]) select (a[2] + a[3]) - (b[2] + b[3])
+    else (a[2] * b[1] - b[2] * a[1])>;
+oku := rankingAxiomsHold(unstable, nv, nd, bound);
+check(~all_pass, "CONTROL an order unstable under differentiation is not a ranking",
+      not oku);
+
+print "";
+print all_pass select "ALL PASS" else "SOME TESTS FAILED";
+error if not all_pass, "test-pdiffpol.mag: at least one test failed";
+quit;
