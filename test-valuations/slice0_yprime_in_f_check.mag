@@ -24,7 +24,8 @@
 //   y''' in <f, f', f'', f'''>?              false
 
 SetQuitOnError(true);
-AttachSpec("/Users/tdupuy/repos/magma-diff-alg/diffalg.spec");
+AttachSpec("../diffalg.spec");
+assert IsIntrinsic("differentialPolynomialRing"); // TS2: prove the spec attached
 
 Q := Rationals();
 R<t> := PolynomialRing(Q, 1);

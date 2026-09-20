@@ -25,7 +25,8 @@
 
 SetQuitOnError(true);
 SetColumns(0);
-AttachSpec("diffalg.spec");
+AttachSpec("../diffalg.spec");
+assert IsIntrinsic("differentialPolynomialRing"); // TS2: prove the spec attached
 
 Q := Rationals();
 R<t> := PolynomialRing(Q, 1);
@@ -82,7 +83,7 @@ for r in [2, 3, 4] do
     for g in gens do
         out cat:= Sprint(g) cat "\n";
     end for;
-    path := "test-valuations/c3_stable_trace_gens_r" cat IntegerToString(r) cat ".txt";
+    path := "c3_stable_trace_gens_r" cat IntegerToString(r) cat ".txt";
     PrintFile(path, out : Overwrite := true);
     printf "  exported %o generator(s) -> %o\n", #gens, path;
     printf "  wall: %o s\n", elapsed;

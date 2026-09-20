@@ -12,7 +12,8 @@
 //          (See also project_jetideal_minimal_order_gotcha.md for why we use
 //           the manual chain rather than `JetIdeal` or `TraceIdeal`.)
 
-AttachSpec("/Users/tdupuy/repos/magma-diff-alg/diffalg.spec");
+AttachSpec("../diffalg.spec");
+assert IsIntrinsic("differentialPolynomialRing"); // TS2: prove the spec attached
 Q := Rationals();
 R<t> := PolynomialRing(Q, 1);
 deriv := map<R -> R | u :-> Derivative(u, t)>;

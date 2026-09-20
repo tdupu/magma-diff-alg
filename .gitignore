@@ -1,0 +1,32 @@
+# Not a LaTeX repository — zero .tex, zero LaTeX byproducts (measured 2026-09-20).
+# The generic template's byproduct list is deliberately absent. See LAYOUT.md.
+
+# Standing ruling: PDFs are never tracked, anywhere, whatever produced them.
+*.pdf
+
+# Magma compiled signatures — regenerated on attach (LAYOUT.md TS6)
+*.sig
+
+# NOTE: *.out is deliberately NOT ignored. test-valuations/*.out are tracked
+# expected-output fixtures (LAYOUT.md TS4). Ignoring them untracks the fixtures.
+
+# gc rig scaffolding — keep on disk, never repo content (LY1)
+.agents/
+crew/
+mayor/
+polecats/
+refinery/
+plugins/
+settings/
+witness/
+mda-*/
+config.json
+
+# git / beads / gc internals — .git is a FILE here, pointing at .repo.git
+.repo.git/
+.beads/
+.beads.gate.lock
+.gc/
+
+# transient
+scratch/
