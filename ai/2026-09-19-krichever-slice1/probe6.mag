@@ -1,0 +1,8 @@
+K<x> := RationalDifferentialField(Rationals());
+R<D> := DifferentialOperatorRing(K);
+L := D^2+1;
+for nm in ["GCRD","LCLM","Adjoint","SymmetricPower"] do
+  printf "%o: ", nm;
+  try _ := eval(nm * "(L,D)"); printf "exists(2-arg)\n"; catch e printf "no/2-arg-fail\n"; end try;
+end for;
+quit;

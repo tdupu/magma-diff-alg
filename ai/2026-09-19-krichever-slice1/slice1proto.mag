@@ -1,0 +1,62 @@
+declare type SetKric[ModKric];
+declare attributes SetKric: cring, opring, iota;
+declare attributes ModKric: parent, images, actmap;
+
+intrinsic KricheverModules(A::RngUPol, R::RngDiffOp) -> SetKric
+{}
+  H := New(SetKric); H`cring := A; H`opring := R;
+  H`iota := Coercion(ConstantRing(R), BaseRing(R));
+  return H;
+end intrinsic;
+
+intrinsic Print(H::SetKric)
+{}
+  printf "Krichever modules for %o in %o", H`cring, H`opring;
+end intrinsic;
+
+intrinsic KricheverModule(H::SetKric, images::SeqEnum) -> ModKric
+{}
+  R := H`opring; A := H`cring;
+  require #images eq 1: "slice 1: one generator only";
+  L := R!images[1];
+  require Order(L) gt 0: "order law: image must have positive order";
+  M := New(ModKric); M`parent := H; M`images := [L];
+  ev := function(f)
+    cs := Coefficients(f); v := R!0;
+    for i := #cs to 1 by -1 do v := v*L + R!(BaseRing(R)!cs[i]); end for;
+    return v;
+  end function;
+  M`actmap := map< A -> R | f :-> ev(f) >;
+  return M;
+end intrinsic;
+
+intrinsic Parent(M::ModKric) -> SetKric
+{} return M`parent; end intrinsic;
+intrinsic Rank(M::ModKric) -> RngIntElt
+{} return Order(M`images[1]); end intrinsic;
+intrinsic ActionMap(M::ModKric) -> Map
+{} return M`actmap; end intrinsic;
+intrinsic Operator(M::ModKric, a::RngUPolElt) -> RngDiffOpElt
+{} return (M`actmap)(a); end intrinsic;
+intrinsic Apply(M::ModKric, a::RngUPolElt, y::RngDiffElt) -> RngDiffElt
+{} return Apply(Operator(M,a), y); end intrinsic;
+intrinsic BaseRing(M::ModKric) -> RngDiff
+{} return BaseRing((M`parent)`opring); end intrinsic;
+intrinsic CoefficientRing(M::ModKric) -> Rng
+{} return (M`parent)`cring; end intrinsic;
+intrinsic OperatorRing(M::ModKric) -> RngDiffOp
+{} return (M`parent)`opring; end intrinsic;
+intrinsic ConstantEmbedding(M::ModKric) -> Map
+{} return (M`parent)`iota; end intrinsic;
+intrinsic DefiningOperators(M::ModKric) -> SeqEnum
+{} return M`images; end intrinsic;
+
+intrinsic Print(M::ModKric)
+{}
+  H := M`parent; K := BaseRing(H`opring); A := H`cring;
+  printf "Krichever module of rank %o over %o, delta(%o) = %o\n", Rank(M), K, K.1, Derivative(K.1);
+  printf "  Coefficient algebra: %o, infinity pole degree of %o = 1\n", A, A.1;
+  printf "  Action: %o |-> %o\n", A.1, M`images[1];
+  printf "  Source fixed: %o; isomorphisms are scalar gauges over %o\n", A, K;
+  printf "  Validation: order law checked (positive order)";
+end intrinsic;

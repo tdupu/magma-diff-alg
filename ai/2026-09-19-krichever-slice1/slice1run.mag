@@ -1,0 +1,17 @@
+AttachSpec("/private/tmp/claude-501/-Users-tdupuy-gt/00350225-ec1b-4a5a-9c24-55f048475f7d/scratchpad/slice1spec.spec");
+C := Rationals();
+A<T> := PolynomialRing(C);
+K<x> := RationalDifferentialField(C);
+R<D> := DifferentialOperatorRing(K);
+H := KricheverModules(A, R);
+M := KricheverModule(H, [D^2+1]);
+M;
+printf "\nType(M) = %o\n", Type(M);
+printf "Parent(M) = %o\n", Parent(M);
+printf "Rank(M) = %o\n", Rank(M);
+printf "Operator(M, T^2-T) = %o\n", Operator(M, T^2-T);
+printf "Apply(M, T, x^3) = %o\n", Apply(M, T, x^3);
+printf "ActionMap type = %o\n", Type(ActionMap(M));
+printf "BaseRing(M) type = %o\n", Type(BaseRing(M));
+printf "ConstantEmbedding = %o\n", ConstantEmbedding(M);
+quit;

@@ -1,0 +1,10 @@
+AttachSpec("slice1spec.spec");
+C := Rationals(); A<T> := PolynomialRing(C);
+K<x> := RationalDifferentialField(C); R<D> := DifferentialOperatorRing(K);
+H := KricheverModules(A, R); M := KricheverModule(H, [D^2+1]);
+printf "OperatorRing(M) type = %o\n", Type(OperatorRing(M));
+printf "BaseRing(OperatorRing(M)) type = %o\n", Type(BaseRing(OperatorRing(M)));
+printf "CoefficientRing(M) type = %o\n", Type(CoefficientRing(M));
+printf "BaseRing(M) type = %o\n", Type(BaseRing(M));
+printf "direct Type(BaseRing(R)) = %o\n", Type(BaseRing(R));
+quit;

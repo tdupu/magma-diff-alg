@@ -1,0 +1,33 @@
+C := Rationals();
+A<T> := PolynomialRing(C);
+K<x> := RationalDifferentialField(C);
+R<D> := DifferentialOperatorRing(K);
+L := D^2+1;
+// probe: can we make a ring hom A -> R ?
+try
+  h := hom< A -> R | L >;
+  printf "hom OK: h(T^2-T) = %o\n", h(T^2-T);
+catch e
+  printf "hom FAILED: %o\n", e`Object;
+end try;
+// probe: Horner evaluation by hand
+f := T^2-T;
+cs := Coefficients(f);
+val := R!0;
+for i := #cs to 1 by -1 do val := val*L + R!(K!cs[i]); end for;
+printf "hand-Horner(T^2-T) = %o\n", val;
+// probe: does Apply/action of operator on a function exist natively?
+try
+  printf "L(x^3) = %o\n", L(x^3);
+catch e
+  printf "L(f) call FAILED: %o\n", e`Object;
+end try;
+try
+  printf "Apply(L,x^3) = %o\n", Apply(L, x^3);
+catch e
+  printf "Apply FAILED: %o\n", e`Object;
+end try;
+// probe: RngDiffOp accessors
+printf "Type(BaseRing(R))=%o\n", Type(BaseRing(R));
+try printf "Domain: %o\n", ConstantRing(R); catch e printf "ConstantRing FAILED\n"; end try;
+quit;

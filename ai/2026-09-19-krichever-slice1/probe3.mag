@@ -1,0 +1,30 @@
+AttachSpec("/Users/tdupuy/repos/magma-diff-alg/diffalg.spec");
+C := Rationals();
+A<T> := PolynomialRing(C);
+K<x> := RationalDifferentialField(C);
+R<D> := DifferentialOperatorRing(K);
+L := D^2+1;
+ev := function(f, L)
+  cs := Coefficients(f); v := Parent(L)!0;
+  for i := #cs to 1 by -1 do v := v*L + Parent(L)!(BaseRing(Parent(L))!cs[i]); end for;
+  return v;
+end function;
+try
+  m := map< A -> R | f :-> ev(f, L) >;
+  printf "map<> OK: m(T^2-T) = %o, Type = %o\n", m(T^2-T), Type(m);
+catch e
+  printf "map<> FAILED: %o\n", e`Object;
+end try;
+// AlgWeyl over the same RngDiff
+try
+  W := WeylAlgebra(K);
+  printf "WeylAlgebra(K) OK: %o\n", W;
+  dW := Derivation(W);
+  LW := dW^2 + 1;
+  printf "AlgWeyl L = %o, Order = %o\n", LW, Order(LW);
+  printf "AlgWeyl L^2 = %o\n", LW^2;
+  printf "AlgWeyl L@x^3 = %o\n", LW@(x^3);
+catch e
+  printf "AlgWeyl FAILED: %o\n", e`Object;
+end try;
+quit;

@@ -1,0 +1,6 @@
+AttachSpec("probe5.spec");
+f := MakeFoo();
+printf "CoefficientRing(f) = %o\n", CoefficientRing(f);
+try printf "BaseRing(f) = %o\n", BaseRing(f);
+catch e printf "BaseRing(f) FAILED: %o\n", e`Object; end try;
+quit;

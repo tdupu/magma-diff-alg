@@ -1,0 +1,23 @@
+C := Rationals();
+A<T> := PolynomialRing(C);
+K<x> := RationalDifferentialField(C);
+R<D> := DifferentialOperatorRing(K);
+printf "TYPE K = %o\n", Type(K);
+printf "TYPE R = %o\n", Type(R);
+printf "TYPE D = %o\n", Type(D);
+L := D^2 + 1;
+printf "L = %o\n", L;
+printf "Order(L) = %o\n", Order(L);
+printf "L^2 = %o\n", L^2;
+printf "L*x = %o\n", L*(R!x);
+printf "x*L = %o\n", (R!x)*L;
+printf "commutes? %o\n", L*(R!x) eq (R!x)*L;
+printf "BaseRing(R) = %o\n", BaseRing(R);
+printf "ConstantField(K) = %o\n", ConstantField(K);
+try
+  E := Evaluate(T^2-T, L);
+  printf "Evaluate(T^2-T, L) = %o  type %o\n", E, Type(E);
+catch e
+  printf "Evaluate FAILED: %o\n", e`Object;
+end try;
+quit;

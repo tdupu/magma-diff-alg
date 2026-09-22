@@ -1,0 +1,3 @@
+{
+  slice1proto.mag
+}

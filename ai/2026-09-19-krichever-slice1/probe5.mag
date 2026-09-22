@@ -1,0 +1,7 @@
+declare type FooK;
+declare attributes FooK: v;
+intrinsic MakeFoo() -> FooK
+{} f := New(FooK); f`v := 7; return f; end intrinsic;
+intrinsic Print(f::FooK) {} printf "Foo"; end intrinsic;
+intrinsic CoefficientRing(f::FooK) -> RngIntElt
+{} return 111; end intrinsic;
