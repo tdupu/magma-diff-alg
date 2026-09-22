@@ -112,10 +112,10 @@ scratch/
 | Current state | Target disposition |
 | --- | --- |
 | `.agents/` (124 files), `crew/`, `mayor/`, `polecats/`, `refinery/`, `plugins/`, `settings/`, `witness/`, 9 × `mda-*/` — untracked gc scaffolding at root | keep-untracked (gitignore + tree row) — **awaiting human confirmation** |
-| `README.md` carries BOTH `AttachSpec("diffalg.spec")` and `AttachSpec("../diffalg.spec")`; one is wrong depending on the reader's cwd | TBD (human) — needs a doc pass, not a code change |
+| `README.md` carries BOTH `AttachSpec("diffalg.spec")` and `AttachSpec("../diffalg.spec")`; one is wrong depending on the reader's cwd | **work, not a decision** — correct form is derivable from TS1. Filed and dispatched 2026-09-22 |
 | `test-homog/` holds only `.ipynb`; no `.mag` tests and no runner | TBD (human) — is notebook-form a supported test type? |
-| No runner exists for `test-valuations/` | TBD (human) — TS3 specifies one; nobody has written it |
-| `CLAUDE.md` + `CONTEXT.md` untracked at root | TBD (human) |
+| No runner exists for `test-valuations/` | **work, not a decision** — TS3 states the contract in full. Filed `mda-fn4` (P1) and dispatched 2026-09-22 |
+| ~~`CLAUDE.md` + `CONTEXT.md` untracked at root~~ | **RESOLVED 2026-09-22** — both tracked as of `748c885`; verified with `git ls-files --error-unmatch` |
 
 ## Rules
 
