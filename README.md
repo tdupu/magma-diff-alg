@@ -37,6 +37,7 @@ Also term order associated with block rankings are implemented in the prolongati
 24. [Example: Compactified Jet Spaces of Projective Space](example-compactified-jet-spaces-of-projective-space)
 25. [Example: Initial Ideal Under a Weight Vector](example-initial-ideal-under-a-weight-vector)
 26. [Example: Lineality Canonicalization and Weight Shifting](example-lineality-canonicalization-and-weight-shifting)
+27. [Example: Partial Differential Polynomial Rings](example-partial-differential-polynomial-rings)
 
 
 # Examples
@@ -1170,3 +1171,113 @@ In := InitialIdeal(I, w_nonneg);
 ```
 
 
+
+### Example: Partial Differential Polynomial Rings
+
+`RngPDiffPol` is the third implementation of differential polynomials in the
+package, and the only one that carries more than one derivation. It is
+`K{u_1,...,u_n}` for a finite set of commuting derivations
+`Delta = {d_1,...,d_m}`, with derivatives indexed by the lattice
+`N^m x {1..n}`: the pair `[i,a_1,...,a_m]` denotes
+`d_1^{a_1} ... d_m^{a_m} u_i`.
+
+It is implemented in `package-pdiffpol.mag`, and its element type is
+`RngPDiffPolElt`.
+
+**Why a monomial representation and not a prolongation sequence.**
+`RngPDiffPol` stores a differential monomial sparsely, the way `RngDiffPol`
+does, and never builds a jet ring. In `RngDiffPol` a monomial's exponent is a
+sequence of `n` univariate polynomials over `Z`, the coefficient of `d^j` in
+entry `i` being the exponent of `u_i^{(j)}`; here it is a sequence of `n`
+*multivariate* polynomials over `Z` in `d_1,...,d_m`, the coefficient of `d^a`
+in entry `i` being the exponent of `theta^a u_i`. The alternative would have
+been the `RngMPolProlSeq` design, which materialises the order-`r` jet ring;
+that ring has `n*binomial(r+m,m)` variables, so for `m = 3`, `n = 2`, `r = 10`
+it already carries 572 of them, and every operation has to extend both operands
+to a common order first. That price buys access to Magma's Gröbner machinery on
+jet rings, which is what `RngMPolProlSeq` is for. The consumer here is
+Ritt–Kolchin pseudo-reduction, which needs leaders, initials, separants,
+differentiation by a multi-index and a pseudo-division step, all sparse and all
+at unbounded order — each reduction step raises the order of the leader, so a
+jet-ring representation would have to be extended and re-coerced at every step.
+
+**Construction.**
+```
+AttachSpec("diffalg.spec");
+Q := RationalField();
+R := pDifferentialPolynomialRing(Q, 1, 2 : names := ["u"], derivation_names := ["x","t"]);
+u := R.1;
+R;
+```
+```
+Partial differential polynomial ring in 1 differential variable [ u ] over
+Rational Field, with 2 commuting derivations (orderly ranking)
+```
+`R.i` is the differential variable `u_i` and `R.[i,a_1,...,a_m]` — equivalently
+`derivativeVariable(R,i,a)` — is the derivative `theta^a u_i`. `Diff(f,k)`
+applies the `k`-th derivation and `Diff(f,a)` applies a multi-index;
+`Prolong(f,r)` returns every `<a, theta^a f>` with `|a| <= r`.
+
+**Rankings.** A ranking is a total order on `N^m x {1..n}` with `theta u >= u`
+and `v >= w` exactly when `theta v >= theta w`. As in `RngDiffPol` a ranking is
+a comparison function on derivative indices, and four constructors are shipped:
+`orderlyRanking(n,m)`, `eliminationRanking(n,m)` (optionally with an explicit
+variable order), `blockRanking(n,m,blocks)`, and
+`derivationEliminationRanking(n,m,dorder)`. The last one eliminates on the
+*derivations* rather than the variables, which is what lets `u_t` outrank
+`u_xx` — an orderly ranking cannot, since it compares total order first.
+`setRanking` installs a ranking and costs nothing: elements are stored in a
+ranking-independent canonical form. `rankingAxiomsHold(cmp,n,m,r)` checks both
+axioms on every derivative of total order at most `r`.
+
+**Leaders, initials, separants.**
+```
+setRanking(R, derivationEliminationRanking(1, 2, [1,2]), "elimination x > t");
+heat := Diff(u,[0,1]) - Diff(u,[2,0]);
+heat;  leader(heat);  initial(heat);  separant(heat);
+```
+```
+-Dx^2(u) + Dt(u)
+Dx^2(u)
+-1
+-1
+```
+
+**Pseudo-division.** `pseudoDivide(f,g)` is the Ritt–Kolchin reduction of `f`
+by `g` for the installed ranking. It returns a quotient, a remainder and a
+multiplier satisfying
+
+```
+Mult * f  =  sum_a  Quo_a * theta^a g  +  Rem
+```
+
+with `Rem` reduced with respect to `g` and `Mult` a product of powers of the
+initial and the separant of `g`. The identity is asserted before the intrinsic
+returns unless `check := false` is passed, and
+`pseudoDivisionIdentity(f,g,Quo,Rem,Mult)` re-checks it from the returned data.
+Reducing `u_xxxx` modulo the heat operator recovers the classical `u_xxxx` ≡
+`u_tt`, and needs the operator prolonged to order two:
+```
+quo, rem, mult := pseudoDivide(Diff(u,[4,0]), heat);
+quo;  rem;  mult;  pseudoDivisionIdentity(Diff(u,[4,0]), heat, quo, rem, mult);
+```
+```
+[ <[ 2, 0 ], -1>, <[ 0, 1 ], -1> ]
+Dt^2(u)
+1
+true
+```
+
+**The ordinary case.** With `m = 1` the type degenerates to ordinary
+differential algebra, and `toOrdinary(f,R0)` transports an element into a
+`RngDiffPol` so the two implementations can be compared on a shared example.
+
+**Tests.** `test-pdiffpol/test-pdiffpol.mag` covers commutativity of the
+derivations on a non-trivial polynomial, the heat-equation reduction above, the
+`m = 1` degeneration against `package-rngdiffpol.mag`, and the ranking axioms
+for every shipped ranking. Each test carries a mutation control. From the
+`./test-pdiffpol` folder:
+```
+magma test-pdiffpol.mag
+```
+The script exits non-zero if any check fails.

@@ -1,0 +1,1446 @@
+declare verbose RngPDiffPol, 6;
+
+/*
+    PARTIAL DIFFERENTIAL POLYNOMIAL RINGS
+
+    K{u_1,...,u_n} for a finite set of commuting derivations
+    Delta = {d_1,...,d_m}.  Derivatives are indexed by the lattice
+    N^m x {1..n}: the pair <i,a> denotes
+
+        theta^a u_i  =  d_1^{a_1} ... d_m^{a_m} u_i.
+
+    DESIGN NOTE (monomial-based, not prolongation-lattice)
+
+    This package stores a differential monomial sparsely, exactly as
+    package-rngdiffpol.mag does for the ordinary case, and never builds a
+    jet ring.  In package-rngdiffpol.mag a monomial's exponent is a
+    sequence of n UNIVARIATE polynomials over Z: the coefficient of d^j in
+    the i-th entry is the exponent of u_i^{(j)}.  Here the exponent is a
+    sequence of n MULTIVARIATE polynomials over Z in d_1,...,d_m: the
+    coefficient of d^a in the i-th entry is the exponent of theta^a u_i.
+    The encoding is the same shape, so the two APIs rhyme.
+
+    The alternative is the prolongation-sequence design of
+    package-prolongations.mag (RngMPolProlSeq), which materialises the
+    order-r jet ring.  That ring has n*binomial(r+m,m) variables, so for
+    m=3, n=2, r=10 it already carries 572 variables, and every operation
+    must Extend both operands to a common order and coerce into that ring.
+    Its payoff is access to Magma's Groebner machinery on jet rings, which
+    is what package-prolongations.mag is for.  The consumer here is
+    Ritt-Kolchin pseudo-reduction (and Mansfield differential Groebner
+    bases downstream), which needs leaders, initials, separants,
+    differentiation by a multi-index and a pseudo-division step -- all
+    sparse, and all at unbounded order, since each reduction step raises
+    the order of the leader.  A jet-ring representation would have to
+    Extend and re-coerce at every step.  So the sparse encoding is the
+    right one here, and RngMPolProlSeq remains the right one there.
+
+    STORAGE
+
+    An element carries a canonical sequence of terms <supp,c>, where supp
+    is the support of the monomial as a sequence of pairs
+
+        < [i, a_1, ..., a_m] , e >     e > 0
+
+    sorted by plain lexicographic order on [i,a_1,...,a_m], and c is a
+    nonzero coefficient of the base ring.  The storage order is
+    RANKING-INDEPENDENT on purpose: setRanking then costs nothing and
+    invalidates no element.  The ranking-induced order is applied on
+    demand by sortedTerms, leadingTerm and Print.
+*/
+
+ZZ := IntegerRing();
+
+declare type RngPDiffPol[RngPDiffPolElt];
+
+declare attributes RngPDiffPol:
+    base_ring,
+    number_of_variables,
+    number_of_derivations,
+    variable_names,
+    derivation_names,
+    exponent_ring,
+    ranking,
+    ranking_name;
+
+declare attributes RngPDiffPolElt:
+    parent,
+    terms;
+
+//##################################################
+//  SUPPORT-LEVEL HELPERS (ranking independent)
+//##################################################
+
+//###########################
+function idxCmp(u, v)
+//###########################
+/*
+Plain lexicographic comparison of two derivative indices [i,a_1,...,a_m],
+used only to keep storage canonical.  This is NOT a ranking.
+*/
+    for k in [1..#u] do
+        if u[k] ne v[k] then
+            return u[k] - v[k];
+        end if;
+    end for;
+    return 0;
+end function;
+
+//###########################
+function suppCmp(s1, s2)
+//###########################
+/*
+Lexicographic comparison of two canonical supports.  Total, so it gives
+each monomial one storage representative.
+*/
+    lo := Minimum(#s1, #s2);
+    for k in [1..lo] do
+        c := idxCmp(s1[k][1], s2[k][1]);
+        if c ne 0 then
+            return c;
+        end if;
+        if s1[k][2] ne s2[k][2] then
+            return s1[k][2] - s2[k][2];
+        end if;
+    end for;
+    return #s1 - #s2;
+end function;
+
+//###########################
+function suppNormalise(supp)
+//###########################
+/*
+Sort by idxCmp, merge repeated indices, drop zero exponents.
+*/
+    pairs := [p : p in supp | p[2] ne 0];
+    if #pairs le 1 then
+        return pairs;
+    end if;
+    pairs := Sort(pairs, func<a, b | idxCmp(a[1], b[1])>);
+    out := [];
+    cur := pairs[1][1];
+    acc := pairs[1][2];
+    for k in [2..#pairs] do
+        if idxCmp(pairs[k][1], cur) eq 0 then
+            acc := acc + pairs[k][2];
+        else
+            if acc ne 0 then
+                Append(~out, <cur, acc>);
+            end if;
+            cur := pairs[k][1];
+            acc := pairs[k][2];
+        end if;
+    end for;
+    if acc ne 0 then
+        Append(~out, <cur, acc>);
+    end if;
+    return out;
+end function;
+
+//###########################
+function suppMul(s1, s2)
+//###########################
+    return suppNormalise(s1 cat s2);
+end function;
+
+//###########################
+function suppExponent(supp, idx)
+//###########################
+/*
+The exponent of the derivative idx in the monomial supp.
+*/
+    for p in supp do
+        if idxCmp(p[1], idx) eq 0 then
+            return p[2];
+        end if;
+    end for;
+    return 0;
+end function;
+
+//###########################
+function suppShift(supp, idx, delta)
+//###########################
+/*
+Add delta to the exponent of idx.  Used by Leibniz differentiation and by
+monomial division.
+*/
+    return suppNormalise(supp cat [<idx, delta>]);
+end function;
+
+//###########################
+function termsNormalise(tms)
+//###########################
+/*
+Canonical form of a term list: sort supports, merge like monomials, drop
+zero coefficients.
+*/
+    keep := [t : t in tms | t[2] ne 0];
+    if #keep le 1 then
+        return keep;
+    end if;
+    keep := Sort(keep, func<a, b | suppCmp(a[1], b[1])>);
+    out := [];
+    cur := keep[1][1];
+    acc := keep[1][2];
+    for k in [2..#keep] do
+        if suppCmp(keep[k][1], cur) eq 0 then
+            acc := acc + keep[k][2];
+        else
+            if acc ne 0 then
+                Append(~out, <cur, acc>);
+            end if;
+            cur := keep[k][1];
+            acc := keep[k][2];
+        end if;
+    end for;
+    if acc ne 0 then
+        Append(~out, <cur, acc>);
+    end if;
+    return out;
+end function;
+
+//##################################################
+//  RANKINGS
+//##################################################
+
+/*
+A ranking is a total order on N^m x {1..n} satisfying
+
+    (R1)  theta u  >=  u                for every derivative operator theta
+    (R2)  v >= w   <=>  theta v >= theta w.
+
+It is represented, as in package-rngdiffpol.mag, by a comparison function
+on derivative indices [i,a_1,...,a_m] returning an integer that is
+negative, zero or positive according as the first argument is lower,
+equal or higher.  rankingAxiomsHold below checks (R1) and (R2) on a
+sample; test-pdiffpol/test-pdiffpol.mag exercises it for every shipped
+ranking.
+*/
+
+//###########################
+function multidegree(idx)
+//###########################
+    return &+[idx[k] : k in [2..#idx]];
+end function;
+
+//###########################
+function latticeLexCmp(idx1, idx2, dorder)
+//###########################
+/*
+Lexicographic comparison of the multi-index parts, reading the
+derivations in the order dorder: the derivation named first dominates.
+*/
+    for k in dorder do
+        if idx1[k + 1] ne idx2[k + 1] then
+            return idx1[k + 1] - idx2[k + 1];
+        end if;
+    end for;
+    return 0;
+end function;
+
+//###########################
+function latticeOrderlyCmp(idx1, idx2, m)
+//###########################
+/*
+Total degree first, then lexicographic on the multi-index.  This is an
+orderly order on N^m.
+*/
+    d1 := multidegree(idx1);
+    d2 := multidegree(idx2);
+    if d1 ne d2 then
+        return d1 - d2;
+    end if;
+    return latticeLexCmp(idx1, idx2, [1..m]);
+end function;
+
+//###########################
+function blockOf(i, blocks)
+//###########################
+    for b in [1..#blocks] do
+        if i in blocks[b] then
+            return b;
+        end if;
+    end for;
+    return #blocks + 1;
+end function;
+
+intrinsic orderlyRanking(n::RngIntElt, m::RngIntElt) -> UserProgram
+{The orderly ranking on N^m x (1..n): derivatives of lower total order
+rank lower, ties broken by variable index and then lexicographically on
+the multi-index.}
+    require n ge 1: "there must be at least one differential variable";
+    require m ge 1: "there must be at least one derivation";
+
+    function cmp(idx1, idx2)
+        c := latticeOrderlyCmp(idx1, idx2, m);
+        if c ne 0 then
+            return c;
+        end if;
+        return idx2[1] - idx1[1];
+    end function;
+
+    return cmp;
+end intrinsic;
+
+intrinsic blockRanking(n::RngIntElt, m::RngIntElt, blocks::SeqEnum) -> UserProgram
+{The block ranking determined by blocks, a partition of (1..n) into
+blocks of variable indices: every derivative of a variable in an earlier
+block outranks every derivative of a variable in a later block, and
+within a block the orderly ranking is used.}
+    require n ge 1: "there must be at least one differential variable";
+    require m ge 1: "there must be at least one derivation";
+    flat := &cat[[i : i in b] : b in blocks];
+    require Sort(flat) eq [1..n]:
+        "blocks must partition the variable indices 1..n";
+
+    function cmp(idx1, idx2)
+        b1 := blockOf(idx1[1], blocks);
+        b2 := blockOf(idx2[1], blocks);
+        if b1 ne b2 then
+            return b2 - b1;
+        end if;
+        c := latticeOrderlyCmp(idx1, idx2, m);
+        if c ne 0 then
+            return c;
+        end if;
+        return idx2[1] - idx1[1];
+    end function;
+
+    return cmp;
+end intrinsic;
+
+intrinsic eliminationRanking(n::RngIntElt, m::RngIntElt) -> UserProgram
+{The elimination ranking u_1 > u_2 > ... > u_n: every derivative of u_i
+outranks every derivative of u_j when i < j.  This is the block ranking
+whose blocks are the singletons, taken in index order.}
+    return blockRanking(n, m, [[i] : i in [1..n]]);
+end intrinsic;
+
+intrinsic eliminationRanking(n::RngIntElt, m::RngIntElt, varorder::SeqEnum) -> UserProgram
+{The elimination ranking in which the variables are eliminated in the
+order given by varorder, highest first.}
+    require Sort(varorder) eq [1..n]:
+        "varorder must be a permutation of the variable indices 1..n";
+    return blockRanking(n, m, [[i] : i in varorder]);
+end intrinsic;
+
+intrinsic derivationEliminationRanking(n::RngIntElt, m::RngIntElt, dorder::SeqEnum) -> UserProgram
+{The ranking that eliminates on the DERIVATIONS: multi-indices are
+compared lexicographically reading the derivations in the order dorder,
+so the derivation listed first dominates, and ties are broken by variable
+index.  This is the ranking that makes a derivative like u_t outrank
+u_xx, which an orderly ranking cannot do.}
+    require n ge 1: "there must be at least one differential variable";
+    require m ge 1: "there must be at least one derivation";
+    require Sort(dorder) eq [1..m]:
+        "dorder must be a permutation of the derivation indices 1..m";
+
+    function cmp(idx1, idx2)
+        c := latticeLexCmp(idx1, idx2, dorder);
+        if c ne 0 then
+            return c;
+        end if;
+        return idx2[1] - idx1[1];
+    end function;
+
+    return cmp;
+end intrinsic;
+
+//##################################################
+//  RING CONSTRUCTION
+//##################################################
+
+intrinsic pDifferentialPolynomialRing(K::Rng, n::RngIntElt, m::RngIntElt
+    : names := [], derivation_names := [], ranking := 0) -> RngPDiffPol
+{Create the partial differential polynomial ring K(u_1,...,u_n) with m
+commuting derivations.  names and derivation_names are optional sequences
+of strings; ranking is an optional comparison function on derivative
+indices, defaulting to the orderly ranking.}
+    require n ge 1: "there must be at least one differential variable";
+    require m ge 1: "there must be at least one derivation";
+
+    R := New(RngPDiffPol);
+    R`base_ring := K;
+    R`number_of_variables := n;
+    R`number_of_derivations := m;
+    R`exponent_ring := PolynomialRing(ZZ, m);
+
+    if #names eq 0 then
+        R`variable_names := [Sprintf("u%o", i) : i in [1..n]];
+    else
+        require #names eq n: "names must have one entry per differential variable";
+        R`variable_names := [Sprint(s) : s in names];
+    end if;
+
+    if #derivation_names eq 0 then
+        R`derivation_names := [Sprintf("%o", k) : k in [1..m]];
+    else
+        require #derivation_names eq m:
+            "derivation_names must have one entry per derivation";
+        R`derivation_names := [Sprint(s) : s in derivation_names];
+    end if;
+
+    if Type(ranking) eq RngIntElt then
+        R`ranking := orderlyRanking(n, m);
+        R`ranking_name := "orderly";
+    else
+        R`ranking := ranking;
+        R`ranking_name := "custom";
+    end if;
+
+    return R;
+end intrinsic;
+
+intrinsic baseRing(R::RngPDiffPol) -> Rng
+{The ring of coefficients.}
+    return R`base_ring;
+end intrinsic;
+
+intrinsic Nvariables(R::RngPDiffPol) -> RngIntElt
+{The number of differential variables.}
+    return R`number_of_variables;
+end intrinsic;
+
+intrinsic Nvars(R::RngPDiffPol) -> RngIntElt
+{The number of differential variables.}
+    return R`number_of_variables;
+end intrinsic;
+
+intrinsic Nderivations(R::RngPDiffPol) -> RngIntElt
+{The number of commuting derivations.}
+    return R`number_of_derivations;
+end intrinsic;
+
+intrinsic variableNames(R::RngPDiffPol) -> SeqEnum
+{The names of the differential variables.}
+    return R`variable_names;
+end intrinsic;
+
+intrinsic derivationNames(R::RngPDiffPol) -> SeqEnum
+{The names of the derivations.}
+    return R`derivation_names;
+end intrinsic;
+
+intrinsic exponentRing(R::RngPDiffPol) -> RngMPol
+{The ring Z[d_1,...,d_m] in which monomial exponents are recorded: the
+coefficient of d^a in the i-th entry of an exponent is the exponent of
+theta^a u_i.}
+    return R`exponent_ring;
+end intrinsic;
+
+intrinsic ranking(R::RngPDiffPol) -> UserProgram
+{The comparison function on derivative indices currently installed.}
+    return R`ranking;
+end intrinsic;
+
+intrinsic rankingName(R::RngPDiffPol) -> MonStgElt
+{A label for the installed ranking.}
+    return R`ranking_name;
+end intrinsic;
+
+intrinsic setRanking(R::RngPDiffPol, comparison::UserProgram)
+{Install a new ranking.  Elements remain valid: they are stored in a
+ranking-independent canonical form.}
+    R`ranking := comparison;
+    R`ranking_name := "custom";
+end intrinsic;
+
+intrinsic setRanking(R::RngPDiffPol, comparison::UserProgram, name::MonStgElt)
+{Install a new ranking together with a label for it.}
+    R`ranking := comparison;
+    R`ranking_name := name;
+end intrinsic;
+
+intrinsic AssignNames(~R::RngPDiffPol, s::SeqEnum)
+{Assign names to the differential variables.}
+    require #s eq Nvariables(R): "one name per differential variable is needed";
+    R`variable_names := [Sprint(x) : x in s];
+end intrinsic;
+
+intrinsic NumberOfNames(R::RngPDiffPol) -> RngIntElt
+{The number of differential variables.}
+    return Nvariables(R);
+end intrinsic;
+
+intrinsic 'eq'(R1::RngPDiffPol, R2::RngPDiffPol) -> BoolElt
+{Two partial differential polynomial rings are equal when their
+coefficient ring, variable count, derivation count and variable names
+agree.}
+    return baseRing(R1) cmpeq baseRing(R2)
+        and Nvariables(R1) eq Nvariables(R2)
+        and Nderivations(R1) eq Nderivations(R2)
+        and variableNames(R1) eq variableNames(R2);
+end intrinsic;
+
+intrinsic Hash(R::RngPDiffPol) -> RngIntElt
+{}
+    return Hash(<Nvariables(R), Nderivations(R), variableNames(R)>);
+end intrinsic;
+
+intrinsic Print(R::RngPDiffPol)
+{}
+    printf "Partial differential polynomial ring in %o differential %o %o over %o, with %o commuting %o (%o ranking)",
+        Nvariables(R),
+        Nvariables(R) eq 1 select "variable" else "variables",
+        variableNames(R),
+        baseRing(R),
+        Nderivations(R),
+        Nderivations(R) eq 1 select "derivation" else "derivations",
+        rankingName(R);
+end intrinsic;
+
+//##################################################
+//  ELEMENT CONSTRUCTION
+//##################################################
+
+//###########################
+function makeElt(R, tms)
+//###########################
+    f := New(RngPDiffPolElt);
+    f`parent := R;
+    f`terms := termsNormalise(tms);
+    return f;
+end function;
+
+//###########################
+function constantElt(R, c)
+//###########################
+    K := baseRing(R);
+    return makeElt(R, [<[], K ! c>]);
+end function;
+
+intrinsic Parent(f::RngPDiffPolElt) -> RngPDiffPol
+{}
+    return f`parent;
+end intrinsic;
+
+intrinsic terms(f::RngPDiffPolElt) -> SeqEnum
+{The terms of f in canonical storage order, each a pair <support,
+coefficient>, where the support lists the derivatives occurring in the
+monomial with their exponents.}
+    return f`terms;
+end intrinsic;
+
+intrinsic zero(R::RngPDiffPol) -> RngPDiffPolElt
+{The zero element.}
+    return makeElt(R, []);
+end intrinsic;
+
+intrinsic one(R::RngPDiffPol) -> RngPDiffPolElt
+{The identity element.}
+    return constantElt(R, 1);
+end intrinsic;
+
+intrinsic isZero(f::RngPDiffPolElt) -> BoolElt
+{}
+    return #terms(f) eq 0;
+end intrinsic;
+
+intrinsic isOne(f::RngPDiffPolElt) -> BoolElt
+{}
+    t := terms(f);
+    return #t eq 1 and #t[1][1] eq 0 and t[1][2] eq 1;
+end intrinsic;
+
+intrinsic isConstant(f::RngPDiffPolElt) -> BoolElt
+{True when f involves no differential variable.}
+    return #terms(f) eq 0 or (#terms(f) eq 1 and #terms(f)[1][1] eq 0);
+end intrinsic;
+
+intrinsic isTerm(f::RngPDiffPolElt) -> BoolElt
+{True when f has at most one term.}
+    return #terms(f) le 1;
+end intrinsic;
+
+intrinsic isMonomial(f::RngPDiffPolElt) -> BoolElt
+{True when f is a single term with coefficient one.}
+    t := terms(f);
+    return #t eq 1 and t[1][2] eq 1;
+end intrinsic;
+
+intrinsic derivativeVariable(R::RngPDiffPol, i::RngIntElt, a::SeqEnum) -> RngPDiffPolElt
+{The derivative theta^a u_i, where a is a multi-index of length
+Nderivations(R).}
+    require 1 le i and i le Nvariables(R): "the variable index is out of range";
+    require #a eq Nderivations(R):
+        "the multi-index must have one entry per derivation";
+    require &and[x ge 0 : x in a]: "the multi-index must be non-negative";
+    K := baseRing(R);
+    return makeElt(R, [<[<[i] cat [ZZ ! x : x in a], 1>], K ! 1>]);
+end intrinsic;
+
+intrinsic derivativeVariable(R::RngPDiffPol, idx::SeqEnum) -> RngPDiffPolElt
+{The derivative with index idx = [i,a_1,...,a_m].}
+    require #idx eq Nderivations(R) + 1:
+        "a derivative index is a variable index followed by a multi-index";
+    return derivativeVariable(R, idx[1], idx[2..#idx]);
+end intrinsic;
+
+intrinsic '.'(R::RngPDiffPol, i::RngIntElt) -> RngPDiffPolElt
+{The i-th differential variable u_i.}
+    return derivativeVariable(R, i, [0 : k in [1..Nderivations(R)]]);
+end intrinsic;
+
+intrinsic '.'(R::RngPDiffPol, idx::SeqEnum) -> RngPDiffPolElt
+{The derivative with index idx = [i,a_1,...,a_m].}
+    return derivativeVariable(R, idx);
+end intrinsic;
+
+intrinsic Name(R::RngPDiffPol, i::RngIntElt) -> RngPDiffPolElt
+{The i-th differential variable.}
+    return R . i;
+end intrinsic;
+
+intrinsic generators(R::RngPDiffPol) -> SeqEnum
+{The differential variables u_1,...,u_n.}
+    return [R . i : i in [1..Nvariables(R)]];
+end intrinsic;
+
+intrinsic monomial(R::RngPDiffPol, e::SeqEnum[RngMPolElt]) -> RngPDiffPolElt
+{The monomial whose exponent is e: e must have one entry per differential
+variable, each an element of exponentRing(R) with non-negative integer
+coefficients, the coefficient of d^a in e[i] being the exponent of
+theta^a u_i.}
+    require #e eq Nvariables(R):
+        "the number of exponents must equal the number of differential variables";
+    E := exponentRing(R);
+    K := baseRing(R);
+    supp := [];
+    for i in [1..Nvariables(R)] do
+        ei := E ! e[i];
+        cs := Coefficients(ei);
+        ms := Monomials(ei);
+        for k in [1..#ms] do
+            require cs[k] ge 0: "exponents must be non-negative";
+            Append(~supp, <[i] cat Exponents(ms[k]), ZZ ! cs[k]>);
+        end for;
+    end for;
+    return makeElt(R, [<suppNormalise(supp), K ! 1>]);
+end intrinsic;
+
+intrinsic monomial(R::RngPDiffPol, supp::SeqEnum[Tup]) -> RngPDiffPolElt
+{The monomial with the given support, a sequence of pairs <[i,a_1,...,a_m], e>.}
+    K := baseRing(R);
+    for p in supp do
+        require #p[1] eq Nderivations(R) + 1:
+            "a derivative index is a variable index followed by a multi-index";
+        require 1 le p[1][1] and p[1][1] le Nvariables(R):
+            "the variable index is out of range";
+        require p[2] ge 0: "exponents must be non-negative";
+    end for;
+    return makeElt(R, [<suppNormalise([<[ZZ ! x : x in p[1]], ZZ ! p[2]> : p in supp]), K ! 1>]);
+end intrinsic;
+
+intrinsic exponent(f::RngPDiffPolElt) -> SeqEnum
+{The exponent of the monomial f, as a sequence of Nvariables(Parent(f))
+elements of exponentRing(Parent(f)).  This is the inverse of
+monomial(R,e).}
+    require isTerm(f): "the argument must be a single term";
+    R := Parent(f);
+    E := exponentRing(R);
+    n := Nvariables(R);
+    out := [E ! 0 : i in [1..n]];
+    if isZero(f) then
+        return out;
+    end if;
+    for p in terms(f)[1][1] do
+        i := p[1][1];
+        out[i] := out[i] + p[2] * Monomial(E, p[1][2..#p[1]]);
+    end for;
+    return out;
+end intrinsic;
+
+//##################################################
+//  COERCION
+//##################################################
+
+intrinsic IsCoercible(R::RngPDiffPol, x::.) -> BoolElt, .
+{}
+    if Type(x) eq RngPDiffPolElt then
+        if Parent(x) eq R then
+            return true, x;
+        end if;
+        return false, "the element belongs to a different ring";
+    end if;
+
+    ok, c := IsCoercible(baseRing(R), x);
+    if ok then
+        return true, constantElt(R, c);
+    end if;
+
+    return false, "the element cannot be coerced into the coefficient ring";
+end intrinsic;
+
+intrinsic 'in'(x::., R::RngPDiffPol) -> BoolElt
+{}
+    if Type(x) eq RngPDiffPolElt then
+        return Parent(x) eq R;
+    end if;
+    return false;
+end intrinsic;
+
+//##################################################
+//  ARITHMETIC
+//##################################################
+
+intrinsic '+'(f::RngPDiffPolElt, g::RngPDiffPolElt) -> RngPDiffPolElt
+{}
+    require Parent(f) eq Parent(g): "the arguments must lie in the same ring";
+    return makeElt(Parent(f), terms(f) cat terms(g));
+end intrinsic;
+
+intrinsic '+'(f::RngPDiffPolElt, c::.) -> RngPDiffPolElt
+{}
+    ok, cc := IsCoercible(Parent(f), c);
+    require ok: "the second argument cannot be coerced into the ring";
+    return f + cc;
+end intrinsic;
+
+intrinsic '+'(c::., f::RngPDiffPolElt) -> RngPDiffPolElt
+{}
+    return f + c;
+end intrinsic;
+
+intrinsic '-'(f::RngPDiffPolElt) -> RngPDiffPolElt
+{}
+    return makeElt(Parent(f), [<t[1], -t[2]> : t in terms(f)]);
+end intrinsic;
+
+intrinsic '-'(f::RngPDiffPolElt, g::RngPDiffPolElt) -> RngPDiffPolElt
+{}
+    require Parent(f) eq Parent(g): "the arguments must lie in the same ring";
+    return f + (-g);
+end intrinsic;
+
+intrinsic '-'(f::RngPDiffPolElt, c::.) -> RngPDiffPolElt
+{}
+    ok, cc := IsCoercible(Parent(f), c);
+    require ok: "the second argument cannot be coerced into the ring";
+    return f - cc;
+end intrinsic;
+
+intrinsic '-'(c::., f::RngPDiffPolElt) -> RngPDiffPolElt
+{}
+    ok, cc := IsCoercible(Parent(f), c);
+    require ok: "the first argument cannot be coerced into the ring";
+    return cc - f;
+end intrinsic;
+
+intrinsic '*'(f::RngPDiffPolElt, g::RngPDiffPolElt) -> RngPDiffPolElt
+{}
+    require Parent(f) eq Parent(g): "the arguments must lie in the same ring";
+    out := [];
+    for t1 in terms(f) do
+        for t2 in terms(g) do
+            Append(~out, <suppMul(t1[1], t2[1]), t1[2] * t2[2]>);
+        end for;
+    end for;
+    return makeElt(Parent(f), out);
+end intrinsic;
+
+intrinsic '*'(f::RngPDiffPolElt, c::.) -> RngPDiffPolElt
+{}
+    ok, cc := IsCoercible(Parent(f), c);
+    require ok: "the second argument cannot be coerced into the ring";
+    return f * cc;
+end intrinsic;
+
+intrinsic '*'(c::., f::RngPDiffPolElt) -> RngPDiffPolElt
+{}
+    return f * c;
+end intrinsic;
+
+intrinsic '^'(f::RngPDiffPolElt, k::RngIntElt) -> RngPDiffPolElt
+{}
+    require k ge 0: "the exponent must be non-negative";
+    R := Parent(f);
+    out := one(R);
+    base := f;
+    e := k;
+    while e gt 0 do
+        if IsOdd(e) then
+            out := out * base;
+        end if;
+        base := base * base;
+        e := e div 2;
+    end while;
+    return out;
+end intrinsic;
+
+intrinsic 'eq'(f::RngPDiffPolElt, g::RngPDiffPolElt) -> BoolElt
+{}
+    if not Parent(f) eq Parent(g) then
+        return false;
+    end if;
+    tf := terms(f);
+    tg := terms(g);
+    if #tf ne #tg then
+        return false;
+    end if;
+    for k in [1..#tf] do
+        if suppCmp(tf[k][1], tg[k][1]) ne 0 or tf[k][2] ne tg[k][2] then
+            return false;
+        end if;
+    end for;
+    return true;
+end intrinsic;
+
+intrinsic 'eq'(f::RngPDiffPolElt, c::.) -> BoolElt
+{}
+    ok, cc := IsCoercible(Parent(f), c);
+    if not ok then
+        return false;
+    end if;
+    return f eq cc;
+end intrinsic;
+
+intrinsic 'eq'(c::., f::RngPDiffPolElt) -> BoolElt
+{}
+    return f eq c;
+end intrinsic;
+
+intrinsic Hash(f::RngPDiffPolElt) -> RngIntElt
+{}
+    return Hash(Sprint(terms(f)));
+end intrinsic;
+
+//##################################################
+//  PRINTING
+//##################################################
+
+//###########################
+function printIndex(R, idx)
+//###########################
+    vs := variableNames(R);
+    ds := derivationNames(R);
+    ops := "";
+    for k in [1..Nderivations(R)] do
+        a := idx[k + 1];
+        if a eq 1 then
+            ops := ops cat Sprintf("D%o", ds[k]);
+        elif a gt 1 then
+            ops := ops cat Sprintf("D%o^%o", ds[k], a);
+        end if;
+    end for;
+    if ops eq "" then
+        return vs[idx[1]];
+    end if;
+    return Sprintf("%o(%o)", ops, vs[idx[1]]);
+end function;
+
+//###########################
+function printSupport(R, supp)
+//###########################
+    if #supp eq 0 then
+        return "1";
+    end if;
+    factors := [];
+    for p in supp do
+        if p[2] eq 1 then
+            Append(~factors, printIndex(R, p[1]));
+        else
+            Append(~factors, Sprintf("%o^%o", printIndex(R, p[1]), p[2]));
+        end if;
+    end for;
+    out := factors[1];
+    for k in [2..#factors] do
+        out := out cat "*" cat factors[k];
+    end for;
+    return out;
+end function;
+
+//###########################
+function printTerm(R, t)
+//###########################
+    if #t[1] eq 0 then
+        return Sprintf("%o", t[2]);
+    end if;
+    if t[2] eq 1 then
+        return printSupport(R, t[1]);
+    end if;
+    if t[2] eq -1 then
+        return "-" cat printSupport(R, t[1]);
+    end if;
+    return Sprintf("%o*%o", t[2], printSupport(R, t[1]));
+end function;
+
+intrinsic Print(f::RngPDiffPolElt)
+{}
+    R := Parent(f);
+    if isZero(f) then
+        printf "0";
+        return;
+    end if;
+    tms := Reverse(sortedTerms(f));
+    out := printTerm(R, tms[1]);
+    for k in [2..#tms] do
+        s := printTerm(R, tms[k]);
+        if s[1] eq "-" then
+            out := out cat " - " cat s[2..#s];
+        else
+            out := out cat " + " cat s;
+        end if;
+    end for;
+    printf "%o", out;
+end intrinsic;
+
+//##################################################
+//  RANKING-INDUCED ORDER ON MONOMIALS
+//##################################################
+
+//###########################
+function rankedSupport(supp, rk)
+//###########################
+/*
+The support listed in decreasing ranking order.
+*/
+    return Sort(supp, func<a, b | -rk(a[1], b[1])>);
+end function;
+
+//###########################
+function monCmpRanked(s1, s2, rk)
+//###########################
+/*
+The order on differential monomials induced by a ranking: lexicographic
+in the exponents, reading the derivatives from the highest-ranked down.
+*/
+    t1 := rankedSupport(s1, rk);
+    t2 := rankedSupport(s2, rk);
+    lo := Minimum(#t1, #t2);
+    for k in [1..lo] do
+        c := rk(t1[k][1], t2[k][1]);
+        if c ne 0 then
+            return c;
+        end if;
+        if t1[k][2] ne t2[k][2] then
+            return t1[k][2] - t2[k][2];
+        end if;
+    end for;
+    return #t1 - #t2;
+end function;
+
+intrinsic compareMonomials(f::RngPDiffPolElt, g::RngPDiffPolElt) -> RngIntElt
+{Compare two monomials in the order induced by the ranking of their
+parent ring, returning a negative, zero or positive integer.}
+    require Parent(f) eq Parent(g): "the arguments must lie in the same ring";
+    require isTerm(f) and isTerm(g): "the arguments must be single terms";
+    rk := ranking(Parent(f));
+    s1 := isZero(f) select [] else terms(f)[1][1];
+    s2 := isZero(g) select [] else terms(g)[1][1];
+    return monCmpRanked(s1, s2, rk);
+end intrinsic;
+
+intrinsic sortedTerms(f::RngPDiffPolElt) -> SeqEnum
+{The terms of f in increasing order for the ranking-induced monomial
+order, so the last entry is the leading term.}
+    rk := ranking(Parent(f));
+    return Sort(terms(f), func<a, b | monCmpRanked(a[1], b[1], rk)>);
+end intrinsic;
+
+intrinsic leadingTerm(f::RngPDiffPolElt) -> RngPDiffPolElt
+{The term of f whose monomial is greatest in the ranking-induced order.}
+    require not isZero(f): "the zero polynomial has no leading term";
+    return makeElt(Parent(f), [sortedTerms(f)[#terms(f)]]);
+end intrinsic;
+
+intrinsic leadingMonomial(f::RngPDiffPolElt) -> RngPDiffPolElt
+{The greatest monomial of f in the ranking-induced order.}
+    require not isZero(f): "the zero polynomial has no leading monomial";
+    return makeElt(Parent(f), [<sortedTerms(f)[#terms(f)][1], baseRing(Parent(f)) ! 1>]);
+end intrinsic;
+
+intrinsic leadingCoefficient(f::RngPDiffPolElt) -> RngElt
+{The coefficient of the leading monomial of f.}
+    require not isZero(f): "the zero polynomial has no leading coefficient";
+    return sortedTerms(f)[#terms(f)][2];
+end intrinsic;
+
+//##################################################
+//  THE DERIVATIVE LATTICE
+//##################################################
+
+intrinsic derivativeIndices(f::RngPDiffPolElt) -> SeqEnum
+{The indices [i,a_1,...,a_m] of the derivatives occurring in f, without
+repetition.}
+    seen := [];
+    for t in terms(f) do
+        for p in t[1] do
+            if not p[1] in seen then
+                Append(~seen, p[1]);
+            end if;
+        end for;
+    end for;
+    return seen;
+end intrinsic;
+
+intrinsic order(f::RngPDiffPolElt) -> RngIntElt
+{The largest total order of a derivative occurring in f, or -1 when f
+involves no differential variable.}
+    idxs := derivativeIndices(f);
+    if #idxs eq 0 then
+        return -1;
+    end if;
+    top := Maximum([multidegree(idx) : idx in idxs]);
+    return top;
+end intrinsic;
+
+intrinsic degreeIn(f::RngPDiffPolElt, idx::SeqEnum) -> RngIntElt
+{The degree of f in the single derivative idx.}
+    if isZero(f) then
+        return -1;
+    end if;
+    top := Maximum([suppExponent(t[1], idx) : t in terms(f)]);
+    return top;
+end intrinsic;
+
+intrinsic coefficientIn(f::RngPDiffPolElt, idx::SeqEnum, e::RngIntElt) -> RngPDiffPolElt
+{The coefficient of idx^e when f is regarded as a polynomial in the single
+derivative idx.  The result is free of idx.}
+    R := Parent(f);
+    out := [];
+    for t in terms(f) do
+        if suppExponent(t[1], idx) eq e then
+            Append(~out, <suppShift(t[1], idx, -e), t[2]>);
+        end if;
+    end for;
+    return makeElt(R, out);
+end intrinsic;
+
+intrinsic leaderIndex(f::RngPDiffPolElt) -> SeqEnum
+{The index of the leader of f: the highest-ranked derivative occurring
+in f.}
+    idxs := derivativeIndices(f);
+    require #idxs gt 0: "a polynomial free of differential variables has no leader";
+    rk := ranking(Parent(f));
+    best := idxs[1];
+    for k in [2..#idxs] do
+        if rk(idxs[k], best) gt 0 then
+            best := idxs[k];
+        end if;
+    end for;
+    return best;
+end intrinsic;
+
+intrinsic leader(f::RngPDiffPolElt) -> RngPDiffPolElt
+{The leader of f: the highest-ranked derivative occurring in f, returned
+as a monomial of the ring.}
+    return derivativeVariable(Parent(f), leaderIndex(f));
+end intrinsic;
+
+intrinsic degreeInLeader(f::RngPDiffPolElt) -> RngIntElt
+{The degree of f in its leader.}
+    return degreeIn(f, leaderIndex(f));
+end intrinsic;
+
+intrinsic initial(f::RngPDiffPolElt) -> RngPDiffPolElt
+{The initial of f: the coefficient of the leader raised to its degree.}
+    v := leaderIndex(f);
+    return coefficientIn(f, v, degreeIn(f, v));
+end intrinsic;
+
+intrinsic derivative(f::RngPDiffPolElt, idx::SeqEnum) -> RngPDiffPolElt
+{The formal partial derivative of f with respect to the single derivative
+idx.}
+    R := Parent(f);
+    out := [];
+    for t in terms(f) do
+        e := suppExponent(t[1], idx);
+        if e gt 0 then
+            Append(~out, <suppShift(t[1], idx, -1), t[2] * e>);
+        end if;
+    end for;
+    return makeElt(R, out);
+end intrinsic;
+
+intrinsic derivative(f::RngPDiffPolElt, v::RngPDiffPolElt) -> RngPDiffPolElt
+{The formal partial derivative of f with respect to the derivative v,
+given as a monomial.}
+    require isMonomial(v) and #terms(v)[1][1] eq 1 and terms(v)[1][1][1][2] eq 1:
+        "the second argument must be a single derivative";
+    return derivative(f, terms(v)[1][1][1][1]);
+end intrinsic;
+
+intrinsic separant(f::RngPDiffPolElt) -> RngPDiffPolElt
+{The separant of f: the partial derivative of f with respect to its
+leader.}
+    return derivative(f, leaderIndex(f));
+end intrinsic;
+
+//##################################################
+//  DIFFERENTIATION AND PROLONGATION
+//##################################################
+
+intrinsic Diff(f::RngPDiffPolElt, k::RngIntElt) -> RngPDiffPolElt
+{Apply the k-th derivation to f.  Coefficients are treated as constants.}
+    R := Parent(f);
+    require 1 le k and k le Nderivations(R): "the derivation index is out of range";
+    out := [];
+    for t in terms(f) do
+        for p in t[1] do
+            raised := p[1];
+            raised[k + 1] := raised[k + 1] + 1;
+            s := suppShift(t[1], p[1], -1);
+            s := suppShift(s, raised, 1);
+            Append(~out, <s, t[2] * p[2]>);
+        end for;
+    end for;
+    return makeElt(R, out);
+end intrinsic;
+
+intrinsic Diff(f::RngPDiffPolElt, a::SeqEnum) -> RngPDiffPolElt
+{Apply the derivation operator theta^a to f, where a is a multi-index of
+length Nderivations(Parent(f)).}
+    R := Parent(f);
+    require #a eq Nderivations(R):
+        "the multi-index must have one entry per derivation";
+    require &and[x ge 0 : x in a]: "the multi-index must be non-negative";
+    out := f;
+    for k in [1..Nderivations(R)] do
+        for j in [1..a[k]] do
+            out := Diff(out, k);
+        end for;
+    end for;
+    return out;
+end intrinsic;
+
+intrinsic multiIndices(m::RngIntElt, r::RngIntElt) -> SeqEnum
+{All multi-indices in N^m of total degree at most r, listed by increasing
+total degree.}
+    require m ge 1: "there must be at least one derivation";
+    require r ge 0: "the order must be non-negative";
+    out := [[0 : k in [1..m]]];
+    level := out;
+    for d in [1..r] do
+        next := [];
+        for a in level do
+            for k in [1..m] do
+                b := a;
+                b[k] := b[k] + 1;
+                if not b in next then
+                    Append(~next, b);
+                end if;
+            end for;
+        end for;
+        out := out cat next;
+        level := next;
+    end for;
+    return out;
+end intrinsic;
+
+intrinsic Prolong(f::RngPDiffPolElt, r::RngIntElt) -> SeqEnum
+{The prolongation of f up to order r: the sequence of pairs <a, theta^a f>
+for every multi-index a of total degree at most r.}
+    require r ge 0: "the order must be non-negative";
+    return [<a, Diff(f, a)> : a in multiIndices(Nderivations(Parent(f)), r)];
+end intrinsic;
+
+intrinsic Prolong(F::SeqEnum[RngPDiffPolElt], r::RngIntElt) -> SeqEnum
+{The prolongation of a system up to order r, as a flat sequence of
+differential polynomials.}
+    return &cat[[p[2] : p in Prolong(f, r)] : f in F];
+end intrinsic;
+
+//##################################################
+//  PSEUDO-DIVISION (RITT-KOLCHIN REDUCTION)
+//##################################################
+
+/*
+The reduction of f by g with respect to the installed ranking.  Write v
+for the leader of g, d for its degree in v, I for its initial and S for
+its separant.
+
+For every multi-index a with |a| > 0 one has
+
+    theta^a g  =  S * theta^a v  +  (terms in derivatives lower than theta^a v),
+
+so theta^a g is linear in its own leader with initial S.  Phase one uses
+those to remove every proper derivative of v from f; phase two uses g
+itself to push the degree in v below d.  The bookkeeping maintains
+
+    Mult * f  =  sum_a  Quo_a * theta^a g  +  Rem,
+
+which pseudoDivisionIdentity re-checks from the returned data.  Mult is a
+product of powers of S and I, so it lies in the multiplicative set
+generated by the initial and the separant of g, which is exactly what
+Ritt-Kolchin reduction is allowed to saturate by.
+*/
+
+//###########################
+function quoAdd(quo, a, c)
+//###########################
+    for k in [1..#quo] do
+        if quo[k][1] eq a then
+            quo[k] := <a, quo[k][2] + c>;
+            return quo;
+        end if;
+    end for;
+    return Append(quo, <a, c>);
+end function;
+
+//###########################
+function quoScale(quo, s)
+//###########################
+    return [<p[1], s * p[2]> : p in quo];
+end function;
+
+//###########################
+function properDerivativesOf(f, v, rk)
+//###########################
+/*
+The indices of the derivatives of f that are PROPER derivatives of v,
+that is theta v with |theta| > 0.
+*/
+    out := [];
+    for idx in derivativeIndices(f) do
+        if idx[1] ne v[1] then
+            continue;
+        end if;
+        diffs := [idx[k] - v[k] : k in [2..#v]];
+        if &and[x ge 0 : x in diffs] and &+diffs gt 0 then
+            Append(~out, idx);
+        end if;
+    end for;
+    return Sort(out, func<a, b | rk(a, b)>);
+end function;
+
+intrinsic isPartiallyReduced(f::RngPDiffPolElt, g::RngPDiffPolElt) -> BoolElt
+{True when f involves no proper derivative of the leader of g.}
+    require Parent(f) eq Parent(g): "the arguments must lie in the same ring";
+    v := leaderIndex(g);
+    return #properDerivativesOf(f, v, ranking(Parent(f))) eq 0;
+end intrinsic;
+
+intrinsic isReduced(f::RngPDiffPolElt, g::RngPDiffPolElt) -> BoolElt
+{True when f is partially reduced with respect to g and its degree in the
+leader of g is smaller than that of g.}
+    require Parent(f) eq Parent(g): "the arguments must lie in the same ring";
+    if not isPartiallyReduced(f, g) then
+        return false;
+    end if;
+    v := leaderIndex(g);
+    return degreeIn(f, v) lt degreeIn(g, v);
+end intrinsic;
+
+intrinsic applyQuotient(quo::SeqEnum, g::RngPDiffPolElt) -> RngPDiffPolElt
+{Evaluate sum_a Quo_a * theta^a g for a quotient in the form returned by
+pseudoDivide.}
+    R := Parent(g);
+    out := zero(R);
+    for p in quo do
+        out := out + p[2] * Diff(g, p[1]);
+    end for;
+    return out;
+end intrinsic;
+
+intrinsic pseudoDivide(f::RngPDiffPolElt, g::RngPDiffPolElt
+    : check := true) -> SeqEnum, RngPDiffPolElt, RngPDiffPolElt
+{Ritt-Kolchin pseudo-division of f by g with respect to the ranking of
+their common parent.  Returns a quotient Quo, a remainder Rem and a
+multiplier Mult satisfying Mult*f = sum_a Quo_a*theta^a g + Rem, with Rem
+reduced with respect to g and Mult a product of powers of the initial and
+the separant of g.  The identity is asserted before returning unless
+check is set to false.}
+    require Parent(f) eq Parent(g): "the arguments must lie in the same ring";
+    require #derivativeIndices(g) gt 0:
+        "the divisor must involve a differential variable";
+
+    R := Parent(f);
+    rk := ranking(R);
+    v := leaderIndex(g);
+    d := degreeIn(g, v);
+    S := separant(g);
+    I := initial(g);
+
+    require not isZero(S):
+        "the separant of the divisor vanishes, so no pseudo-division is possible";
+
+    quo := [];
+    rem := f;
+    mult := one(R);
+
+    // Phase one: remove every proper derivative of the leader of g.
+    props := properDerivativesOf(rem, v, rk);
+    while #props gt 0 do
+        w := props[#props];
+        a := [w[k] - v[k] : k in [2..#v]];
+        gw := Diff(g, a);
+        e := degreeIn(rem, w);
+        while e ge 1 do
+            c := coefficientIn(rem, w, e) * derivativeVariable(R, w) ^ (e - 1);
+            rem := S * rem - c * gw;
+            quo := quoScale(quo, S);
+            quo := quoAdd(quo, a, c);
+            mult := S * mult;
+            e := degreeIn(rem, w);
+        end while;
+        props := properDerivativesOf(rem, v, rk);
+    end while;
+
+    // Phase two: push the degree in the leader of g below that of g.
+    e := degreeIn(rem, v);
+    while e ge d do
+        c := coefficientIn(rem, v, e) * derivativeVariable(R, v) ^ (e - d);
+        rem := I * rem - c * g;
+        quo := quoScale(quo, I);
+        quo := quoAdd(quo, [0 : k in [1..Nderivations(R)]], c);
+        mult := I * mult;
+        e := degreeIn(rem, v);
+    end while;
+
+    quo := [p : p in quo | not isZero(p[2])];
+
+    if check then
+        error if not (mult * f eq applyQuotient(quo, g) + rem),
+            "pseudoDivide: the multiplied-input identity failed";
+    end if;
+
+    return quo, rem, mult;
+end intrinsic;
+
+intrinsic pseudoDivisionIdentity(f::RngPDiffPolElt, g::RngPDiffPolElt,
+    quo::SeqEnum, rem::RngPDiffPolElt, mult::RngPDiffPolElt) -> BoolElt
+{Re-check the multiplied-input identity Mult*f = sum_a Quo_a*theta^a g +
+Rem from the returned data.  This is the assertable invariant of
+pseudoDivide.}
+    require Parent(f) eq Parent(g): "the arguments must lie in the same ring";
+    return mult * f eq applyQuotient(quo, g) + rem;
+end intrinsic;
+
+//##################################################
+//  RANKING AXIOMS
+//##################################################
+
+intrinsic rankingAxiomsHold(comparison::UserProgram, n::RngIntElt,
+    m::RngIntElt, r::RngIntElt) -> BoolElt, MonStgElt
+{Check the two ranking axioms on every derivative of total order at most
+r: that theta u is at least u, strictly when theta is not the identity,
+and that v > w if and only if theta v > theta w.  Returns false together
+with a description of the first violation found.}
+    require n ge 1 and m ge 1 and r ge 0: "the sample bounds are out of range";
+
+    idxs := [];
+    for a in multiIndices(m, r) do
+        for i in [1..n] do
+            Append(~idxs, [i] cat a);
+        end for;
+    end for;
+
+    // Axiom one: theta u >= u, strictly for theta not the identity.
+    for idx in idxs do
+        base := [idx[1]] cat [0 : k in [1..m]];
+        c := comparison(idx, base);
+        if multidegree(idx) eq 0 then
+            if c ne 0 then
+                return false, Sprintf("a variable is not equal to itself: %o", idx);
+            end if;
+        elif c le 0 then
+            return false, Sprintf("theta u does not exceed u at %o", idx);
+        end if;
+    end for;
+
+    // Axiom two: the order is stable under differentiation.
+    ops := multiIndices(m, r);
+    for v in idxs do
+        for w in idxs do
+            cvw := comparison(v, w);
+            for a in ops do
+                if multidegree(v) + multidegree(a) gt r then
+                    continue;
+                end if;
+                if multidegree(w) + multidegree(a) gt r then
+                    continue;
+                end if;
+                tv := [v[1]] cat [v[k + 1] + a[k] : k in [1..m]];
+                tw := [w[1]] cat [w[k + 1] + a[k] : k in [1..m]];
+                ctw := comparison(tv, tw);
+                if Sign(cvw) ne Sign(ctw) then
+                    return false, Sprintf(
+                        "differentiation by %o does not preserve the order on %o and %o",
+                        a, v, w);
+                end if;
+            end for;
+        end for;
+    end for;
+
+    return true, "the sampled ranking axioms hold";
+end intrinsic;
+
+//##################################################
+//  EVALUATION
+//##################################################
+
+intrinsic Evaluate(f::RngPDiffPolElt, val::UserProgram) -> RngElt
+{Evaluate f by substituting val(idx) for the derivative with index idx.
+val must return elements of the coefficient ring.}
+    K := baseRing(Parent(f));
+    out := K ! 0;
+    for t in terms(f) do
+        acc := t[2];
+        for p in t[1] do
+            acc := acc * (K ! val(p[1])) ^ p[2];
+        end for;
+        out := out + acc;
+    end for;
+    return out;
+end intrinsic;
+
+intrinsic Eltseq(f::RngPDiffPolElt) -> SeqEnum
+{The element sequence of f: one pair <coefficient, support> per term,
+where the support lists the derivatives of the monomial with their
+exponents as pairs <[i,a_1,...,a_m], e>.}
+    return [<t[2], t[1]> : t in terms(f)];
+end intrinsic;
+
+intrinsic monomials(f::RngPDiffPolElt) -> SeqEnum
+{The monomials of f.}
+    R := Parent(f);
+    K := baseRing(R);
+    return [makeElt(R, [<t[1], K ! 1>]) : t in terms(f)];
+end intrinsic;
+
+intrinsic coefficients(f::RngPDiffPolElt) -> SeqEnum
+{The coefficients of f, in the same order as monomials(f).}
+    return [t[2] : t in terms(f)];
+end intrinsic;
+
+//##################################################
+//  THE ORDINARY CASE m = 1
+//##################################################
+
+intrinsic toOrdinary(f::RngPDiffPolElt, R0::RngDiffPol) -> RngDiffPolElt
+{Transport a partial differential polynomial with a single derivation
+into the ordinary type RngDiffPol of package-rngdiffpol.mag, so that the
+two implementations can be compared on a shared example.}
+    R := Parent(f);
+    require Nderivations(R) eq 1:
+        "only a single derivation can be transported to the ordinary type";
+    require Nvariables(R) eq Nvars(R0):
+        "the two rings must have the same number of differential variables";
+
+    if isZero(f) then
+        return zero(R0);
+    end if;
+
+    /*
+    The terms are accumulated without seeding the sum with zero(R0): in
+    package-rngdiffpol.mag a zero summand survives in the term set of the
+    result, and later calls to monomials() on that element fail.
+    */
+    out := zero(R0);
+    started := false;
+    for t in terms(f) do
+        mon := one(R0);
+        for p in t[1] do
+            pair := [p[1][1], p[1][2]];
+            mon := mon * (R0 . pair) ^ p[2];
+        end for;
+        piece := differentialPolynomial(t[2] * mon);
+        if started then
+            out := out + piece;
+        else
+            out := piece;
+            started := true;
+        end if;
+    end for;
+    return out;
+end intrinsic;
